@@ -10,7 +10,6 @@ Ce répertoire contient une collection de scripts bash utiles pour l'administrat
 ├── install.sh                      # Script d'installation de l'environnement
 ├── Wake-on-LAN.sh                  # Réveil à distance de machines réseau
 ├── exemple_option.sh               # Exemples et modèles pour scripts bash
-├── mytest.sh                       # Script de test et développement
 ├── plex_series_organizer.sh        # Organisateur de séries pour Plex
 ├── readme_plex_organizer.md        # Documentation détaillée pour Plex Organizer
 └── logs/                           # Répertoire des fichiers de logs
@@ -94,29 +93,6 @@ chmod +x install.sh
 ```
 
 **Status** : 📖 Documentation/Formation
-
----
-
-### 🧪 **mytest.sh**
-
-**Description** : Script de test et développement pour expérimentation et validation de concepts.
-
-**Fonctionnalités** :
-
-- Tests de nouvelles fonctionnalités
-- Validation de concepts avant intégration
-- Banc d'essai pour debug
-- Environnement de développement rapide
-
-**Utilisation** :
-
-```bash
-./mytest.sh [paramètres_de_test]
-```
-
-**⚠️ Note** : Script en développement, utilisation à des fins de test uniquement.
-
-**Status** : 🚧 Développement
 
 ---
 
