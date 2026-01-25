@@ -20,7 +20,8 @@ Ce répertoire contient une collection de scripts bash utiles pour l'administrat
 
 ### 🚀 **install.sh**
 
-**Description** : Script d'installation pour mettre en place rapidement un environnement de développement sur NAS Synology.
+**Description** : Script d'installation pour mettre en place rapidement un environnement de développement sur NAS
+Synology.
 
 **Fonctionnalités** :
 
@@ -98,7 +99,8 @@ chmod +x install.sh
 
 ### 🎬 **plex_series_organizer.sh**
 
-**Description** : Script principal pour renommer automatiquement les épisodes de séries selon les conventions Plex Media Server.
+**Description** : Script principal pour renommer automatiquement les épisodes de séries selon les conventions Plex Media
+Server.
 
 **Fonctionnalités** :
 
@@ -127,6 +129,32 @@ chmod +x install.sh
 **Status** : ✅ Production - ⭐ **Script Principal**
 
 ---
+
+### update-plex.sh
+
+**Description** : Script d’automatisation pour la mise à jour de Plex Media Server exécuté dans un conteneur Docker sur
+NAS Synology. Il est conçu pour être lancé manuellement ou via le planificateur de tâches DSM, en assurant une mise à
+jour propre, contrôlée et journalisée.
+
+Fonctionnalités :
+
+- Mise à jour automatique de l’image Docker lscr.io/linuxserver/plex
+- Redéploiement propre du conteneur Plex via Docker Compose
+- Préservation complète des données Plex (/config, bibliothèques, métadonnées)
+- Journalisation détaillée des opérations (logs horodatés)
+- Vérification préalable de la disponibilité de Docker
+- Sécurisation du processus (arrêt si le docker pull échoue)
+- Nettoyage optionnel des images Docker inutilisées
+- Compatible DSM 6.x / 7.x et exécution planifiée
+
+````bash
+chmod +x update-plex.sh
+./update-plex.sh
+````
+
+**Status** : ✅ Production – Automatisation & Maintenance Docker
+
+--- 
 
 ### 📖 **readme_plex_organizer.md**
 
