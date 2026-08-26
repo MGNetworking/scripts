@@ -15,6 +15,10 @@ Document temporaire, caduc une fois la refactorisation terminée.
 **Guide dispatcher :** [docs/guide-dispatcher.md](docs/guide-dispatcher.md)
 Patterns de parsing d'arguments et templates de CLI.
 
+**Points en suspens :** [docs/points-en-suspens.md](docs/points-en-suspens.md)
+Sujets soulevés et écartés pour ne pas interrompre la production des scripts.
+Y verser tout nouveau point plutôt que de dévier du travail en cours.
+
 ---
 
 ## Arborescence cible
