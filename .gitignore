@@ -32,3 +32,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Claude Code ###
+.claude/settings.local.json
+
+### Configuration locale des scripts ###
+config/*.env
+!config/*.env.example
