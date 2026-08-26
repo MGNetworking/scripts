@@ -9,7 +9,7 @@ configuration et de maintenance d'infrastructure.
 ## Architecture
 
 ```text
-Linux/       System (5 scripts) | Security | Docker | K3s
+Linux/       System (6 scripts) | Security | Docker | K3s
 Kubernetes/  Installation | Configuration | Maintenance   (à venir)
 Docker/      Installation | Maintenance | Cleanup   (à venir)
 Synology/    Plex | Administration
@@ -31,6 +31,7 @@ cluster quelle que soit son origine.
 | [`Linux/System/configure-logging.sh`](Linux/System/configure-logging.sh) | répertoire des journaux et rotation logrotate |
 | [`Linux/System/configure-hostname.sh`](Linux/System/configure-hostname.sh) | nom d'hôte et cohérence de /etc/hosts |
 | [`Linux/System/configure-timezone.sh`](Linux/System/configure-timezone.sh) | fuseau horaire, avec validation |
+| [`Linux/System/configure-swap.sh`](Linux/System/configure-swap.sh) | fichier d'échange : état, création, redimensionnement |
 | [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
 | [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |
 

@@ -21,9 +21,9 @@ prime toujours sur la valeur du fichier.
 | `configure-logging.sh` | crée le répertoire des journaux et installe la règle logrotate | root | oui |
 | `configure-hostname.sh` | définit le nom d'hôte et met /etc/hosts en cohérence | root | oui |
 | `configure-timezone.sh` | définit le fuseau horaire, en validant son existence | root | oui |
+| `configure-swap.sh` | affiche le swap, crée ou redimensionne un fichier d'échange | root | oui |
 
-Les autres scripts prévus (`configure-swap.sh`,
-`manage-users.sh`, `check-disk.sh`, `check-memory.sh`, `check-services.sh`,
+Les autres scripts prévus (`manage-users.sh`, `check-disk.sh`, `check-memory.sh`, `check-services.sh`,
 `reboot-system.sh`) restent à écrire — voir
 [le plan](../../docs/refactorisation-plan.md).
 
@@ -45,6 +45,10 @@ sudo ./Linux/System/configure-hostname.sh mon-serveur --dry-run
 sudo ./Linux/System/configure-timezone.sh --list      # lister les fuseaux
 sudo ./Linux/System/configure-timezone.sh            # prend SRV_TIMEZONE
 sudo ./Linux/System/configure-timezone.sh Europe/Paris
+
+./Linux/System/configure-swap.sh                     # état du swap, sans root
+sudo ./Linux/System/configure-swap.sh 2G             # créer ou redimensionner
+sudo ./Linux/System/configure-swap.sh 2G --dry-run
 ```
 
 ## Risques
@@ -65,3 +69,9 @@ installation rend le nœud existant inutilisable.
 `configure-timezone.sh` modifie l'heure locale du système. Les tâches planifiées
 suivent ce fuseau : un cron réglé sur 4 h s'exécutera à 4 h dans le nouveau
 fuseau, donc à une autre heure réelle qu'auparavant.
+
+`configure-swap.sh` sans argument n'affiche que l'état. Avec une taille, il
+désactive puis recrée le fichier d'échange et complète `/etc/fstab`, sauvegardé
+au préalable. Il refuse de désactiver un swap dont le contenu ne tiendrait pas
+en mémoire disponible. Les partitions de swap et les systèmes de fichiers btrfs
+et ZFS ne sont pas pris en charge.
