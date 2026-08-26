@@ -295,6 +295,19 @@ Désinstallation explicitement confirmée. Documenter les données susceptibles 
 
 Responsabilité : outils et composants de l'écosystème Kubernetes, indépendamment de la distribution Kubernetes.
 
+> **Frontière avec `Linux/K3s/`** — critère de rangement :
+> *si K3s était remplacé par un cluster managé dans le cloud, ce script
+> survivrait-il ?*
+>
+> - **Oui** → `Kubernetes/` : `kubectl`, Helm, ingress, cert-manager, namespaces,
+>   TLS, diagnostics. Ces scripts s'adressent à un cluster, quelle que soit son
+>   origine.
+> - **Non** → `Linux/K3s/` : installer, mettre à niveau, désinstaller K3s,
+>   configurer son service systemd. Spécifique à K3s sur Linux.
+>
+> `Linux/K3s/` reste plat : cinq scripts ne justifient pas un découpage
+> Installation / Configuration / Maintenance.
+
 ```text
 Kubernetes/Installation/
 ├── install-kubectl.sh

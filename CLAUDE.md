@@ -34,6 +34,10 @@ conteneurs, `Linux/K3s/` la distribution, `Kubernetes/` l'orchestration.
 Les workloads gérés par Kubernetes ne s'administrent jamais via `docker restart`
 ou équivalent.
 
+Frontière `Linux/K3s/` ↔ `Kubernetes/` : si le script survivrait au remplacement
+de K3s par un cluster managé, il va dans `Kubernetes/` ; sinon dans `Linux/K3s/`,
+qui reste plat.
+
 ## Conventions de script
 
 En-tête obligatoire — les trois lignes de résolution fonctionnent à n'importe

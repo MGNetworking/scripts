@@ -1,209 +1,72 @@
-# 🛠️ Projet de Scripting - Collection de Scripts Bash
+# MGNetworking Scripts
 
-Ce répertoire contient une collection de scripts bash utiles pour l'administration et l'automatisation sur NAS Synology.
+Bibliothèque personnelle de scripts d'administration, d'installation, de
+configuration et de maintenance d'infrastructure.
 
-## 📁 Structure du projet
+> Le dépôt est en cours de refactorisation. Seuls le socle commun et les scripts
+> Synology existent à ce jour ; les domaines Linux, Docker et Kubernetes sont à
+> développer. Voir [le plan](docs/refactorisation-plan.md).
 
+## Architecture
+
+```text
+Linux/       System | Security | Docker | K3s      (à venir)
+Kubernetes/  Installation | Configuration | Maintenance   (à venir)
+Docker/      Installation | Maintenance | Cleanup   (à venir)
+Synology/    Plex | Administration
+lib/         fonctions communes (common.sh)
+config/      un <contexte>.env par domaine
+docs/        socle technique, plan, guides
 ```
-/volume1/development/scripts/
-├── README.md                       # Ce fichier (documentation principale)
-├── install.sh                      # Script d'installation de l'environnement
-├── Wake-on-LAN.sh                  # Réveil à distance de machines réseau
-├── exemple_option.sh               # Exemples et modèles pour scripts bash
-├── plex_series_organizer.sh        # Organisateur de séries pour Plex
-├── readme_plex_organizer.md        # Documentation détaillée pour Plex Organizer
-└── logs/                           # Répertoire des fichiers de logs
-    └── *.log
-```
 
-## 📜 Description des Scripts
+`Linux/` prépare le système, `Docker/` gère le moteur de conteneurs,
+`Linux/K3s/` la distribution Kubernetes, `Kubernetes/` tout ce qui s'adresse à un
+cluster quelle que soit son origine.
 
-### 🚀 **install.sh**
-
-**Description** : Script d'installation pour mettre en place rapidement un environnement de développement sur NAS
-Synology.
-
-**Fonctionnalités** :
-
-- Configuration automatique de l'environnement de développement
-- Installation des dépendances nécessaires
-- Création de la structure de répertoires
-- Configuration des permissions
-
-**Utilisation** :
+## Installation sur un serveur
 
 ```bash
-chmod +x install.sh
-./install.sh
+git clone git@github.com:MGNetworking/script.git /opt/mgnetworking
+cd /opt/mgnetworking
+cp config/<contexte>.env.example config/<contexte>.env   # selon les scripts utilisés
 ```
 
-**Status** : ✅ Production
+Le dépôt fonctionne quel que soit son emplacement : chaque script résout la
+racine du projet à l'exécution.
 
----
+## Conventions
 
-### 🌐 **Wake-on-LAN.sh**
-
-**Description** : Script pour réveiller des machines distantes via Wake-on-LAN (WoL).
-
-**Fonctionnalités** :
-
-- Réveil à distance de PC/serveurs
-- Support de multiples adresses MAC
-- Logging des tentatives de réveil
-- Vérification de connectivité post-réveil
-
-**Utilisation** :
+Tout script commence par :
 
 ```bash
-./Wake-on-LAN.sh [adresse_MAC] [adresse_IP_optionnelle]
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
+source "$_dir/lib/common.sh"
 ```
 
-**Exemple** :
+`lib/common.sh` fournit la journalisation (`info`, `warn`, `error`, `success`,
+`die`, `run_logged`), les vérifications (`require_root`, `require_cmd`,
+`require_os`), la confirmation interactive (`confirm`) et le chargement de
+configuration (`load_config`).
 
-```bash
-./Wake-on-LAN.sh "AA:BB:CC:DD:EE:FF" "192.168.1.100"
-```
+Nommage `verb-noun.sh`. Idempotence dès que possible. `--dry-run` sur toute
+opération destructive. Aucun secret versionné.
 
-**Status** : ✅ Production
+Détail des règles : [CLAUDE.md](CLAUDE.md).
+Fonctionnement du socle : [docs/architecture-technique.md](docs/architecture-technique.md).
 
----
+## Journalisation
 
-### 📚 **exemple_option.sh**
+Chaque script écrit à l'écran et dans un fichier nommé d'après lui :
+`/var/log/mgnetworking/<script>.log` en root, `logs/<script>.log` sinon.
 
-**Description** : Script d'exemples et modèles pour l'apprentissage et le développement de scripts bash.
+La rotation est assurée par `logrotate`, configuré une fois par serveur.
 
-**Fonctionnalités** :
+## Sécurité
 
-- Exemples de gestion des options en ligne de commande
-- Modèles de fonctions courantes
-- Exemples de validation d'entrées
-- Patterns de logging et gestion d'erreurs
-
-**Utilisation** :
-
-```bash
-./exemple_option.sh [options] [paramètres]
-```
-
-**Exemples** :
-
-```bash
-./exemple_option.sh --help
-./exemple_option.sh -v --debug
-./exemple_option.sh --file "monfichier.txt"
-```
-
-**Status** : 📖 Documentation/Formation
-
----
-
-### 🎬 **plex_series_organizer.sh**
-
-**Description** : Script principal pour renommer automatiquement les épisodes de séries selon les conventions Plex Media
-Server.
-
-**Fonctionnalités** :
-
-- Renommage en lot des fichiers de série
-- Format standardisé : `Série S01E01.extension`
-- Tri alphabétique automatique
-- Logging détaillé des opérations
-- Validation des paramètres
-- Compatible interface DSM
-
-**Utilisation** :
-
-```bash
-./plex_series_organizer.sh "Nom de série" "S01" "/chemin/vers/dossier"
-```
-
-**Exemples** :
-
-```bash
-./plex_series_organizer.sh "Yi Nian Yong Heng" "S01" "/volume3/Plex/media/mangas/Yi_Nian_Yong_Heng/S01"
-./plex_series_organizer.sh "Game of Thrones" "S08" "/volume1/series/GoT/Season_8"
-```
-
-**Documentation complète** : Voir `readme_plex_organizer.md`
-
-**Status** : ✅ Production - ⭐ **Script Principal**
-
----
-
-### update-plex.sh
-
-**Description** : Script d’automatisation pour la mise à jour de Plex Media Server exécuté dans un conteneur Docker sur
-NAS Synology. Il est conçu pour être lancé manuellement ou via le planificateur de tâches DSM, en assurant une mise à
-jour propre, contrôlée et journalisée.
-
-Fonctionnalités :
-
-- Mise à jour automatique de l’image Docker lscr.io/linuxserver/plex
-- Redéploiement propre du conteneur Plex via Docker Compose
-- Préservation complète des données Plex (/config, bibliothèques, métadonnées)
-- Journalisation détaillée des opérations (logs horodatés)
-- Vérification préalable de la disponibilité de Docker
-- Sécurisation du processus (arrêt si le docker pull échoue)
-- Nettoyage optionnel des images Docker inutilisées
-- Compatible DSM 6.x / 7.x et exécution planifiée
-
-````bash
-chmod +x update-plex.sh
-./update-plex.sh
-````
-
-**Status** : ✅ Production – Automatisation & Maintenance Docker
-
---- 
-
-### 📖 **readme_plex_organizer.md**
-
-**Description** : Documentation détaillée et complète pour le script `plex_series_organizer.sh`.
-
-**Contenu** :
-
-- Guide d'installation complet
-- Exemples d'utilisation détaillés
-- Intégration avec DSM (interface web)
-- Guide de dépannage
-- Bonnes pratiques
-- Format des logs
-
-**Status** : 📚 Documentation
-
-## 🚀 Installation Rapide
-
-### Prérequis
-
-- NAS Synology avec DSM 6.x ou 7.x
-- Accès SSH activé
-- Utilisateur avec privilèges admin
-
-### Installation
-
-```bash
-# 1. Connexion SSH
-ssh admin@votre-nas-ip
-
-# 2. Création du répertoire
-mkdir -p /volume1/development/scripts/
-
-# 3. Navigation vers le répertoire
-cd /volume1/development/scripts/
-
-# 4. Installation de l'environnement (optionnel)
-chmod +x install.sh
-./install.sh
-
-# 5. Rendre tous les scripts exécutables
-chmod +x *.sh
-```
-
-## 🔧 Configuration
-
-### Variables d'environnement communes
-
-Les scripts utilisent ces chemins par défaut :
-
-- **Répertoire de scripts** : `/volume1/development/scripts/`
-- **Répertoire de logs** : `/v
+Le dépôt est public. Aucun mot de passe, token, clé privée, kubeconfig ou
+certificat ne doit y figurer. Les configurations réelles (`config/*.env`) ne sont
+jamais versionnées ; seuls les modèles `*.env.example` le sont.
