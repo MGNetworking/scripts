@@ -81,13 +81,17 @@ die() {
 
 # Exécute une commande en enregistrant sa sortie dans le log.
 # Usage : run_logged apt-get upgrade -y
+#
+# La sortie de la commande part sur stderr, comme les messages de _log : deux
+# flux distincts se mélangeraient à l'affichage, chacun ayant son propre tampon.
+# stdout reste ainsi réservé aux données que le script produit réellement.
 run_logged() {
     info "Exécution : $*"
     if [ -n "$LOG_FILE" ]; then
-        "$@" 2>&1 | tee -a "$LOG_FILE"
+        "$@" 2>&1 | tee -a "$LOG_FILE" >&2
         return "${PIPESTATUS[0]}"
     fi
-    "$@"
+    "$@" >&2
 }
 
 # Redirige TOUTE la sortie du script courant vers le log, en plus de l'écran.
