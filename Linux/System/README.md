@@ -20,8 +20,9 @@ prime toujours sur la valeur du fichier.
 | `update-system.sh` | mise à jour des paquets (Debian, Ubuntu) | root | oui |
 | `configure-logging.sh` | crée le répertoire des journaux et installe la règle logrotate | root | oui |
 | `configure-hostname.sh` | définit le nom d'hôte et met /etc/hosts en cohérence | root | oui |
+| `configure-timezone.sh` | définit le fuseau horaire, en validant son existence | root | oui |
 
-Les autres scripts prévus (`configure-timezone.sh`, `configure-swap.sh`,
+Les autres scripts prévus (`configure-swap.sh`,
 `manage-users.sh`, `check-disk.sh`, `check-memory.sh`, `check-services.sh`,
 `reboot-system.sh`) restent à écrire — voir
 [le plan](../../docs/refactorisation-plan.md).
@@ -40,6 +41,10 @@ sudo ./Linux/System/configure-logging.sh          # une fois par serveur
 sudo ./Linux/System/configure-hostname.sh                 # prend SRV_HOSTNAME
 sudo ./Linux/System/configure-hostname.sh mon-serveur     # l'argument l'emporte
 sudo ./Linux/System/configure-hostname.sh mon-serveur --dry-run
+
+sudo ./Linux/System/configure-timezone.sh --list      # lister les fuseaux
+sudo ./Linux/System/configure-timezone.sh            # prend SRV_TIMEZONE
+sudo ./Linux/System/configure-timezone.sh Europe/Paris
 ```
 
 ## Risques
@@ -56,3 +61,7 @@ règle existante différente sans afficher les écarts et demander confirmation.
 `configure-hostname.sh` modifie `/etc/hosts`, sauvegardé au préalable. Sur un
 nœud K3s ou Kubernetes, le nom d'hôte identifie le nœud : le changer après
 installation rend le nœud existant inutilisable.
+
+`configure-timezone.sh` modifie l'heure locale du système. Les tâches planifiées
+suivent ce fuseau : un cron réglé sur 4 h s'exécutera à 4 h dans le nouveau
+fuseau, donc à une autre heure réelle qu'auparavant.
