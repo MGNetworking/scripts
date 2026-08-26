@@ -22,10 +22,23 @@ SCRIPTS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export SCRIPTS_ROOT
 
 # --- Répertoire de logs ----------------------------------------------------
-# Aucun fichier de configuration n'est lu ici : la journalisation est
-# indépendante des configurations de contexte (voir load_config plus bas).
-LOG_DIR="${SCRIPTS_LOG_DIR:-}"
-if [ -z "$LOG_DIR" ]; then
+# Deux niveaux, dans cet ordre :
+#   1. config/log.env s'il existe, où LOG_DIR peut être redéfini ;
+#   2. la valeur par défaut ci-dessous, écrite en dur.
+#
+# Le dépôt reste ainsi fonctionnel sans aucune configuration, tout en laissant
+# déplacer les journaux serveur par serveur.
+#
+# config/log.env est le seul fichier que common.sh charge de lui-même : il
+# concerne la journalisation, qui est sa responsabilité. Les configurations de
+# contexte (docker.env, k3s.env…) restent à la charge des scripts, via
+# load_config.
+if [ -f "$SCRIPTS_ROOT/config/log.env" ]; then
+    # shellcheck source=/dev/null
+    . "$SCRIPTS_ROOT/config/log.env"
+fi
+
+if [ -z "${LOG_DIR:-}" ]; then
     if [ "$(id -u)" -eq 0 ]; then
         LOG_DIR="/var/log/mgnetworking"
     else

@@ -69,11 +69,12 @@ dans le script appelant. Les variables sont donc partagées dans les deux sens.
 
 ## 3. Configuration de contexte
 
-`lib/common.sh` assure la **journalisation** et les **vérifications**. Il ne lit
-aucun fichier de configuration : les deux sujets sont indépendants.
+`lib/common.sh` assure la **journalisation** et les **vérifications**. Le seul
+fichier qu'il charge de lui-même est `config/log.env`, qui concerne la
+journalisation — donc sa propre responsabilité (voir section 4).
 
-Les configurations appartiennent aux contextes — Linux, Docker, K3s, Kubernetes,
-Synology — et un script charge la sienne explicitement :
+Toutes les autres configurations appartiennent aux contextes — Linux, Docker,
+K3s, Kubernetes, Synology — et un script charge la sienne explicitement :
 
 ```bash
 source "$_dir/lib/common.sh"
@@ -146,6 +147,31 @@ Les couleurs ne sont émises que si la sortie est un terminal (`[ -t 2 ]`).
 
 Le fichier est nommé d'après le script : `install-k3s.sh` écrit dans
 `install-k3s.log`.
+
+### Emplacement des journaux
+
+Deux niveaux, dans cet ordre :
+
+| Priorité | Origine | Valeur |
+|---|---|---|
+| 1 | `config/log.env`, s'il existe | `LOG_DIR` tel qu'il y est défini |
+| 2 | valeur par défaut, écrite en dur | `/var/log/mgnetworking` en root, `<racine>/logs` sinon |
+
+Le dépôt fonctionne donc sans aucune configuration, tout en permettant de
+déplacer les journaux serveur par serveur :
+
+```bash
+cp config/log.env.example config/log.env
+```
+
+`config/log.env` est le **seul** fichier que `common.sh` charge de lui-même,
+parce qu'il concerne la journalisation. Les configurations de contexte restent à
+la charge des scripts, via `load_config` (section 3).
+
+`configure-logging.sh` lit ce même `LOG_DIR` : le répertoire créé, celui où les
+journaux sont écrits et celui que surveille `logrotate` sont toujours le même.
+Le nom de la règle `logrotate` en découle — `LOG_DIR=/var/log/mgn-test` produit
+`/etc/logrotate.d/mgn-test`.
 
 ### Pourquoi écrire des logs
 

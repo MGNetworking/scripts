@@ -8,8 +8,20 @@ load_config docker      # -> config/docker.env
 load_config k3s         # -> config/k3s.env
 ```
 
-`lib/common.sh` ne charge jamais de configuration de lui-même : la
-journalisation et les configurations de contexte sont indépendantes.
+## `log.env` — la seule exception
+
+`config/log.env` est chargé automatiquement par `lib/common.sh`, sans
+`load_config` : il définit `LOG_DIR`, l'emplacement des journaux, qui relève de
+la responsabilité de `common.sh`.
+
+```bash
+cp config/log.env.example config/log.env
+```
+
+Sans ce fichier, l'emplacement par défaut s'applique : `/var/log/mgnetworking` en
+root, `<racine>/logs` sinon. Le dépôt fonctionne donc sans configuration.
+
+Toutes les autres configurations passent par `load_config`.
 
 ## Nommer autrement selon la machine
 

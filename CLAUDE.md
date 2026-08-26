@@ -61,8 +61,9 @@ Fonctions disponibles : `info` `warn` `error` `success` `die`, `require_root`
 sortie d'une commande externe), `enable_full_logging` (capture tout le script)
 et `load_config`. Ne jamais redéfinir localement ce que `common.sh` fournit déjà.
 
-`lib/common.sh` assure la journalisation et les vérifications, rien d'autre. Il
-ne charge aucune configuration de lui-même.
+`lib/common.sh` assure la journalisation et les vérifications. Le seul fichier
+qu'il charge de lui-même est `config/log.env` (emplacement des journaux) ;
+toutes les autres configurations passent par `load_config`.
 
 Un script qui a besoin d'une configuration expose `--config <nom>`, avec le nom
 de son contexte par défaut, et appelle `load_config` **après** le parsing :
