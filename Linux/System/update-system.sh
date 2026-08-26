@@ -35,6 +35,20 @@ Options :
 AIDE
 }
 
+# Signale un redémarrage en attente, sans jamais le déclencher.
+# Appelé quel que soit le chemin suivi : un redémarrage peut rester en attente
+# d'une mise à jour précédente alors que le système n'a plus rien à installer.
+signaler_redemarrage() {
+    if [ ! -f /var/run/reboot-required ]; then
+        return 0
+    fi
+    warn "Un redémarrage est nécessaire pour appliquer certaines mises à jour."
+    if [ -r /var/run/reboot-required.pkgs ]; then
+        warn "Paquets concernés : $(tr '\n' ' ' < /var/run/reboot-required.pkgs)"
+    fi
+    warn "Ce script ne redémarre jamais : utiliser Linux/System/reboot-system.sh."
+}
+
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run)  DRY_RUN="true"; shift ;;
@@ -71,6 +85,7 @@ a_installer="$(printf '%s\n' "$simulation" | grep '^Inst ' || true)"
 
 if [ -z "$a_installer" ]; then
     success "Le système est à jour, aucun paquet à mettre à niveau."
+    signaler_redemarrage
     exit 0
 fi
 
@@ -82,6 +97,7 @@ printf '%s\n' "$a_installer" | awk '{print "    " $2 " " $3}' >&2
 
 if [ "$DRY_RUN" = "true" ]; then
     info "Mode --dry-run : aucune modification effectuée."
+    signaler_redemarrage
     exit 0
 fi
 
@@ -107,12 +123,6 @@ if [ "$restant" -gt 0 ]; then
     warn "Les examiner avec : apt-get --simulate dist-upgrade"
 fi
 
-if [ -f /var/run/reboot-required ]; then
-    warn "Un redémarrage est nécessaire pour appliquer certaines mises à jour."
-    if [ -r /var/run/reboot-required.pkgs ]; then
-        warn "Paquets concernés : $(tr '\n' ' ' < /var/run/reboot-required.pkgs)"
-    fi
-    warn "Ce script ne redémarre jamais : utiliser Linux/System/reboot-system.sh."
-fi
+signaler_redemarrage
 
 success "Mise à jour terminée."
