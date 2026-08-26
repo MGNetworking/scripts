@@ -52,6 +52,88 @@ contexte, journalisation, rotation des logs) est décrit dans
 
 ---
 
+# 0. Socle commun
+
+Base partagée par tous les scripts, mise en place avant la phase 1.
+
+## `lib/common.sh` — fait
+
+Chargé au début de chaque script par trois lignes qui résolvent la racine du
+dépôt, quelle que soit la profondeur du script et son emplacement de
+déploiement :
+
+```bash
+_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
+source "$_dir/lib/common.sh"
+```
+
+Fournit :
+
+| Fonctions | Rôle |
+|---|---|
+| `info` `warn` `error` `success` `die` | messages à l'écran et dans le fichier de log |
+| `run_logged` | exécute une commande externe en capturant sa sortie |
+| `enable_full_logging` | capture toute la sortie du script |
+| `require_root` `require_cmd` `require_os` `detect_os` | vérifications de préflight |
+| `confirm` | confirmation interactive, contournable par `ASSUME_YES` |
+| `load_config` | charge `config/<contexte>.env` |
+
+Ne connaît rien des configurations : c'est le script appelant qui décide d'en
+charger une.
+
+## `config/` — fait
+
+Un fichier par contexte : `config/docker.env`, `config/k3s.env`…
+
+- `<contexte>.env.example` versionné, sert de modèle ;
+- `<contexte>.env` jamais versionné, propre à chaque serveur.
+
+Tout script chargeant une configuration expose `--config <nom>`, ce qui permet de
+nommer le fichier différemment selon la machine sans modifier le script.
+
+## `.gitattributes` — fait
+
+```text
+* text=auto eol=lf
+```
+
+Fins de ligne `LF` garanties. Sans cela, un script enregistré sous Windows
+échoue sous Linux avec `/usr/bin/env: bad interpreter`.
+
+## Journalisation et rotation — `common.sh` fait, script de mise en place à faire
+
+Chaque script écrit à l'écran **et** dans un fichier nommé d'après lui :
+`/var/log/mgnetworking/<script>.log` en root, `<racine>/logs/<script>.log` sinon.
+
+La rotation est assurée par `logrotate`, présent par défaut sur Debian, Ubuntu et
+Synology DSM. Il s'exécute une fois par jour et lit `/etc/logrotate.d/`. Le
+fichier à y déposer, `/etc/logrotate.d/mgnetworking` :
+
+```text
+/var/log/mgnetworking/*.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root adm
+}
+```
+
+Rotation hebdomadaire, huit semaines conservées, anciens fichiers compressés.
+Le motif `*.log` couvre automatiquement tout script ajouté par la suite : cette
+configuration n'aura jamais à être modifiée.
+
+Ce dépôt est effectué par `Linux/System/configure-logging.sh` (section 1),
+à lancer une fois par serveur. **Ce script reste à écrire.**
+
+Détail technique du socle :
+[architecture-technique.md](architecture-technique.md).
+
+---
+
 # 1. Linux / System
 
 Responsabilité : administration du système Linux lui-même, indépendamment de Docker et Kubernetes.
@@ -95,12 +177,14 @@ Prévoir `--dry-run` et `--yes`. Ne jamais redémarrer automatiquement.
 
 ### `configure-logging.sh`
 
-À lancer une fois par serveur, à la mise en route. Créer `/var/log/mgnetworking`
-avec les bonnes permissions et installer la règle `logrotate` unique décrite dans
-[architecture-technique.md](architecture-technique.md#5-rotation-des-logs).
+À lancer une fois par serveur, à la mise en route. Deux actions :
 
-Le motif `*.log` de cette règle couvrant tout le répertoire, aucun script ajouté
-par la suite ne nécessitera de reconfiguration.
+1. créer `/var/log/mgnetworking` avec les permissions adéquates ;
+2. déposer `/etc/logrotate.d/mgnetworking` — contenu en section 0.
+
+Vérifier la présence de `logrotate` avant d'écrire, et ne pas écraser une
+configuration existante sans confirmation. Idempotent : relançable sans effet de
+bord.
 
 ### `configure-hostname.sh`
 
@@ -550,8 +634,9 @@ Responsabilité : automatisations Plex sur Synology.
 
 ```text
 Synology/Plex/
+├── organize-series.sh      # existant, à mettre au standard
+├── update-plex.sh          # existant, à mettre au standard
 ├── install-plex.sh
-├── update-plex.sh
 ├── backup-plex.sh
 ├── restore-plex.sh
 ├── plex-status.sh
@@ -559,6 +644,11 @@ Synology/Plex/
 ```
 
 Ces scripts restent indépendants de l'infrastructure Linux/Kubernetes du VPS.
+
+**État** : `organize-series.sh` (anciennement `plex_series_organizer.sh`) et
+`update-plex.sh` ont été déplacés depuis la racine du dépôt, avec leur code
+d'origine. Ils ne passent pas encore par `lib/common.sh` et ne respectent pas
+encore les conventions — c'est le travail de la phase 4.
 
 ---
 
@@ -734,11 +824,13 @@ Les workloads gérés par Kubernetes ne doivent pas être administrés directeme
 
 Ne pas développer toute la bibliothèque en une fois.
 
+## Phase 0 — Socle commun — fait
+
+`lib/common.sh`, `config/`, `.gitattributes`, documentation. Voir section 0.
+
 ## Phase 1 — VPS actuel
 
 ```text
-lib/
-config/
 Linux/System/
 Linux/Security/
 Linux/K3s/
@@ -799,12 +891,16 @@ Docker/Cleanup/
 
 ## Phase 4 — Synology
 
-Réorganiser les anciens scripts dans :
+Déplacement fait : `Synology/Plex/` contient `organize-series.sh` et
+`update-plex.sh`, `Synology/Administration/` est créé et vide.
 
-```text
-Synology/Plex/
-Synology/Administration/
-```
+Reste à faire : mettre les deux scripts existants au standard du dépôt
+(`lib/common.sh`, conventions, journalisation), puis développer les scripts
+manquants des sections 11 et 12.
+
+Les anciens `install.sh`, `Wake-on-LAN.sh` et `exemple_option.sh` ont été
+supprimés — sans objet dans la nouvelle organisation, et récupérables dans
+l'historique Git si nécessaire.
 
 ---
 
