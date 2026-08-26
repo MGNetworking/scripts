@@ -29,7 +29,7 @@ Kubernetes/  Installation | Configuration | Maintenance
 Docker/      Installation | Maintenance | Cleanup
 Synology/    Plex | Administration
 lib/         fonctions communes (common.sh)
-config/      un <contexte>.env par domaine ; seuls les .example sont versionnés
+config/      server.env (la machine) + un <contexte>.env par application
 docs/        socle technique, plan, guides
 ```
 
@@ -62,7 +62,7 @@ sortie d'une commande externe), `enable_full_logging` (capture tout le script)
 et `load_config`. Ne jamais redéfinir localement ce que `common.sh` fournit déjà.
 
 `lib/common.sh` assure la journalisation et les vérifications. Le seul fichier
-qu'il charge de lui-même est `config/log.env` (emplacement des journaux) ;
+qu'il charge de lui-même est `config/server.env` (contexte de la machine) ;
 toutes les autres configurations passent par `load_config`.
 
 Un script qui a besoin d'une configuration expose `--config <nom>`, avec le nom

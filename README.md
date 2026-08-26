@@ -3,25 +3,37 @@
 Bibliothèque personnelle de scripts d'administration, d'installation, de
 configuration et de maintenance d'infrastructure.
 
-> Le dépôt est en cours de refactorisation. Seuls le socle commun et les scripts
-> Synology existent à ce jour ; les domaines Linux, Docker et Kubernetes sont à
-> développer. Voir [le plan](docs/refactorisation-plan.md).
+> Le dépôt est en cours de refactorisation. Voir
+> [le plan](docs/refactorisation-plan.md) pour l'état d'avancement.
 
 ## Architecture
 
 ```text
-Linux/       System | Security | Docker | K3s      (à venir)
+Linux/       System (4 scripts) | Security | Docker | K3s
 Kubernetes/  Installation | Configuration | Maintenance   (à venir)
 Docker/      Installation | Maintenance | Cleanup   (à venir)
 Synology/    Plex | Administration
 lib/         fonctions communes (common.sh)
-config/      un <contexte>.env par domaine
+config/      server.env (la machine) + un <contexte>.env par application
 docs/        socle technique, plan, guides
 ```
 
 `Linux/` prépare le système, `Docker/` gère le moteur de conteneurs,
 `Linux/K3s/` la distribution Kubernetes, `Kubernetes/` tout ce qui s'adresse à un
 cluster quelle que soit son origine.
+
+## Scripts disponibles
+
+| Script | Rôle |
+|---|---|
+| [`Linux/System/system-info.sh`](Linux/System/system-info.sh) | état du système, en lecture seule |
+| [`Linux/System/update-system.sh`](Linux/System/update-system.sh) | mise à jour des paquets |
+| [`Linux/System/configure-logging.sh`](Linux/System/configure-logging.sh) | répertoire des journaux et rotation logrotate |
+| [`Linux/System/configure-hostname.sh`](Linux/System/configure-hostname.sh) | nom d'hôte et cohérence de /etc/hosts |
+| [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
+| [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |
+
+Détail par domaine : [Linux/System/README.md](Linux/System/README.md).
 
 ## Installation sur un serveur
 

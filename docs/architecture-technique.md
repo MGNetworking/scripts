@@ -69,12 +69,36 @@ dans le script appelant. Les variables sont donc partagées dans les deux sens.
 
 ## 3. Configuration de contexte
 
-`lib/common.sh` assure la **journalisation** et les **vérifications**. Le seul
-fichier qu'il charge de lui-même est `config/log.env`, qui concerne la
-journalisation — donc sa propre responsabilité (voir section 4).
+Deux natures de configuration coexistent, et une seule est chargée
+automatiquement.
 
-Toutes les autres configurations appartiennent aux contextes — Linux, Docker,
-K3s, Kubernetes, Synology — et un script charge la sienne explicitement :
+**`config/server.env` décrit la machine** : emplacement des journaux, nom
+d'hôte, fuseau horaire, taille du fichier d'échange. C'est le seul fichier que
+`lib/common.sh` charge de lui-même, parce que ces valeurs concernent le serveur
+sur lequel tout s'exécute.
+
+```bash
+LOG_DIR="/var/log/mgnetworking"
+SRV_HOSTNAME="k3s-master"
+SRV_TIMEZONE="Europe/Paris"
+SRV_SWAP_SIZE="2G"
+```
+
+Les variables portent le préfixe `SRV_` pour ne pas entrer en collision avec
+celles de l'environnement — `HOSTNAME` existe déjà dans Bash, et l'écraser
+produirait des effets difficiles à diagnostiquer. `LOG_DIR` fait exception, il
+précède cette convention.
+
+Un script lit d'abord son argument de ligne de commande et ne retombe sur la
+variable qu'à défaut :
+
+```bash
+sudo ./configure-hostname.sh              # prend SRV_HOSTNAME
+sudo ./configure-hostname.sh autre-nom    # l'argument l'emporte
+```
+
+**Les configurations applicatives** — Docker, K3s, Kubernetes, Synology — sont
+chargées explicitement par le script qui en a besoin :
 
 ```bash
 source "$_dir/lib/common.sh"
@@ -154,19 +178,19 @@ Deux niveaux, dans cet ordre :
 
 | Priorité | Origine | Valeur |
 |---|---|---|
-| 1 | `config/log.env`, s'il existe | `LOG_DIR` tel qu'il y est défini |
+| 1 | `config/server.env`, s'il existe | `LOG_DIR` tel qu'il y est défini |
 | 2 | valeur par défaut, écrite en dur | `/var/log/mgnetworking` en root, `<racine>/logs` sinon |
 
 Le dépôt fonctionne donc sans aucune configuration, tout en permettant de
 déplacer les journaux serveur par serveur :
 
 ```bash
-cp config/log.env.example config/log.env
+cp config/server.env.example config/server.env
 ```
 
-`config/log.env` est le **seul** fichier que `common.sh` charge de lui-même,
-parce qu'il concerne la journalisation. Les configurations de contexte restent à
-la charge des scripts, via `load_config` (section 3).
+`config/server.env` est le **seul** fichier que `common.sh` charge de lui-même,
+parce qu'il décrit la machine elle-même. Les configurations applicatives restent
+à la charge des scripts, via `load_config` (section 3).
 
 `configure-logging.sh` lit ce même `LOG_DIR` : le répertoire créé, celui où les
 journaux sont écrits et celui que surveille `logrotate` sont toujours le même.

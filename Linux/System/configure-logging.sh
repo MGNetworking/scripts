@@ -16,12 +16,12 @@ source "$_dir/lib/common.sh"
 DRY_RUN="false"
 
 # Le répertoire vient de common.sh, qui l'a lui-même résolu depuis
-# config/log.env ou depuis sa valeur par défaut. Une seule source de vérité pour
+# config/server.env ou depuis sa valeur par défaut. Une seule source de vérité pour
 # l'endroit où les journaux sont écrits et celui que logrotate doit surveiller.
 REPERTOIRE_LOGS="$LOG_DIR"
 ORIGINE_CHEMIN="valeur par défaut"
-if [ -f "$SCRIPTS_ROOT/config/log.env" ]; then
-    ORIGINE_CHEMIN="config/log.env"
+if [ -f "$SCRIPTS_ROOT/config/server.env" ]; then
+    ORIGINE_CHEMIN="config/server.env"
 fi
 NOM_REGLE="$(basename "$REPERTOIRE_LOGS")"
 FICHIER_REGLE="/etc/logrotate.d/$NOM_REGLE"
