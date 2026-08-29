@@ -1,0 +1,43 @@
+# tests/env/Dockerfile.debian — image du profil « debian ».
+#
+# Environnement de validation jetable : une Debian 12 propre, dans laquelle les
+# scripts du dépôt s'exécutent réellement. Le dépôt n'est pas copié dans
+# l'image, il est monté à l'exécution sur /depot — l'image ne contient donc que
+# le système et les outils, jamais le code à tester.
+#
+# Volontairement minimale : on la complète au fil des besoins plutôt que de tout
+# embarquer d'avance. Chaque paquet ajouté doit avoir une raison écrite ici.
+#
+# Le profil « systemd » (image privilégiée avec /sbin/init, pour systemctl,
+# timedatectl et hostnamectl) est une image distincte, non encore écrite.
+#
+# Construction et usage : voir tests/env/run-in-container.sh et tests/README.md.
+
+FROM debian:12
+
+# La glibc de Debian 12 fournit C.UTF-8 nativement : aucun paquet « locales »
+# n'est nécessaire. Sans cela, la locale C ferait compter les caractères
+# accentués pour deux octets et décalerait l'alignement des colonnes affichées
+# par les scripts.
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
+
+# ca-certificates  téléchargements HTTPS (apt sur un dépôt tiers, installateurs officiels)
+# iproute2         « ip », lu par system-info.sh pour les adresses et la passerelle
+# procps           « free » et « uptime », lus par system-info.sh
+# shellcheck       analyse statique du niveau « lint » à l'intérieur du conteneur
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        iproute2 \
+        procps \
+        shellcheck \
+    && rm -rf /var/lib/apt/lists/*
+
+# Les listes apt sont supprimées : un script qui installe un paquet doit faire
+# son propre « apt-get update », exactement comme sur un serveur neuf.
+
+WORKDIR /depot
+
+CMD ["bash"]

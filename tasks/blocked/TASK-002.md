@@ -1,7 +1,8 @@
 ---
 id: TASK-002
 title: "Fournir un environnement de test conteneurisé jetable"
-status: ready
+status: blocked
+attempts: 1
 priority: high
 depends_on:
   - TASK-001
@@ -14,8 +15,9 @@ objective: |
 scope:
   - tests/env/Dockerfile.debian — image de test, profil debian
   - tests/env/run-in-container.sh — exécute une commande dans un conteneur neuf
-  - tests/README.md — documenter l'usage de l'environnement
-  - tests/README.md — documenter les profils disponibles
+  - tests/README.md — documenter l'usage de l'environnement et les profils disponibles
+  - tests/acceptance/run-acceptance.sh — dispatcher du niveau acceptance
+  - tests/acceptance/TASK-002-environnement-conteneurise.sh — preuve des critères
 out_of_scope:
   - profil systemd (image privilégiée avec /sbin/init) — tâche distincte
   - toute exécution sur un serveur réel ou sur le NAS
@@ -32,6 +34,18 @@ validation:
   - "tests/run.sh lint"
   - "tests/env/run-in-container.sh -- bash -c 'cat /etc/os-release'"
   - "tests/env/run-in-container.sh -- Linux/System/system-info.sh"
+blocked_reason: |
+  La commande de validation « tests/run.sh lint » porte sur le dépôt entier.
+  Exécutée dans le conteneur que cette tâche livre — et où shellcheck est enfin
+  disponible — elle échoue sur six fichiers préexistants qu'elle ne touche pas :
+  cinq scripts Linux/System et tests/lint.sh.
+
+  Les trois livrables de la tâche passent, eux, sans réserve. Le blocage vient
+  d'une dette antérieure que cette tâche a rendue visible, pas d'un défaut de
+  son travail.
+
+  Décision de Maxime du 2026-08-29 : traiter la dette d'abord (TASK-011), puis
+  reprendre cette tâche sans modifier son énoncé.
 implementation_notes:
   - le démon Docker Desktop est arrêté sur la machine — la tâche ne peut être validée qu'après son démarrage
   - image de base debian:12, aucune image tierce non officielle
@@ -51,11 +65,14 @@ WSL fonctionnerait, mais ne se réinitialise pas proprement — or l'idempotence
 se démontre que sur un état de départ connu, et plusieurs scripts du dépôt
 écrivent dans `/etc/fstab` ou remplacent le nom d'hôte.
 
-## Prérequis bloquant
+## Prérequis
 
-Le démon Docker Desktop est **arrêté**. Cette tâche ne peut pas être validée
-tant qu'il ne tourne pas. L'agent doit le détecter et s'arrêter avec un message
-explicite — pas convertir l'échec en analyse statique.
+Le démon Docker doit tourner. Il l'était au lancement de cette tâche
+(Docker 28.5.2, `linux/amd64`) ; il ne l'était pas à la rédaction, d'où la
+mention dans `implementation_notes`.
+
+Si le démon s'arrête en cours de route, il faut le détecter et s'arrêter avec un
+message explicite — jamais convertir l'échec en analyse statique.
 
 ## Forme attendue
 

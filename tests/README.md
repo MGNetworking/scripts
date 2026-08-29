@@ -15,6 +15,13 @@ tests/run.sh --liste      # ce qui existe et ce qui manque
 Un seul point d'entrée, pour que la commande de validation inscrite dans une
 tâche soit exactement celle qu'un humain tape.
 
+Sur la machine de développement, seule l'analyse statique s'exécute directement.
+Tout le reste passe par un conteneur Debian jetable (§4) :
+
+```bash
+tests/env/run-in-container.sh -- tests/run.sh
+```
+
 ---
 
 ## 1. Niveaux
@@ -71,8 +78,12 @@ winget install koalaman.shellcheck     # Windows
 sudo apt install shellcheck            # Debian, Ubuntu
 ```
 
-Il est de toute façon présent dans l'image de test conteneurisée
-([TASK-002](../tasks/pending/TASK-002.md)), qui reste la référence.
+Il est de toute façon installé dans l'image de test conteneurisée (§4), qui
+reste la référence :
+
+```bash
+tests/env/run-in-container.sh -- tests/run.sh lint
+```
 
 ### Exclusions
 
@@ -106,7 +117,132 @@ n'apparaît qu'en cas de problème de style réellement détecté.
 `--strict` supprime la tolérance et les rend bloquants sur tout, ce qui
 permettra de constater le jour où ils seront à niveau.
 
-## 4. Écrire un test
+## 4. Environnement de test conteneurisé
+
+La machine de développement est sous Windows : elle n'a ni `apt`, ni
+`systemctl`, ni `/etc/os-release`, et le premier `detect_os` y échoue. **Aucun
+script d'administration ne s'exécute sur l'hôte.** Tout ce qui dépasse
+l'analyse statique passe par un conteneur jetable.
+
+```bash
+tests/env/run-in-container.sh -- bash -c 'cat /etc/os-release'
+tests/env/run-in-container.sh -- Linux/System/system-info.sh
+tests/env/run-in-container.sh --profil debian -- tests/run.sh unit
+tests/env/run-in-container.sh -- Linux/System/configure-swap.sh 512M --dry-run
+```
+
+Tout ce qui suit `--` est exécuté **tel quel** dans le conteneur, depuis la
+racine du dépôt montée sur `/depot`. Le code de retour de la commande est
+transmis fidèlement à l'appelant : `tests/env/run-in-container.sh -- false`
+sort en 1.
+
+### Ce que fait le script
+
+1. vérifie que `docker` existe **et que le démon répond** — un démon arrêté
+   produit un message explicite et le code 3, jamais un faux succès ;
+2. construit l'image du profil si elle est absente ;
+3. lance un conteneur neuf, dépôt monté en **lecture-écriture** sur `/depot`,
+   répertoire de travail `/depot` ;
+4. détruit le conteneur — `--rm`, plus un filet de sécurité sur interruption.
+   **Aucun état ne survit :** deux exécutions consécutives partent d'un état
+   identique, condition sans laquelle un test d'idempotence ne prouve rien.
+
+### Options
+
+| Option | Effet |
+|---|---|
+| `--profil <nom>` | profil de conteneur, défaut `debian` |
+| `--reconstruire` | reconstruire l'image sans cache et retélécharger l'image de base |
+| `--dry-run` | afficher les commandes `docker` sans les exécuter |
+| `-h, --help` | aide |
+
+### Codes de retour
+
+| Code | Sens |
+|---|---|
+| 0 | la commande exécutée dans le conteneur a réussi |
+| 2 | erreur d'usage — option inconnue, profil inexistant, commande absente |
+| 3 | environnement indisponible — `docker` absent ou démon arrêté, **rien n'a été exécuté** |
+| 4 | échec de la construction de l'image, rien n'a été exécuté |
+| autre | code de retour de la commande, transmis tel quel |
+
+Les codes 2, 3 et 4 peuvent aussi venir de la commande elle-même : la
+transmission fidèle du code de retour l'impose. Les messages `[ERROR]` lèvent
+l'ambiguïté.
+
+### Profils
+
+| Profil | Image | Couvre | État |
+|---|---|---|---|
+| `debian` | `debian:12` | `lint`, `unit`, `--dry-run`, idempotence, `apt` | **implémenté** — `tests/env/Dockerfile.debian` |
+| `systemd` | dérivée, `/sbin/init`, `--privileged` | `systemctl`, `timedatectl`, `hostnamectl`, `logrotate` | à écrire |
+
+Un profil `<nom>` correspond au fichier `tests/env/Dockerfile.<nom>`. En déposer
+un nouveau suffit à le rendre disponible — le script ne tient aucune liste en
+dur. Le profil `systemd` demandera en plus `--privileged` et un point d'entrée
+`/sbin/init`, que le script ne gère pas encore.
+
+### L'image
+
+`debian:12` officielle, volontairement minimale. Quatre paquets seulement, et
+chacun a sa raison écrite dans le `Dockerfile` :
+
+| Paquet | Pourquoi |
+|---|---|
+| `ca-certificates` | téléchargements HTTPS |
+| `iproute2` | `ip`, lu par `system-info.sh` |
+| `procps` | `free` et `uptime`, lus par `system-info.sh` |
+| `shellcheck` | niveau `lint` à l'intérieur du conteneur |
+
+La locale est `C.UTF-8`, fournie nativement par la glibc de Debian 12 : sans
+elle, les libellés accentués seraient comptés en octets et l'alignement des
+colonnes serait décalé.
+
+Les listes `apt` sont supprimées de l'image : un script qui installe un paquet
+doit faire son propre `apt-get update`, comme sur un serveur neuf.
+
+Le dépôt **n'est pas copié** dans l'image, il est monté à l'exécution. L'image
+ne contient donc jamais le code à tester, et une modification de script est
+prise en compte sans reconstruction.
+
+L'image se complète au fil des besoins. Tout paquet ajouté doit avoir sa
+justification dans le `Dockerfile`.
+
+### Nommage et nettoyage
+
+Images et conteneurs sont préfixés `mgnet-test-`, sans exception :
+[AGENTS.md](../AGENTS.md) §8 n'autorise les commandes Docker de l'agent que sur
+ce préfixe. L'image est `mgnet-test-debian:latest`, le conteneur
+`mgnet-test-debian-<pid>-<horodatage>`.
+
+Pour vérifier qu'il ne reste rien après une exécution :
+
+```bash
+docker ps -a --filter 'name=mgnet-test-'
+```
+
+### Windows et Git Bash
+
+Deux pièges propres à l'hôte, traités par le script :
+
+- **réécriture des chemins par MSYS.** `-w /depot` deviendrait
+  `-w C:/Program Files/Git/depot`. `MSYS_NO_PATHCONV=1` et
+  `MSYS2_ARG_CONV_EXCL='*'` désactivent cette conversion ; les chemins de
+  l'hôte sont alors passés à Docker sous leur forme Windows via `cygpath -w` ;
+- **fins de ligne.** `.gitattributes` impose `eol=lf` : la copie de travail est
+  déjà en LF et le montage transmet les octets tels quels. Le script contrôle
+  `lib/common.sh` et avertit si des CRLF s'y sont glissés — dans ce cas les
+  scripts échoueraient dans le conteneur avec un `bad interpreter` peu parlant.
+  Correctif : `git add --renormalize .`.
+
+Le bit exécutable dépend de la façon dont Docker Desktop expose le montage. Si
+un `Permission denied` apparaît, lancer la commande via `bash` :
+
+```bash
+tests/env/run-in-container.sh -- bash Linux/System/system-info.sh
+```
+
+## 5. Écrire un test
 
 Les tests suivent les mêmes conventions que le reste du dépôt : en-tête en trois
 lignes, chargement de `lib/common.sh`, messages préfixés, français.
