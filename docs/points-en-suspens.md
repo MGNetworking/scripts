@@ -8,6 +8,7 @@ production des scripts. À traiter avant la fin du chantier.
 ## 1. Mise en place de `update-system.sh` en tâche planifiée
 
 **Soulevé le** 2026-08-26.
+**Converti en tâche le** 2026-08-27 : [TASK-009](../tasks/pending/TASK-009.md).
 
 Le script est destiné à tourner par `cron`. Trois éléments conditionnent son
 fonctionnement dans ce cadre.
@@ -54,6 +55,9 @@ puis écrire le fichier `/etc/cron.d/`. Éventuellement un script
 ## 2. Un échec en tâche planifiée passe inaperçu
 
 **Soulevé le** 2026-08-26, conséquence directe du point 1.
+**Indexé au backlog le** 2026-08-27 : [tasks/backlog.md](../tasks/backlog.md) §3.
+Les trois pistes ci-dessous s'excluent mutuellement — le choix est une décision
+d'architecture, elle vous revient avant toute atomisation en tâche.
 
 **Le problème.** Avec la sortie jetée vers `/dev/null`, une mise à jour qui
 échoue ne prévient personne. Le code de retour est correct et le journal

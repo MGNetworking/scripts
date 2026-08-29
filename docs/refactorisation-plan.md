@@ -1,5 +1,11 @@
 # MGNetworking/script — Refactorisation complète
 
+> **Ce document reste la référence de conception du chantier** : il décrit ce que
+> doit faire chaque script et pourquoi. Ce qui est *à faire maintenant*, avec ses
+> critères et ses preuves, vit désormais dans [tasks/backlog.md](../tasks/backlog.md).
+>
+> Les deux se complètent : le plan explique, le backlog engage.
+
 ## Objectif
 
 Transformer le dépôt `MGNetworking/script` en bibliothèque personnelle de scripts d'administration, d'installation, de configuration et de maintenance d'infrastructure.
