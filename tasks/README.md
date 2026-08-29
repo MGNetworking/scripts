@@ -25,8 +25,23 @@ tasks/
 ```
 
 Le fichier se **déplace** d'un répertoire à l'autre au fil du cycle de vie ; son
-nom ne change jamais. Le répertoire est l'état visible, le champ `status` est
-l'état lisible par machine : les deux doivent toujours concorder.
+nom ne change jamais.
+
+Il y a sept statuts pour cinq répertoires : le répertoire dit **l'étape**, le
+champ `status` dit **la précision**.
+
+| Répertoire | Statuts qu'il accueille |
+|---|---|
+| `pending/` | `pending`, `ready` |
+| `active/` | `in_progress`, `validating` |
+| `completed/` | `completed` |
+| `blocked/` | `blocked` |
+| `cancelled/` | `cancelled` |
+
+Un fichier dont le `status` ne figure pas dans la colonne de droite de son
+répertoire est une incohérence à signaler. **Ne créez pas de répertoire
+supplémentaire pour rétablir une correspondance exacte** : `ready` et
+`in_progress` sont des états trop brefs pour justifier un déplacement de plus.
 
 ### Atomisation progressive
 
