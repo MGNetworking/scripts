@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-012**.
+Prochain identifiant libre : **TASK-013**.
 
 ---
 
@@ -20,7 +20,8 @@ Prochain identifiant libre : **TASK-012**.
 |---|---|---|---|---|---|---|
 | [TASK-001](completed/TASK-001.md) | Mettre en place le harnais de validation du dépôt | `completed` | haute | — | hôte | non |
 | [TASK-002](blocked/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | `blocked` | haute | 001 | hôte | non |
-| [TASK-011](pending/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | `ready` | haute | — | conteneur | non |
+| [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | `completed` | haute | — | conteneur | non |
+| [TASK-012](pending/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | `ready` | haute | — | hôte | non |
 | [TASK-003](pending/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `pending` | haute | 001, 002 | conteneur | non |
 | [TASK-004](pending/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `pending` | moyenne | 002, 003 | conteneur | non |
 | [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `pending` | moyenne | 004 | conteneur | non |
@@ -148,8 +149,10 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | écarté pour l'instant : coûteux en limites d'usage, et prématuré tant que les règles n'ont pas été éprouvées |
 | Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | après le premier passage réel de `/tache` — il révélera les règles mal formulées |
 | Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
-| `tests/run.sh` confond « niveau en échec » et « niveau non prouvé » | [TASK-002](reports/TASK-002-report.md) | un script de niveau sortant en 3 est compté ÉCHEC ; le code 3 ne couvre que « script absent » |
-| Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011 |
+| Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011. Traité par [TASK-012](pending/TASK-012.md) |
+| Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
+| `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | contraire à la convention « erreur d'usage → 2 », mais cohérent sur les cinq scripts et conforme à `lib/common.sh` |
+| Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
 | `run-in-container.sh` : message de démon injoignable tronqué, et `--profil --dry-run` mal analysé | [TASK-002](reports/TASK-002-report.md) | deux défauts mineurs, relevés et non corrigés |
 
 ---
@@ -160,6 +163,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 |---|---|---|
 | [TASK-001](completed/TASK-001.md) | Mettre en place le harnais de validation du dépôt | [rapport](reports/TASK-001-report.md) |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | [rapport](reports/TASK-010-report.md) |
+| [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | [rapport](reports/TASK-011-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

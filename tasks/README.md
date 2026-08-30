@@ -202,6 +202,30 @@ Une validation qui n'a pas été exécutée vaut `NON EXÉCUTÉ`, jamais `PASS`.
 Une tâche dont une validation échoue n'est pas terminée, quelle que soit
 l'apparente qualité du code produit.
 
+### Une validation doit être satisfaisable
+
+Cette règle a manqué deux fois, et a bloqué deux tâches dont le travail était
+bon. Elle tient en deux points.
+
+**Une validation ne porte que sur le périmètre de la tâche.** Écrire
+`tests/run.sh lint` — qui analyse tout le dépôt — pour une tâche dont le `scope`
+compte trois fichiers, c'est la faire dépendre de l'état de fichiers qu'elle ne
+touche pas. La moindre dette antérieure la bloque. C'est arrivé à TASK-002.
+
+**Une validation doit pouvoir réussir dans l'`environment` déclaré.** Exiger le
+vert d'une suite qui comporte des cas inaccessibles à cet environnement, c'est
+écrire une exigence qu'aucun travail ne peut satisfaire. C'est arrivé à
+TASK-011, dont la suite sautait sept cas faute de `systemd`.
+
+Avant de passer une tâche en `ready`, poser la question : **si le travail était
+parfait, cette commande sortirait-elle en 0 ?** Si la réponse n'est pas un oui
+franc, la validation est mal écrite.
+
+Corriger une validation défectueuse relève de celui qui écrit le backlog, jamais
+de l'agent qui exécute la tâche. Un agent qui modifie sa propre validation pour
+la faire passer neutralise le contrôle ; celui qui donne le travail corrige une
+exigence fautive. La distinction n'est pas de forme.
+
 ---
 
 ## 6. Format du rapport

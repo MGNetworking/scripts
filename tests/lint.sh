@@ -3,11 +3,15 @@
 #
 # Deux contrôles, de portées très différentes :
 #
-#   bash -n      syntaxe seule. Toujours disponible, ne détecte presque rien
-#                au-delà d'une accolade oubliée.
-#   shellcheck   analyse réelle : variables non quotées, tests fragiles, cd
-#                sans garde. Absent de certaines machines — dans ce cas le
-#                résultat est NON EXÉCUTÉ, jamais PASS.
+#   - bash -n      syntaxe seule. Toujours disponible, ne détecte presque rien
+#                  au-delà d'une accolade oubliée.
+#   - shellcheck   analyse réelle : variables non quotées, tests fragiles, cd
+#                  sans garde. Absent de certaines machines — dans ce cas le
+#                  résultat est NON EXÉCUTÉ, jamais PASS.
+#
+# Les deux tirets ci-dessus ne sont pas décoratifs : un commentaire dont le
+# premier mot est « shellcheck » est lu par l'outil comme une directive, et ce
+# fichier ne s'analysait plus (SC1073, SC1072). Ne pas les retirer.
 #
 # Les deux scripts Synology hérités ne sont pas encore au standard du dépôt.
 # La tolérance dont ils bénéficient porte sur le STYLE, jamais sur la SYNTAXE :

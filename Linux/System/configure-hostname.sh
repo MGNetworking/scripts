@@ -57,7 +57,8 @@ AIDE
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run)  DRY_RUN="true"; shift ;;
-        -y|--yes)   ASSUME_YES="true"; shift ;;
+        # ASSUME_YES est lue par confirm(), dans lib/common.sh.
+        -y|--yes)   export ASSUME_YES="true"; shift ;;
         -h|--help)  show_help; exit 0 ;;
         -*)         die "Option inconnue : $1" 2 ;;
         *)
@@ -137,7 +138,7 @@ else
     LIGNE_HOTE="$ADRESSE_HOTE	$NOUVEAU_NOM	$NOM_COURT"
 fi
 
-LIGNE_EXISTANTE="$(grep -E "^[[:space:]]*$ADRESSE_HOTE[[:space:]]" /etc/hosts || true)"
+LIGNE_EXISTANTE="$(grep -E "^[[:space:]]*${ADRESSE_HOTE}[[:space:]]" /etc/hosts || true)"
 
 # La ligne existante suffit dès lors qu'elle mentionne déjà le nom demandé, que
 # ce soit comme nom principal ou comme alias. La réécrire à l'identique du
@@ -265,5 +266,5 @@ if [ "$nom_verifie" != "$NOUVEAU_NOM" ]; then
     warn "Certains systèmes ne l'appliquent qu'après redémarrage."
 fi
 
-info "Ligne /etc/hosts : $(grep -E "^[[:space:]]*$ADRESSE_HOTE[[:space:]]" /etc/hosts || echo 'absente')"
+info "Ligne /etc/hosts : $(grep -E "^[[:space:]]*${ADRESSE_HOTE}[[:space:]]" /etc/hosts || echo 'absente')"
 success "Nom d'hôte configuré : $NOUVEAU_NOM"

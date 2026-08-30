@@ -56,7 +56,8 @@ while [ "${1:-}" != "" ]; do
     case "$1" in
         --file)     shift; FICHIER_SWAP="${1:?--file attend un chemin}"; shift ;;
         --dry-run)  DRY_RUN="true"; shift ;;
-        -y|--yes)   ASSUME_YES="true"; shift ;;
+        # ASSUME_YES est lue par confirm(), dans lib/common.sh.
+        -y|--yes)   export ASSUME_YES="true"; shift ;;
         -h|--help)  show_help; exit 0 ;;
         -*)         die "Option inconnue : $1" 2 ;;
         *)
@@ -207,7 +208,7 @@ taille_actuelle_mo() {
 TAILLE_ACTUELLE_MO="$(taille_actuelle_mo)"
 
 if swap_actif && [ "$TAILLE_ACTUELLE_MO" -eq "$TAILLE_MO" ]; then
-    if grep -qE "^[[:space:]]*$FICHIER_SWAP[[:space:]]" /etc/fstab 2>/dev/null; then
+    if grep -qE "^[[:space:]]*${FICHIER_SWAP}[[:space:]]" /etc/fstab 2>/dev/null; then
         success "Rien à faire : $FICHIER_SWAP est actif à ${TAILLE_MO} Mo et inscrit dans /etc/fstab."
         exit 0
     fi
@@ -319,7 +320,7 @@ success "Swap actif : $FICHIER_SWAP (${TAILLE_MO} Mo)"
 # -------------------------------------------------------------------
 LIGNE_FSTAB="$FICHIER_SWAP	none	swap	sw	0	0"
 
-if grep -qE "^[[:space:]]*$FICHIER_SWAP[[:space:]]" /etc/fstab 2>/dev/null; then
+if grep -qE "^[[:space:]]*${FICHIER_SWAP}[[:space:]]" /etc/fstab 2>/dev/null; then
     info "/etc/fstab contient déjà une entrée pour $FICHIER_SWAP."
 else
     sauvegarde="/etc/fstab.bak-$(date '+%Y%m%d-%H%M%S')"

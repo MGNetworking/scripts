@@ -78,7 +78,8 @@ while [ "${1:-}" != "" ]; do
     case "$1" in
         --list)     lister_fuseaux; exit 0 ;;
         --dry-run)  DRY_RUN="true"; shift ;;
-        -y|--yes)   ASSUME_YES="true"; shift ;;
+        # ASSUME_YES est lue par confirm(), dans lib/common.sh.
+        -y|--yes)   export ASSUME_YES="true"; shift ;;
         -h|--help)  show_help; exit 0 ;;
         -*)         die "Option inconnue : $1" 2 ;;
         *)

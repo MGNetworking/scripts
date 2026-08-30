@@ -32,10 +32,32 @@ tests/env/run-in-container.sh -- tests/run.sh
 | `unit` | fonctions de `lib/common.sh` | conteneur `debian` | à écrire — [TASK-003](../tasks/pending/TASK-003.md) |
 | `integration` | exécution réelle, `--dry-run`, idempotence | conteneur `debian` | à écrire — [TASK-004](../tasks/pending/TASK-004.md) |
 | `environment` | services, `systemctl`, état système | conteneur `systemd` | à écrire |
-| `acceptance` | critères d'acceptation d'une tâche | selon la tâche | à écrire |
+| `acceptance` | critères d'acceptation d'une tâche | selon la tâche | **implémenté** |
 
 Un niveau s'ajoute en déposant son script au chemin annoncé par
 `tests/run.sh --liste`. Aucune autre modification n'est nécessaire.
+
+### Le niveau `acceptance`
+
+Un fichier par tâche, nommé `tests/acceptance/TASK-0xx-<sujet>.sh`.
+`run-acceptance.sh` les découvre et les exécute — **en `maxdepth 1`**, ce qui a
+une conséquence :
+
+```text
+tests/acceptance/
+├── run-acceptance.sh                    le dispatcher
+├── TASK-002-environnement-conteneurise.sh   exécuté sur l'hôte
+├── TASK-011-analyse-statique.sh             exécuté sur l'hôte
+└── interne/
+    └── TASK-011-cas-conteneur.sh        exécuté DANS le conteneur, jamais sur l'hôte
+```
+
+Un fichier de cas destiné à tourner **dans** le conteneur se place dans
+`interne/`. Le `maxdepth 1` du dispatcher l'ignore alors, et seul son pilote
+— resté au premier niveau — décide quand et comment l'y lancer.
+
+Sans cette séparation, un fichier écrit pour Debian serait exécuté sur l'hôte
+Windows, où il échouerait pour de mauvaises raisons.
 
 ## 2. Codes de retour
 

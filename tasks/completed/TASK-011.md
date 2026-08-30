@@ -1,7 +1,7 @@
 ---
 id: TASK-011
 title: "Remettre le dépôt au niveau de l'analyse statique shellcheck"
-status: ready
+status: completed
 priority: high
 depends_on: []
 environment: container-debian
@@ -29,11 +29,12 @@ acceptance_criteria:
   - aucune règle shellcheck n'est désactivée globalement dans tests/lint.sh
   - une directive disable locale, si elle est employée, porte une justification écrite au-dessus
   - chacun des cinq scripts affiche toujours son aide avec --help et sort en 0
-  - chacun des quatre scripts pourvus de --dry-run l'accepte toujours sans modifier le système
+  - chacun des cinq scripts pourvus de --dry-run l'accepte toujours sans modifier le système
+  - la suite d'acceptation ne compte aucun échec ; son code 3 est admis, les cas non applicables au profil debian étant déclarés et motivés
 validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
   - "tests/env/run-in-container.sh -- bash -c 'for s in Linux/System/*.sh; do \"$s\" --help >/dev/null || exit 1; done'"
-  - "tests/run.sh acceptance"
+  - "tests/acceptance/TASK-011-analyse-statique.sh"
 implementation_notes:
   - l'outillage vient du travail de TASK-002 — partir d'une branche qui le contient, sinon aucun conteneur n'existe
   - SC2034 sur ASSUME_YES est un faux positif — la variable est lue par confirm() dans lib/common.sh, que shellcheck ne suit pas à travers le source
@@ -88,6 +89,24 @@ Toute correction doit être **minimale et de pure forme**. Une modification qui
 change un comportement, même en apparence pour le mieux, sort du périmètre.
 En cas de doute sur une correction, bloquer plutôt que risquer une régression
 sur un script qui fonctionne.
+
+## Correction de l'énoncé, le 2026-08-29
+
+La troisième validation portait initialement `tests/run.sh acceptance`. Elle
+était **structurellement insatisfaisable** : la suite d'acceptation comporte des
+cas qui exigent `systemd` et `swapon`, inaccessibles au profil `debian` que
+cette tâche déclare. Elle sort donc en 3 — et `tests/run.sh` convertit tout code
+non nul en échec.
+
+Le relecteur a établi que corriger `tests/run.sh` n'y suffirait pas : la suite
+resterait à 3, par honnêteté, tant que le profil `systemd` n'existe pas.
+
+Le défaut était dans la rédaction de la validation, pas dans le travail.
+Corrigée par Maxime : la commande vise directement le fichier de cas, exige zéro
+échec, et admet le code 3 pour les cas déclarés non applicables.
+
+La question de fond — un harnais qui confond « rien de prouvé » et « tout passé,
+quelques cas non applicables » — est traitée par TASK-012.
 
 ## Ce que débloque cette tâche
 
