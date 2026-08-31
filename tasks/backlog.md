@@ -28,7 +28,7 @@ Prochain identifiant libre : **TASK-017**.
 | [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `pending` | moyenne | 003 | conteneur | **oui** |
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `completed` | moyenne | 002, 003 | conteneur | non |
 | [TASK-016](pending/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `pending` | moyenne | 004 | conteneur | non |
-| [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `ready` | moyenne | 004 | conteneur | non |
+| [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 
 ### Chemin critique
@@ -37,12 +37,19 @@ Prochain identifiant libre : **TASK-017**.
 TASK-001 ── TASK-002 ── TASK-011 ── TASK-003 ── TASK-004 ── TASK-009
  harnais    conteneur   dette de     tests de    idempotence  1re tâche
  (fait)     (fait)      shellcheck   common.sh   des scripts  métier
-                        (fait)
+                        (fait)       (fait)      (fait)       (FAIT)
 
 TASK-010 ── moteur d'exécution (fait) : 3 sous-agents + /tache
 TASK-012 ── sémantique des codes de retour du harnais (fait)
-TASK-013 ── nature des sauts : non applicable ou indisponible
 ```
+
+**Le chemin critique est achevé.** La chaîne complète — backlog, planification,
+rédaction, tests, relecture, correction, rapport, commit — a produit un script
+d'administration réel et l'a prouvé.
+
+Ce qui reste au backlog n'est plus de l'outillage : ce sont les dettes que le
+dispositif a mises au jour en fonctionnant, et le chantier des scripts
+lui-même.
 
 TASK-002 avait été bloquée par une dette antérieure qu'elle a elle-même rendue
 visible, en livrant un conteneur embarquant `shellcheck`. TASK-011 a levé la
@@ -53,9 +60,14 @@ Une seule ligne désormais, celle de **la preuve** : rendre vérifiable ce que l
 dépôt produit. Le moteur qui exécute n'est plus à construire — c'est Claude
 Code, cadré par TASK-010.
 
-TASK-009 reste le point d'arrivée : la première tâche métier menée de bout en
-bout par les sous-agents. Tant qu'elle n'est pas passée, la chaîne n'est pas
-démontrée.
+TASK-009 était le point d'arrivée : la première tâche métier menée de bout en
+bout par les sous-agents. Elle est passée le 2026-08-31, et le dispositif a servi
+dès son premier usage réel — deux défauts sérieux du script ont été trouvés avant
+qu'il n'atteigne un serveur, dont un que l'environnement de test masquait.
+
+La suite du travail est le chantier des scripts lui-même, décrit dans
+[docs/refactorisation-plan.md](../docs/refactorisation-plan.md) : une
+cinquantaine de scripts, dont huit écrits.
 
 ### Tâches annulées
 
@@ -178,6 +190,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | [rapport](reports/TASK-003-report.md) |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | [rapport](reports/TASK-014-report.md) |
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | [rapport](reports/TASK-004-report.md) |
+| [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | [rapport](reports/TASK-009-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

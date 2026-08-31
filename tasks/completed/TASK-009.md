@@ -1,7 +1,7 @@
 ---
 id: TASK-009
 title: "Écrire Linux/System/configure-cron.sh"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-004
