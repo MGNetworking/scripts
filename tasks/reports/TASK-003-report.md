@@ -168,7 +168,7 @@ un comportement en s'appuyant sur un état du dépôt.
 
 `tests/acceptance/` étant hors `scope`, ni le testeur ni le relecteur n'y ont
 touché : `AGENTS.md` §12 impose de bloquer plutôt que d'élargir. Le point est
-traité par [TASK-014](../pending/TASK-014.md), **à faire avant toute fusion**
+traité par [TASK-014](../completed/TASK-014.md), **à faire avant toute fusion**
 sous peine de transmettre un dépôt rouge à `master`.
 
 ## Neutralisation
