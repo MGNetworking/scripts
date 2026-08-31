@@ -1,7 +1,7 @@
 ---
 id: TASK-003
 title: "Écrire les tests unitaires de lib/common.sh"
-status: pending
+status: ready
 priority: high
 depends_on:
   - TASK-001
@@ -13,9 +13,9 @@ objective: |
   dans lib/common.sh casse aujourd'hui les huit scripts sans que rien ne le
   signale.
 scope:
+  - tests/unit/run-unit.sh — dispatcher du niveau, au chemin qu'annonce tests/run.sh --liste
   - tests/unit/common.test.sh
   - tests/lib/assert.sh — assertions minimales du harnais
-  - tests/run.sh — brancher le niveau unit
   - tests/README.md
 out_of_scope:
   - toute modification de lib/common.sh — si un test révèle un défaut, il est consigné et fait l'objet d'une tâche distincte
@@ -70,3 +70,19 @@ explicitement.
 
 Le consigner dans le rapport, créer une tâche, **ne pas corriger
 `lib/common.sh` au passage**.
+
+## Corrections apportées à l'énoncé avant lancement, le 2026-08-29
+
+Le `scope` listait `tests/unit/common.test.sh` mais pas
+`tests/unit/run-unit.sh`, qui est le chemin où `tests/run.sh` cherche le niveau
+`unit` — voir `tests/run.sh --liste`. Sans ce fichier, `tests/run.sh unit`
+sortirait en 3, « niveau non implémenté », et la seconde validation aurait
+échoué quel que soit le travail fourni.
+
+`tests/run.sh` a été retiré du `scope` : le branchement du niveau ne demande
+aucune modification de ce fichier, le chemin y étant déjà déclaré depuis
+TASK-001. Y toucher serait modifier le validateur sans nécessité.
+
+Contrôle effectué au titre de la règle inscrite dans
+[tasks/README.md](../README.md) §5 après les blocages de TASK-002 et TASK-011 :
+*si le travail était parfait, cette commande sortirait-elle en 0 ?*

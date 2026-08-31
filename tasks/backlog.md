@@ -23,7 +23,7 @@ Prochain identifiant libre : **TASK-014**.
 | [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | `completed` | haute | — | conteneur | non |
 | [TASK-012](completed/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | `completed` | haute | — | hôte | non |
 | [TASK-013](pending/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | `pending` | moyenne | 012 | hôte | non |
-| [TASK-003](pending/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `pending` | haute | 001, 002 | conteneur | non |
+| [TASK-003](pending/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `ready` | haute | 001, 002 | conteneur | non |
 | [TASK-004](pending/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `pending` | moyenne | 002, 003 | conteneur | non |
 | [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `pending` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
