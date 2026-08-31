@@ -1,7 +1,7 @@
 ---
 id: TASK-004
 title: "Éprouver l'idempotence des scripts Linux/System existants"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-002

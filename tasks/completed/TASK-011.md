@@ -83,7 +83,7 @@ Ironie utile : le fichier qui pilote l'analyse statique est le seul du harnais
 ## Prudence
 
 Ces cinq scripts d'administration tournent sur un serveur réel et ne sont
-couverts par aucun test automatisé — [TASK-004](../pending/TASK-004.md) n'est pas faite.
+couverts par aucun test automatisé — [TASK-004](../completed/TASK-004.md) n'est pas faite.
 
 Toute correction doit être **minimale et de pure forme**. Une modification qui
 change un comportement, même en apparence pour le mieux, sort du périmètre.

@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-016**.
+Prochain identifiant libre : **TASK-017**.
 
 ---
 
@@ -26,7 +26,8 @@ Prochain identifiant libre : **TASK-016**.
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `completed` | haute | 001, 002 | conteneur | non |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | `completed` | haute | 003 | hôte | non |
 | [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `pending` | moyenne | 003 | conteneur | **oui** |
-| [TASK-004](pending/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `ready` | moyenne | 002, 003 | conteneur | non |
+| [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `completed` | moyenne | 002, 003 | conteneur | non |
+| [TASK-016](pending/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `pending` | moyenne | 004 | conteneur | non |
 | [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `pending` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 
@@ -176,6 +177,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-012](completed/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | [rapport](reports/TASK-012-report.md) |
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | [rapport](reports/TASK-003-report.md) |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | [rapport](reports/TASK-014-report.md) |
+| [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | [rapport](reports/TASK-004-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

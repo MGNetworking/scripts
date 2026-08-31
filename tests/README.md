@@ -30,7 +30,7 @@ tests/env/run-in-container.sh -- tests/run.sh
 |---|---|---|---|
 | `lint` | `bash -n` sur tous les `.sh`, `shellcheck` si disponible | hôte | **implémenté** |
 | `unit` | fonctions de `lib/common.sh` | conteneur `debian` | **implémenté** |
-| `integration` | exécution réelle, `--dry-run`, idempotence | conteneur `debian` | à écrire — [TASK-004](../tasks/pending/TASK-004.md) |
+| `integration` | exécution réelle, `--dry-run`, idempotence | conteneur `debian` | **implémenté** |
 | `environment` | services, `systemctl`, état système | conteneur `systemd` | à écrire |
 | `acceptance` | critères d'acceptation d'une tâche | selon la tâche | **implémenté** |
 
@@ -99,6 +99,90 @@ lorsqu'il était déjà impossible à créer au chargement. Aucun cas de
 `common.test.sh` n'échoue à ce titre : les onze critères portent sur la valeur
 rendue par `run_logged`, observable seulement dans un contexte où `set -e` est
 neutralisé (`|| code=$?`, `if …`). L'écart relève d'une tâche distincte.
+
+### Le niveau `integration`
+
+Un fichier par sujet, nommé `tests/integration/<sujet>.test.sh`.
+`run-integration.sh` les découvre — **en `maxdepth 1`**, comme l'unit et
+l'acceptance — et agrège leurs verdicts.
+
+```text
+tests/integration/
+├── run-integration.sh        le dispatcher
+└── linux-system.test.sh      les six scripts de Linux/System
+```
+
+**Ce niveau modifie le système sur lequel il tourne** : il réécrit `/etc/hosts`,
+`/etc/localtime` et `/etc/logrotate.d`. Il n'a rien à faire sur une machine de
+travail, et ne s'exécute que dans le conteneur jetable :
+
+```bash
+tests/env/run-in-container.sh -- tests/run.sh integration
+```
+
+Le fichier de cas se protège lui-même : il ne modifie rien tant qu'il n'a pas
+reconnu un système jetable — `/.dockerenv`, un cgroup de conteneur, ou
+`MGNET_TEST_JETABLE=1`. Ailleurs, les groupes modifiants sont `NON EXÉCUTÉ`.
+
+**Conséquence sur l'hôte Windows :** aucun cas ne peut y tourner, le niveau
+rend donc **3** et `tests/run.sh` sans argument rend 3 lui aussi. Ce n'est pas
+un échec, c'est le sens exact du code — *rien n'est prouvé pour ce niveau*. La
+commande de référence reste celle du §4 :
+`tests/env/run-in-container.sh -- tests/run.sh`.
+
+#### Comment l'idempotence est prouvée, et pourquoi « A == B » ne suffit pas
+
+```text
+empreinte P0 → exécution 1 → empreinte A → exécution 2 → empreinte B
+```
+
+Sur un système déjà conforme, les deux exécutions ne font rien, les trois
+empreintes sont égales, et le test passe **sans rien prouver**. C'est
+précisément ce que la règle « un conteneur neuf par cas » cherche à empêcher.
+Chaque cas exige donc aussi **`P0 != A`** : le premier passage doit avoir
+réellement modifié quelque chose. Une idempotence mesurée à vide devient un
+échec, et non un succès silencieux.
+
+Les deux assertions se contrôlent l'une l'autre : si l'empreinte était
+constante, `P0 != A` tomberait ; si elle était bruitée, `A == B` tomberait. Le
+dispositif a été éprouvé à l'envers — système mis d'avance dans l'état
+conforme, la garde échoue comme attendu.
+
+L'empreinte relève **tout `/etc`**, contenu compris, plus le nom d'hôte,
+`/proc/swaps` et la taille de `/swapfile` — et non une liste de fichiers
+arrêtée d'avance : un fichier inattendu se voit. `LOG_DIR` en est exclu,
+`lib/common.sh` y écrivant un journal au seul chargement ; les écritures hors
+journaux sont surveillées séparément, par `find -newer`.
+
+Ce fichier tourne dans un **unique** conteneur — c'est là que
+`tests/run.sh integration` est invoqué, et `docker` n'y est pas disponible pour
+en créer d'autres. Trois dispositions remplacent le conteneur neuf par cas, et
+sont vérifiées plutôt que supposées : les groupes non modifiants passent en
+premier ; l'empreinte relevée juste avant le groupe « idempotence » est
+comparée à celle du départ, et une dérive fait déclarer le groupe entier `NON
+EXÉCUTÉ` ; les trois cas portent sur des fichiers **disjoints**.
+
+#### Recouvrement avec `tests/acceptance/TASK-011-*`
+
+`TASK-011-analyse-statique.sh` éprouve déjà, dans onze conteneurs neufs, le
+préflight, les `--dry-run` et l'idempotence de cinq de ces six scripts. Ses
+assertions sont formulées autour des corrections d'analyse statique qu'elle
+portait — `SC1087`, `export ASSUME_YES` — et disparaîtront avec elle : le
+niveau `integration` est le domicile durable de ces preuves.
+
+Le recouvrement est donc **assumé**, borné à un conteneur au lieu de onze. Les
+groupes `preflight`, `dry-run`, `timezone`, `hostname` et `logging` de
+TASK-011 pourraient être ramenés à leurs seules assertions propres aux
+corrections SC1087 — cela relève d'une tâche distincte, pas d'un effet de bord.
+
+Ce que le niveau `integration` apporte en propre :
+
+- **`system-info.sh`**, que TASK-011 ne couvre que par `--help` : option
+  inconnue, exécution sans privilège, lecture seule prouvée, deux exécutions ;
+- la garde **`P0 != A`**, absente de TASK-011 ;
+- l'empreinte de **tout `/etc`**, là où TASK-011 relève une liste de fichiers ;
+- le cas **« le nom demandé est déjà un alias de la ligne `127.0.1.1` »**,
+  chemin de `hosts_deja_conforme()` qu'aucun cas existant n'emprunte.
 
 ### Le niveau `acceptance`
 
