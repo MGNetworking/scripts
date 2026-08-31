@@ -41,8 +41,8 @@ implementation_notes:
 
 ## Origine
 
-Révélée par [TASK-011](TASK-011.md), et déjà entrevue lors de
-[TASK-002](../blocked/TASK-002.md).
+Révélée par [TASK-011](../completed/TASK-011.md), et déjà entrevue lors de
+[TASK-002](../completed/TASK-002.md).
 
 TASK-001 avait introduit le code 3 pour une bonne raison : empêcher qu'un
 `tests/run.sh unit` sorte en 0 alors qu'aucun test unitaire n'existe. « Rien à

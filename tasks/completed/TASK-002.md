@@ -1,7 +1,7 @@
 ---
 id: TASK-002
 title: "Fournir un environnement de test conteneurisé jetable"
-status: blocked
+status: completed
 attempts: 1
 priority: high
 depends_on:
@@ -34,18 +34,6 @@ validation:
   - "tests/run.sh lint"
   - "tests/env/run-in-container.sh -- bash -c 'cat /etc/os-release'"
   - "tests/env/run-in-container.sh -- Linux/System/system-info.sh"
-blocked_reason: |
-  La commande de validation « tests/run.sh lint » porte sur le dépôt entier.
-  Exécutée dans le conteneur que cette tâche livre — et où shellcheck est enfin
-  disponible — elle échoue sur six fichiers préexistants qu'elle ne touche pas :
-  cinq scripts Linux/System et tests/lint.sh.
-
-  Les trois livrables de la tâche passent, eux, sans réserve. Le blocage vient
-  d'une dette antérieure que cette tâche a rendue visible, pas d'un défaut de
-  son travail.
-
-  Décision de Maxime du 2026-08-29 : traiter la dette d'abord (TASK-011), puis
-  reprendre cette tâche sans modifier son énoncé.
 implementation_notes:
   - le démon Docker Desktop est arrêté sur la machine — la tâche ne peut être validée qu'après son démarrage
   - image de base debian:12, aucune image tierce non officielle
@@ -64,6 +52,29 @@ L'hôte est disqualifié : `detect_os` échoue dès la première ligne sous Git 
 WSL fonctionnerait, mais ne se réinitialise pas proprement — or l'idempotence ne
 se démontre que sur un état de départ connu, et plusieurs scripts du dépôt
 écrivent dans `/etc/fstab` ou remplacent le nom d'hôte.
+
+## Blocage du 2026-08-29, levé le jour même
+
+Le champ `blocked_reason` a été retiré du frontmatter avec la levée du blocage —
+il n'a de sens que pour une tâche `blocked`. Son contenu est conservé ici : la
+trace vaut mieux que la ligne effacée.
+
+> La commande de validation « `tests/run.sh lint` » porte sur le dépôt entier.
+> Exécutée dans le conteneur que cette tâche livre — et où `shellcheck` est
+> enfin disponible — elle échouait sur six fichiers préexistants qu'elle ne
+> touche pas : cinq scripts `Linux/System` et `tests/lint.sh`.
+>
+> Les trois livrables de la tâche passaient, eux, sans réserve. Le blocage
+> venait d'une dette antérieure que cette tâche a rendue visible, pas d'un
+> défaut de son travail.
+>
+> Décision de Maxime : traiter la dette d'abord (TASK-011), puis reprendre cette
+> tâche sans modifier son énoncé.
+
+[TASK-011](TASK-011.md) a levé la dette. Les trois validations ont été rejouées
+telles quelles, sans qu'une virgule de l'énoncé soit changée : elles passent,
+et `tests/run.sh lint` sort désormais en 0 **dans le conteneur aussi**, avec
+`shellcheck` réellement exécuté.
 
 ## Prérequis
 

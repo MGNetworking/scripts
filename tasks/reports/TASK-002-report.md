@@ -2,11 +2,16 @@
 
 ## Statut
 
-BLOCKED
+COMPLETED — après un passage en `blocked` le 2026-08-29, levé le jour même.
 
 Premier passage complet de la commande `/tache`. Les sept critères
-d'acceptation sont satisfaits et prouvés ; la tâche est bloquée par sa commande
-de validation, qui porte sur des fichiers hors de son périmètre.
+d'acceptation étaient satisfaits et prouvés dès la première exécution ; la tâche
+a d'abord été bloquée par sa commande de validation, qui porte sur des fichiers
+hors de son périmètre. La dette levée par TASK-011, elle a été rejouée telle
+quelle et passe.
+
+Le déroulé du blocage est conservé plus bas, sans réécriture : il documente le
+premier refus du système, et c'est ce qu'il a de plus instructif.
 
 ## Objectif
 
@@ -180,7 +185,7 @@ convertir en succès.
 
 ## Prochaine action recommandée
 
-[TASK-011](../pending/TASK-011.md) — remise à niveau de l'analyse statique, six
+[TASK-011](../completed/TASK-011.md) — remise à niveau de l'analyse statique, six
 fichiers, trois causes identifiées et documentées.
 
 Puis reprendre TASK-002 : rejouer ses trois validations, sans rien changer à son
@@ -232,6 +237,44 @@ Trouvés par le testeur et le relecteur, non corrigés ici :
 
 À verser au backlog. Les points 1 et 2 concernent `tests/run.sh` et
 `tests/lint.sh`, produits par TASK-001.
+
+## Revalidation du 2026-08-29
+
+[TASK-011](TASK-011-report.md) a levé la dette d'analyse statique. TASK-002 a
+été rejouée sur la branche `agent/TASK-002-revalidation`, **sans qu'une virgule
+de son énoncé soit modifiée** — c'était la condition posée par Maxime au moment
+du blocage.
+
+Ni les livrables ni les tests n'ont été touchés : `git diff master -- tests/`
+est vide. Seul le reste du dépôt a changé.
+
+| Validation | Environnement | Code | Résultat |
+|---|---|---|---|
+| `tests/run.sh lint` | hôte | 0 | 16 fichiers, `shellcheck` NON EXÉCUTÉ |
+| `tests/run.sh lint` | **conteneur, qui fait foi** | **0** | 16 fichiers, 0 erreur, 2 avertis, `shellcheck` réellement lancé |
+| `run-in-container.sh -- bash -c 'cat /etc/os-release'` | conteneur | 0 | `ID=debian`, `VERSION_ID="12"` |
+| `run-in-container.sh -- Linux/System/system-info.sh` | conteneur | 0 | PASS |
+
+Les deux lectures — hôte et conteneur — concordent désormais. Au premier
+passage, elles divergeaient : c'était tout le problème.
+
+**Verdict du relecteur : CONFORME AVEC RÉSERVES.** Il a relancé la suite
+d'acceptation de la tâche — **64 vérifications, 0 échec, 0 NON EXÉCUTÉ** — et
+vérifié par `git show 961a711` que les six fichiers ne passent pas grâce à une
+neutralisation : cinq `export` de fond, quatre désambiguïsations `${VAR}[`, et
+deux tirets dans un commentaire. Aucune directive `disable`, aucun `|| true`,
+aucune assertion retirée.
+
+Ses quatre réserves portaient sur la tenue des registres, non sur le travail :
+statut du backlog, statut de ce rapport, sort du champ `blocked_reason`, et
+déplacement du fichier de tâche. Les quatre sont traitées — le `blocked_reason`
+a quitté le frontmatter, où il n'a de sens que pour une tâche `blocked`, et son
+contenu est conservé dans le corps de `tasks/completed/TASK-002.md`.
+
+## Validation finale
+
+**PASS.** Les trois validations passent, dans l'environnement de référence
+comme sur l'hôte.
 
 ## Résumé
 

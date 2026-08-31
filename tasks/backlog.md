@@ -19,7 +19,7 @@ Prochain identifiant libre : **TASK-013**.
 | ID | Titre | Statut | Prio | Dépend de | Env. | Humain |
 |---|---|---|---|---|---|---|
 | [TASK-001](completed/TASK-001.md) | Mettre en place le harnais de validation du dépôt | `completed` | haute | — | hôte | non |
-| [TASK-002](blocked/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | `blocked` | haute | 001 | hôte | non |
+| [TASK-002](completed/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | `completed` | haute | 001 | hôte | non |
 | [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | `completed` | haute | — | conteneur | non |
 | [TASK-012](pending/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | `ready` | haute | — | hôte | non |
 | [TASK-003](pending/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `pending` | haute | 001, 002 | conteneur | non |
@@ -30,16 +30,19 @@ Prochain identifiant libre : **TASK-013**.
 ### Chemin critique
 
 ```text
-TASK-001 ── TASK-002 ── TASK-011 ── TASK-002 ── TASK-003 ── TASK-004 ── TASK-009
- harnais    conteneur   dette de     revalidée    tests de   idempotence  1re tâche
- (fait)     (bloquée)   shellcheck                common.sh  des scripts  métier
+TASK-001 ── TASK-002 ── TASK-011 ── TASK-003 ── TASK-004 ── TASK-009
+ harnais    conteneur   dette de     tests de    idempotence  1re tâche
+ (fait)     (fait)      shellcheck   common.sh   des scripts  métier
+                        (fait)
 
 TASK-010 ── moteur d'exécution (fait) : 3 sous-agents + /tache
+TASK-012 ── sémantique des codes de retour du harnais
 ```
 
-TASK-002 apparaît deux fois : son travail est fait et prouvé, mais sa validation
-échoue sur une dette antérieure qu'elle a elle-même rendue visible. TASK-011
-lève cette dette, puis TASK-002 est rejouée sans que son énoncé change.
+TASK-002 avait été bloquée par une dette antérieure qu'elle a elle-même rendue
+visible, en livrant un conteneur embarquant `shellcheck`. TASK-011 a levé la
+dette ; TASK-002 a été rejouée sans qu'une virgule de son énoncé change, et
+passe.
 
 Une seule ligne désormais, celle de **la preuve** : rendre vérifiable ce que le
 dépôt produit. Le moteur qui exécute n'est plus à construire — c'est Claude
@@ -153,6 +156,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
 | `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | contraire à la convention « erreur d'usage → 2 », mais cohérent sur les cinq scripts et conforme à `lib/common.sh` |
 | Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
+| Les liens entre tâches cassent à chaque changement de statut | reprise de TASK-002 | le répertoire fait partie du chemin : six liens rompus au seul passage de `blocked/` à `completed/`. À traiter par une convention de lien, ou par un contrôle automatique dans `tests/` |
 | `run-in-container.sh` : message de démon injoignable tronqué, et `--profil --dry-run` mal analysé | [TASK-002](reports/TASK-002-report.md) | deux défauts mineurs, relevés et non corrigés |
 
 ---
@@ -164,6 +168,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-001](completed/TASK-001.md) | Mettre en place le harnais de validation du dépôt | [rapport](reports/TASK-001-report.md) |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | [rapport](reports/TASK-010-report.md) |
 | [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | [rapport](reports/TASK-011-report.md) |
+| [TASK-002](completed/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | [rapport](reports/TASK-002-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

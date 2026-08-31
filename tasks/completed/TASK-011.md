@@ -47,7 +47,7 @@ implementation_notes:
 
 ## Origine
 
-Révélée par [TASK-002](../blocked/TASK-002.md), qui a livré un conteneur
+Révélée par [TASK-002](../completed/TASK-002.md), qui a livré un conteneur
 embarquant `shellcheck` — outil absent de la machine de développement. Le lint
 n'avait donc jamais analysé le dépôt en profondeur : il se contentait de
 `bash -n` et l'annonçait à chaque exécution.
@@ -83,7 +83,7 @@ Ironie utile : le fichier qui pilote l'analyse statique est le seul du harnais
 ## Prudence
 
 Ces cinq scripts d'administration tournent sur un serveur réel et ne sont
-couverts par aucun test automatisé — [TASK-004](TASK-004.md) n'est pas faite.
+couverts par aucun test automatisé — [TASK-004](../pending/TASK-004.md) n'est pas faite.
 
 Toute correction doit être **minimale et de pure forme**. Une modification qui
 change un comportement, même en apparence pour le mieux, sort du périmètre.
@@ -110,5 +110,5 @@ quelques cas non applicables » — est traitée par TASK-012.
 
 ## Ce que débloque cette tâche
 
-[TASK-002](../blocked/TASK-002.md) reprendra ensuite sans que son énoncé soit
+[TASK-002](../completed/TASK-002.md) reprendra ensuite sans que son énoncé soit
 modifié : sa commande de validation redeviendra verte d'elle-même.

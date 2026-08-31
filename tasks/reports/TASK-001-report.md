@@ -94,7 +94,7 @@ Aucune.
 PASS, avec une réserve explicite : **l'intégration de `shellcheck` n'a pas pu
 être vérifiée à l'exécution**, l'outil étant absent de la machine. Seul le
 comportement de repli l'a été. La levée de cette réserve viendra avec
-[TASK-002](../../tasks/pending/TASK-002.md), l'image de test embarquant
+[TASK-002](../completed/TASK-002.md), l'image de test embarquant
 `shellcheck`.
 
 Cette réserve est consignée plutôt que passée sous silence : un critère dont la
