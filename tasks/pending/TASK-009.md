@@ -1,7 +1,7 @@
 ---
 id: TASK-009
 title: "Écrire Linux/System/configure-cron.sh"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-004
@@ -35,7 +35,7 @@ acceptance_criteria:
   - --help documente le tout
 validation:
   - "tests/run.sh lint"
-  - "tests/env/run-in-container.sh -- tests/run.sh integration configure-cron"
+  - "tests/env/run-in-container.sh -- tests/run.sh integration"
   - "tests/env/run-in-container.sh -- bash -c 'Linux/System/configure-cron.sh --dry-run'"
 implementation_notes:
   - contenu attendu documenté dans docs/points-en-suspens.md, point 1
@@ -77,3 +77,31 @@ L'horaire et le chemin de déploiement ne sont pas figés dans le point en
 suspens. Ils sont réversibles et locaux : retenir une valeur par défaut simple
 — hebdomadaire, tôt le matin — la rendre configurable, et la documenter dans le
 rapport, conformément à [AGENTS.md](../../AGENTS.md) §14.
+
+## Correction apportée à l'énoncé avant lancement, le 2026-08-29
+
+La deuxième validation portait
+`tests/env/run-in-container.sh -- tests/run.sh integration configure-cron`.
+
+`tests/run.sh` n'accepte que des **niveaux**, jamais de filtre par fichier.
+Mesuré :
+
+```text
+tests/run.sh integration configure-cron
+[ERROR] Niveau inconnu : configure-cron (attendu : lint unit integration environment acceptance)
+→ code 2
+```
+
+La commande était donc insatisfaisable quel que soit le travail fourni. C'est le
+troisième énoncé de suite à porter ce défaut, après TASK-003 et TASK-004 : ces
+tâches ont été écrites avant que le harnais n'existe, et supposaient des
+capacités qu'il n'a pas.
+
+Corrigée en `tests/run.sh integration` — le niveau entier. Le dispatcher
+`tests/integration/run-integration.sh`, livré par TASK-004, découvre
+automatiquement tout fichier `*.test.sh` du répertoire : le nouveau fichier de
+test sera pris sans qu'aucun branchement soit nécessaire.
+
+Contrôle effectué au titre de la règle inscrite dans
+[tasks/README.md](../README.md) §5 : *si le travail était parfait, cette
+commande sortirait-elle en 0 ?*

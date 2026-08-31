@@ -28,7 +28,7 @@ Prochain identifiant libre : **TASK-017**.
 | [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `pending` | moyenne | 003 | conteneur | **oui** |
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `completed` | moyenne | 002, 003 | conteneur | non |
 | [TASK-016](pending/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `pending` | moyenne | 004 | conteneur | non |
-| [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `pending` | moyenne | 004 | conteneur | non |
+| [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `ready` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 
 ### Chemin critique
