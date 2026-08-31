@@ -421,8 +421,47 @@ assert_contient "$F_OUT" "rien n'est prouvé" "--help documente le sens du code 
 lancer bash "$RUN" --liste
 assert_code 0 "--liste → 0"
 
-lancer bash "$RUN" unit
-assert_code 3 "tests/run.sh unit sur le dépôt réel → 3 (niveau non implémenté)"
+# Un niveau demandé explicitement mais non implémenté rend 3. Ce comportement
+# ne doit s'adosser au NOM d'aucun niveau : celui qui manque aujourd'hui sera
+# implémenté demain, et l'assertion deviendrait fausse sans que rien ne soit
+# cassé — c'est ce qui est arrivé à « unit », implémenté par TASK-003.
+# Le niveau éprouvé est donc LU dans la sortie de --liste, jamais écrit en dur.
+# N'étant par construction pas implémenté, il ne déclenche l'exécution
+# d'aucune suite : le cas reste aussi peu coûteux que les précédents.
+premier_niveau_absent() {
+    awk '$2 == "NON" && vu == 0 { print $1; vu = 1 }' "$1"
+}
+
+lancer bash "$RUN" --liste
+LISTE_REELLE="$REP_TMP/liste-reelle"
+cp "$F_OUT" "$LISTE_REELLE"
+NIVEAU_ABSENT="$(premier_niveau_absent "$LISTE_REELLE")"
+RUN_EPROUVE="$RUN"
+OU_EPROUVE="le dépôt réel"
+
+# Le jour où le dépôt implémentera ses cinq niveaux, le comportement reste
+# vérifiable dans le bac à sable, qui ne porte que lint et acceptance et dont
+# l'état ne dépend de rien d'extérieur à ce fichier.
+if [ -z "$NIVEAU_ABSENT" ]; then
+    lancer bash "$BAC_RUN" --liste
+    LISTE_BAC="$REP_TMP/liste-bac"
+    cp "$F_OUT" "$LISTE_BAC"
+    NIVEAU_ABSENT="$(premier_niveau_absent "$LISTE_BAC")"
+    RUN_EPROUVE="$BAC_RUN"
+    OU_EPROUVE="le bac à sable"
+fi
+
+if [ -z "$NIVEAU_ABSENT" ]; then
+    saute "niveau non implémenté → 3" \
+        "aucun niveau annoncé NON IMPLÉMENTÉ, ni par le dépôt ni par le bac à sable"
+else
+    lancer bash "$RUN_EPROUVE" "$NIVEAU_ABSENT"
+    assert_code 3 "niveau « $NIVEAU_ABSENT », non implémenté dans $OU_EPROUVE, demandé explicitement → 3"
+    # Sans ce motif, le 3 ci-dessus pourrait tout aussi bien venir d'un niveau
+    # exécuté n'ayant rien pu vérifier : ce n'est pas ce qu'on prouve ici.
+    assert_contient "$F_ERR" "NON IMPLÉMENTÉ" \
+        "tests/run.sh nomme le niveau non implémenté avant de sortir en 3"
+fi
 
 # ===================================================================
 # 6. La sémantique est documentée

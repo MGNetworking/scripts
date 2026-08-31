@@ -1,7 +1,7 @@
 ---
 id: TASK-014
 title: "Affranchir la suite d'acceptation de l'état d'implémentation du dépôt"
-status: ready
+status: completed
 priority: high
 depends_on:
   - TASK-003
