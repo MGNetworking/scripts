@@ -29,13 +29,76 @@ tests/env/run-in-container.sh -- tests/run.sh
 | Niveau | Contenu | Environnement | État |
 |---|---|---|---|
 | `lint` | `bash -n` sur tous les `.sh`, `shellcheck` si disponible | hôte | **implémenté** |
-| `unit` | fonctions de `lib/common.sh` | conteneur `debian` | à écrire — [TASK-003](../tasks/pending/TASK-003.md) |
+| `unit` | fonctions de `lib/common.sh` | conteneur `debian` | **implémenté** |
 | `integration` | exécution réelle, `--dry-run`, idempotence | conteneur `debian` | à écrire — [TASK-004](../tasks/pending/TASK-004.md) |
 | `environment` | services, `systemctl`, état système | conteneur `systemd` | à écrire |
 | `acceptance` | critères d'acceptation d'une tâche | selon la tâche | **implémenté** |
 
 Un niveau s'ajoute en déposant son script au chemin annoncé par
 `tests/run.sh --liste`. Aucune autre modification n'est nécessaire.
+
+### Le niveau `unit`
+
+Un fichier par sujet, nommé `tests/unit/<sujet>.test.sh`. `run-unit.sh` les
+découvre — **en `maxdepth 1`**, comme l'acceptance — et agrège leurs verdicts.
+
+```text
+tests/unit/
+├── run-unit.sh          le dispatcher
+└── common.test.sh       les onze critères de TASK-003
+```
+
+`lib/common.sh` est le point de défaillance unique du dépôt : chaque script le
+charge. Le tester impose trois précautions, toutes visibles en tête de
+`common.test.sh` :
+
+- **les fonctions qui appellent `exit`.** `die`, `require_root`, `require_cmd`,
+  `require_os` et `load_config` tueraient le shell du harnais. Chaque cas est
+  donc écrit dans un fichier jetable et exécuté par un **processus `bash`
+  neuf**, dont on capture le code, `stdout`, `stderr` et le journal. Un
+  sous-shell `( source … )` ne suffirait pas : il hérite de la variable
+  `_COMMON_SH_CHARGE` du harnais, et la garde anti-double-chargement ferait de
+  son `source` une opération nulle ;
+- **le bac à sable.** `SCRIPTS_ROOT` étant résolu depuis l'emplacement de
+  `lib/common.sh`, une **copie** de ce fichier dans un répertoire temporaire s'y
+  enracine d'elle-même. Les `config/*.env` jetables y sont créés sans jamais
+  écrire dans `config/`, et un éventuel `config/server.env` de la machine — que
+  `common.sh` charge de lui-même — ne fausse rien. L'identité de la copie est
+  prouvée par `cmp` ;
+- **les journaux.** `common.sh` crée `LOG_DIR` et calcule `LOG_FILE` dès le
+  `source`. `LOG_DIR` est redirigé vers un répertoire temporaire, remis à zéro
+  avant chaque cas et supprimé à la fin.
+  Un cas le détourne au contraire vers un chemin **non créable** : `LOG_FILE`
+  reste alors vide, et c'est la seule façon d'exécuter la seconde branche de
+  `run_logged` — celle qui n'emploie pas `tee`.
+
+`require_root` demande en plus un utilisateur non privilégié, alors que le
+conteneur tourne en `root`. Trois lanceurs sont **éprouvés** dans cet ordre —
+`setpriv`, `runuser`, `chroot --userspec` — et le premier qui abaisse
+réellement l'UID est retenu. Si aucun n'y parvient, les cas concernés sont
+déclarés `NON EXÉCUTÉ`, jamais réussis.
+
+Le `set -Eeuo pipefail` du harnais reste en place de bout en bout. Le retirer
+pour faire passer un cas vaudrait échec de la tâche — [AGENTS.md](../AGENTS.md)
+§12.
+
+Un écart entre l'énoncé et le socle est relevé au passage, non corrigé :
+`load_config` fait `. "$fichier"`, ce qui rend les variables disponibles dans le
+shell appelant mais **n'exporte pas** une affectation nue vers les processus
+fils. `common.test.sh` mesure les deux frontières, les nomme, et affiche un
+`[WARN]` à chaque exécution. `lib/common.sh` est en zone protégée : la décision
+— `set -a` dans `load_config`, ou reformulation du critère — relève d'une tâche
+distincte.
+
+Un second écart est mesuré et consigné de la même façon : sous `set -e`, un
+appel à `info`, `warn`, `error`, `success` ou `run_logged` **interrompt le
+script** si `LOG_FILE` est renseignée mais non inscriptible — le `printf >>`
+de `_log` échoue et arme le `trap ERR`. Le cas ne se présente que si le
+répertoire de journaux disparaît en cours d'exécution, `LOG_FILE` restant vide
+lorsqu'il était déjà impossible à créer au chargement. Aucun cas de
+`common.test.sh` n'échoue à ce titre : les onze critères portent sur la valeur
+rendue par `run_logged`, observable seulement dans un contexte où `set -e` est
+neutralisé (`|| code=$?`, `if …`). L'écart relève d'une tâche distincte.
 
 ### Le niveau `acceptance`
 
@@ -349,6 +412,37 @@ Trois règles propres aux tests :
 3. **on ne corrige jamais un test pour le faire passer.** Neutraliser une
    assertion, ajouter `|| true` ou retirer `set -e` vaut échec de la tâche —
    voir [AGENTS.md](../AGENTS.md) §12.
+
+### `tests/lib/assert.sh`
+
+Les assertions communes vivent là : `titre`, `ok`, `ko`, `saute`, `assert_code`,
+`assert_code_non_nul`, `assert_egal`, `assert_non_vide`, `assert_contient`,
+`assert_absent`, et `bilan` — qui applique le modèle ci-dessous et sort avec le
+code qui convient.
+
+```bash
+source "$SCRIPTS_ROOT/tests/lib/assert.sh"
+
+titre "1. Journalisation"
+assert_code 1 "$CODE" "die sort en 1 par défaut"
+saute "cas systemd" "le conteneur n'a pas systemd"
+bilan "lib/common.sh"
+```
+
+Bash pur, aucun framework : `bats` est absent de la machine de développement et
+ne se justifie pas pour ce volume. La bibliothèque ne pose ni
+`set -Eeuo pipefail` ni `trap` — les deux s'appliqueraient au shell appelant —
+et ne redéfinit rien de ce que `lib/common.sh` fournit déjà.
+
+> **Ne jamais créer `tests/lib/common.sh`.** La résolution en trois lignes des
+> scripts du dépôt cherche `<candidat>/lib/common.sh` en remontant
+> l'arborescence : depuis `tests/`, le premier candidat testé est justement
+> `tests/lib/common.sh`. Tant qu'il n'existe pas, la remontée se poursuit
+> jusqu'à la racine. Le jour où il existerait, tous les scripts de `tests/`
+> chargeraient ce fichier-là au lieu du socle du dépôt.
+
+Les fichiers de `tests/acceptance/` définissent encore leurs assertions
+localement. Les uniformiser est une tâche en soi, pas un effet de bord.
 
 ### Le bilan d'un fichier de cas
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-003
 title: "Écrire les tests unitaires de lib/common.sh"
-status: ready
+status: completed
 priority: high
 depends_on:
   - TASK-001
