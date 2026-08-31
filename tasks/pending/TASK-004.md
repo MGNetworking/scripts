@@ -1,7 +1,7 @@
 ---
 id: TASK-004
 title: "Éprouver l'idempotence des scripts Linux/System existants"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-002
@@ -13,8 +13,8 @@ objective: |
   annoncé : préflight correct, --dry-run sans effet, seconde exécution sans
   modification.
 scope:
+  - tests/integration/run-integration.sh — dispatcher du niveau, au chemin qu'annonce tests/run.sh --liste
   - tests/integration/linux-system.test.sh
-  - tests/run.sh — brancher le niveau integration
   - tests/README.md
 out_of_scope:
   - correction des défauts découverts — chacun donne lieu à une tâche distincte
@@ -63,3 +63,21 @@ marqués `NON EXÉCUTÉ` et non `PASS` — la couverture complète attend le pro
 
 Il vaut mieux une couverture partielle et honnête qu'une couverture affichée
 comme totale et fausse.
+
+## Corrections apportées à l'énoncé avant lancement, le 2026-08-29
+
+Le `scope` reproduisait mot pour mot le défaut de TASK-003 — les deux tâches
+ayant été écrites dans le même mouvement.
+
+`tests/integration/run-integration.sh` manquait : c'est le chemin où
+`tests/run.sh` cherche le niveau `integration` (`tests/run.sh --liste` le
+confirme). Sans ce fichier, la seconde validation aurait rendu 3, « niveau non
+implémenté », quel que soit le travail fourni.
+
+`tests/run.sh` a été retiré du `scope` : le chemin y est déclaré depuis
+TASK-001, aucune modification n'est nécessaire. Y toucher serait modifier le
+validateur sans raison.
+
+Contrôle effectué au titre de la règle inscrite dans
+[tasks/README.md](../README.md) §5 : *si le travail était parfait, cette
+commande sortirait-elle en 0 ?*

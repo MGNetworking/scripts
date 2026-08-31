@@ -26,7 +26,7 @@ Prochain identifiant libre : **TASK-016**.
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `completed` | haute | 001, 002 | conteneur | non |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | `completed` | haute | 003 | hôte | non |
 | [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `pending` | moyenne | 003 | conteneur | **oui** |
-| [TASK-004](pending/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `pending` | moyenne | 002, 003 | conteneur | non |
+| [TASK-004](pending/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `ready` | moyenne | 002, 003 | conteneur | non |
 | [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `pending` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 
