@@ -7,14 +7,22 @@
 # Une tâche ajoute ses preuves en déposant son fichier ici. Aucune liste n'est
 # tenue en dur.
 #
-# Trois verdicts par fichier, jamais deux :
+# Quatre verdicts par fichier, jamais trois :
 #
-#   0   les critères vérifiés sont satisfaits
-#   3   au moins un critère n'a PAS PU être vérifié (NON EXÉCUTÉ)
+#   0   tous les critères ont été vérifiés et sont satisfaits
+#   4   les critères vérifiés sont satisfaits, mais certains cas ne
+#       s'appliquaient pas à cet environnement — la preuve est partielle
+#   3   AUCUN critère n'a pu être vérifié — rien n'est prouvé
 #   *   au moins un critère est en défaut (ÉCHEC)
 #
 # Le verdict 3 ne se confond pas avec 0 : « pas pu vérifier » n'est pas
 # « vérifié ». C'est la règle d'AGENTS.md §10, appliquée fichier par fichier.
+#
+# Le 4 sépare deux natures de saut que le 3 confondait : « le conteneur n'a pas
+# systemd, sept cas sur cent cinquante-six sont hors de portée » n'est pas
+# « rien n'a tourné ». Le premier laisse une preuve, le second aucune. Le
+# décompte reste affiché dans les deux cas — un saut invisible serait pire que
+# le faux vert qu'on cherche à empêcher.
 
 set -Eeuo pipefail
 
@@ -36,9 +44,10 @@ fi
 
 info "Acceptance — ${#fichiers[@]} fichier(s) de critères"
 
-reussis=0
+reussis=0    # tout vérifié, tout satisfait
+partiels=0   # satisfaits, avec des cas non applicables à cet environnement
+steriles=0   # aucun critère vérifié — rien n'est prouvé
 echoues=0
-non_executes=0
 
 for fichier in "${fichiers[@]}"; do
     relatif="${fichier#"$SCRIPTS_ROOT"/}"
@@ -50,20 +59,30 @@ for fichier in "${fichiers[@]}"; do
     case "$code" in
         0) success "$relatif : critères satisfaits"
            reussis=$((reussis + 1)) ;;
-        3) warn "$relatif : NON EXÉCUTÉ (au moins un critère non vérifiable)"
-           non_executes=$((non_executes + 1)) ;;
+        4) warn "$relatif : critères satisfaits, avec des cas non applicables à cet environnement — voir le bilan du fichier ci-dessus"
+           partiels=$((partiels + 1)) ;;
+        3) warn "$relatif : RIEN N'A PU ÊTRE VÉRIFIÉ — aucun critère prouvé"
+           steriles=$((steriles + 1)) ;;
         *) error "$relatif : ÉCHEC (code $code)"
            echoues=$((echoues + 1)) ;;
     esac
 done
 
 if [ "$echoues" -gt 0 ]; then
-    die "Acceptance : $echoues fichier(s) en échec, $reussis réussi(s), $non_executes non exécuté(s)." 1
+    die "Acceptance : $echoues fichier(s) en échec, $reussis satisfait(s), $partiels partiel(s), $steriles sans preuve." 1
 fi
 
-if [ "$non_executes" -gt 0 ]; then
-    warn "Acceptance : $reussis fichier(s) réussi(s), $non_executes NON EXÉCUTÉ(s) — rien n'est prouvé pour ceux-là."
+# Un fichier qui n'a rien pu vérifier laisse les critères de sa tâche sans
+# preuve : le reste du lot ne rachète pas ce silence.
+if [ "$steriles" -gt 0 ]; then
+    warn "Acceptance : $steriles fichier(s) n'ont RIEN pu vérifier — rien n'est prouvé pour ceux-là."
     exit 3
+fi
+
+if [ "$partiels" -gt 0 ]; then
+    success "Acceptance : $((reussis + partiels)) fichier(s) de critères satisfaits."
+    warn "Dont $partiels fichier(s) comportant des cas non applicables à cet environnement — les critères correspondants ne sont pas prouvés."
+    exit 4
 fi
 
 success "Acceptance : $reussis fichier(s) de critères satisfaits."

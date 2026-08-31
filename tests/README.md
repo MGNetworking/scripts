@@ -48,6 +48,7 @@ tests/acceptance/
 ├── run-acceptance.sh                    le dispatcher
 ├── TASK-002-environnement-conteneurise.sh   exécuté sur l'hôte
 ├── TASK-011-analyse-statique.sh             exécuté sur l'hôte
+├── TASK-012-semantique-codes.sh             exécuté sur l'hôte
 └── interne/
     └── TASK-011-cas-conteneur.sh        exécuté DANS le conteneur, jamais sur l'hôte
 ```
@@ -61,20 +62,90 @@ Windows, où il échouerait pour de mauvaises raisons.
 
 ## 2. Codes de retour
 
+Deux contrats, à ne pas confondre : celui des **niveaux et fichiers de cas**,
+qui rendent compte du détail, et celui de **`tests/run.sh`**, qui prononce le
+verdict global.
+
+### Ce que rend un niveau ou un fichier de cas
+
 | Code | Sens |
 |---|---|
-| 0 | tous les niveaux exécutés ont réussi |
+| 0 | tous les cas ont été exécutés et ont réussi |
+| 1 | au moins un cas est en défaut |
+| 2 | erreur d'usage |
+| 3 | **aucun cas n'a pu être exécuté** — rien n'est prouvé |
+| 4 | les cas exécutés ont réussi, mais certains ne s'appliquaient pas à cet environnement — la preuve est partielle, elle existe |
+
+Le **3** et le **4** sont deux façons très différentes de ne pas tout vérifier,
+longtemps confondues sous le même code :
+
+```text
+156 cas passés, 7 hors de portée du conteneur   →  4   l'essentiel est prouvé
+aucun cas n'a tourné                            →  3   rien n'est prouvé
+```
+
+Le 4 n'ouvre pas la porte au faux vert que le 3 avait fermée : il exige **au
+moins une réussite**. Une suite intégralement sautée retombe sur le 3, et un
+fichier de cas teste donc « aucune réussite » *avant* « des cas sautés ».
+
+#### Ce que le 4 ne garantit pas
+
+Cette garantie est **plus faible qu'elle n'en a l'air**, et c'est mesuré, pas
+supposé. Démon Docker rendu injoignable (`DOCKER_HOST=tcp://127.0.0.1:1`, Docker
+Desktop jamais arrêté), le fichier de cas de TASK-011 donne :
+
+```text
+Bilan TASK-011 : 8 réussites, 0 échec, 21 NON EXÉCUTÉ(s)  → code 4
+tests/run.sh acceptance                                    → code 0
+```
+
+72 % de la preuve avait disparu, le verdict global restait vert.
+
+La cause tient aux compteurs : ils ne distinguent pas **« non applicable par
+nature »** — le profil `debian` n'a pas `systemd` et ne l'aura jamais — de
+**« environnement indisponible »** — le démon Docker est coupé, la preuve existe
+mais n'a pas pu être produite. Les deux tombent dans `non_executes`, et quelques
+cas de préflight, qui n'ont besoin de rien pour tourner, suffisent à franchir le
+seuil « au moins une réussite ».
+
+À lire donc pour ce qu'il dit exactement : **un code 4 garantit qu'au moins un
+cas a été prouvé, pas que l'essentiel l'a été.** Devant un 4, lire le bilan et le
+décompte des `NON EXÉCUTÉ` avant de conclure — la ligne `info` du §5 est là pour
+ça.
+
+Le remède connu — un compteur distinct pour les indisponibilités d'environnement,
+qui les ferait basculer du côté du 3 plutôt que du 4 — est versé au backlog. Il
+dépasse le périmètre de la tâche qui a introduit le code 4.
+
+### Ce que rend `tests/run.sh`
+
+| Code | Sens |
+|---|---|
+| 0 | tous les niveaux exécutés ont réussi — les cas non applicables, s'il y en a, sont décomptés à l'écran |
 | 1 | au moins un niveau a échoué |
 | 2 | erreur d'usage — option ou niveau inconnu |
-| 3 | un niveau demandé explicitement n'est pas implémenté |
+| 3 | rien n'est prouvé : un niveau demandé explicitement n'est pas implémenté, ou un niveau exécuté n'a rien pu vérifier |
 
-Le code **3** est délibérément distinct de 0 et de 1. Sans lui,
+`tests/run.sh` **ne rend jamais 4** : il lit ce code, l'affiche, et le traduit
+en réussite. C'est le point d'entrée du dépôt, son contrat tient en une ligne —
+*0, la validation est acquise ; autre chose, elle ne l'est pas*. Il ne réduit
+plus pour autant le code d'un niveau à réussi/échoué : le 3 remonte en 3, et
+n'est plus maquillé en échec.
+
+Le code **3** reste délibérément distinct de 0 et de 1. Sans lui,
 `tests/run.sh unit` sortirait en 0 aujourd'hui et un validator conclurait que
 les tests unitaires passent, alors qu'aucun n'existe. « Rien à exécuter » n'est
 pas « tout va bien ».
 
 C'est la traduction en code de retour de la règle d'[AGENTS.md](../AGENTS.md)
 §10 : une validation non exécutée vaut `NON EXÉCUTÉ`, jamais `PASS`.
+
+Le 3 et le 4 de `tests/env/run-in-container.sh` (§4) relèvent d'un autre
+contrat — environnement indisponible, échec de construction — et ne se croisent
+pas avec ceux-ci : le lanceur ne juge aucun cas, un niveau ne construit aucune
+image. Une seule précaution : dans le conteneur, lancer `tests/run.sh` plutôt
+qu'un script de niveau, pour que le code transmis reste celui d'un verdict
+global.
 
 ## 3. Analyse statique
 
@@ -278,3 +349,37 @@ Trois règles propres aux tests :
 3. **on ne corrige jamais un test pour le faire passer.** Neutraliser une
    assertion, ajouter `|| true` ou retirer `set -e` vaut échec de la tâche —
    voir [AGENTS.md](../AGENTS.md) §12.
+
+### Le bilan d'un fichier de cas
+
+Trois compteurs — réussites, échecs, non exécutés — et un bilan qui les traduit
+en code de retour, **dans cet ordre** :
+
+```bash
+info "Bilan TASK-0xx : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s)"
+
+if [ "$echecs" -gt 0 ]; then
+    die "TASK-0xx : $echecs critère(s) en défaut." 1
+fi
+
+if [ "$reussites" -eq 0 ]; then
+    warn "TASK-0xx : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
+if [ "$non_executes" -gt 0 ]; then
+    warn "TASK-0xx : $non_executes vérification(s) NON EXÉCUTÉE(s) — les critères correspondants ne sont pas prouvés."
+    exit 4
+fi
+
+success "TASK-0xx : tous les critères vérifiés ($reussites vérifications)."
+```
+
+L'ordre n'est pas décoratif : un échec prime sur tout, et « aucune réussite » se
+teste **avant** « des cas non applicables ». Sans cela, une suite intégralement
+sautée — démon Docker arrêté, par exemple — sortirait en 4, c'est-à-dire en
+réussite partielle, sans avoir rien prouvé.
+
+La ligne `info` du bilan n'est pas facultative : c'est elle qui rend visible le
+nombre de cas non applicables. Le dispatcher, lui, ne compte que des fichiers ;
+le détail vient d'ici.

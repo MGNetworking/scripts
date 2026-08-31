@@ -12,8 +12,10 @@
 # substituts fidèles sont utilisés : un PATH sans docker (client absent) et un
 # DOCKER_HOST pointant sur un port fermé (démon injoignable).
 #
-# Ce fichier sort en 3 si un critère n'a pas pu être vérifié : « pas pu
-# vérifier » ne vaut jamais « vérifié ».
+# Ce fichier sort en 4 si un critère n'a pas pu être vérifié alors que d'autres
+# l'ont été, et en 3 si AUCUNE vérification n'a pu être exécutée : « pas pu
+# vérifier » ne vaut jamais « vérifié », mais n'efface pas non plus ce qui a été
+# prouvé. Le nombre de cas non exécutés est affiché dans les deux cas.
 
 set -Eeuo pipefail
 
@@ -453,9 +455,17 @@ if [ "$echecs" -gt 0 ]; then
     die "TASK-002 : $echecs critère(s) en défaut." 1
 fi
 
+# Testé AVANT le cas des non exécutés : sans cet ordre, une exécution où tout
+# aurait été sauté — démon Docker arrêté, par exemple — sortirait en 4, c'est-à-
+# dire en réussite partielle, alors que rien n'aurait été prouvé.
+if [ "$reussites" -eq 0 ]; then
+    warn "TASK-002 : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
 if [ "$non_executes" -gt 0 ]; then
     warn "TASK-002 : $non_executes vérification(s) NON EXÉCUTÉE(s) — les critères correspondants ne sont pas prouvés."
-    exit 3
+    exit 4
 fi
 
 success "TASK-002 : tous les critères vérifiés ($reussites vérifications)."

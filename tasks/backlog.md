@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-013**.
+Prochain identifiant libre : **TASK-014**.
 
 ---
 
@@ -21,7 +21,8 @@ Prochain identifiant libre : **TASK-013**.
 | [TASK-001](completed/TASK-001.md) | Mettre en place le harnais de validation du dépôt | `completed` | haute | — | hôte | non |
 | [TASK-002](completed/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | `completed` | haute | 001 | hôte | non |
 | [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | `completed` | haute | — | conteneur | non |
-| [TASK-012](pending/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | `ready` | haute | — | hôte | non |
+| [TASK-012](completed/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | `completed` | haute | — | hôte | non |
+| [TASK-013](pending/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | `pending` | moyenne | 012 | hôte | non |
 | [TASK-003](pending/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `pending` | haute | 001, 002 | conteneur | non |
 | [TASK-004](pending/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `pending` | moyenne | 002, 003 | conteneur | non |
 | [TASK-009](pending/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `pending` | moyenne | 004 | conteneur | non |
@@ -36,7 +37,8 @@ TASK-001 ── TASK-002 ── TASK-011 ── TASK-003 ── TASK-004 ── 
                         (fait)
 
 TASK-010 ── moteur d'exécution (fait) : 3 sous-agents + /tache
-TASK-012 ── sémantique des codes de retour du harnais
+TASK-012 ── sémantique des codes de retour du harnais (fait)
+TASK-013 ── nature des sauts : non applicable ou indisponible
 ```
 
 TASK-002 avait été bloquée par une dette antérieure qu'elle a elle-même rendue
@@ -152,7 +154,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | écarté pour l'instant : coûteux en limites d'usage, et prématuré tant que les règles n'ont pas été éprouvées |
 | Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | après le premier passage réel de `/tache` — il révélera les règles mal formulées |
 | Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
-| Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011. Traité par [TASK-012](pending/TASK-012.md) |
+| Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011. Non traité par [TASK-012](completed/TASK-012.md), qui l'a laissé hors périmètre — le harnais a désormais le code 4 pour l'exprimer |
 | Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
 | `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | contraire à la convention « erreur d'usage → 2 », mais cohérent sur les cinq scripts et conforme à `lib/common.sh` |
 | Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
@@ -169,6 +171,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | [rapport](reports/TASK-010-report.md) |
 | [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | [rapport](reports/TASK-011-report.md) |
 | [TASK-002](completed/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | [rapport](reports/TASK-002-report.md) |
+| [TASK-012](completed/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | [rapport](reports/TASK-012-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

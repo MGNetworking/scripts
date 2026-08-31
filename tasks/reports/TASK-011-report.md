@@ -186,7 +186,7 @@ contre le vert.
 ## Défauts révélés hors périmètre
 
 1. **`tests/run.sh` confond « rien de prouvé » et « cas non applicable »** —
-   objet de [TASK-012](../pending/TASK-012.md) ;
+   objet de [TASK-012](../completed/TASK-012.md) ;
 2. le critère d'acceptation parlait de « quatre scripts pourvus de `--dry-run` ».
    **Ils sont cinq** ;
 3. **branche morte dans `configure-logging.sh`** : le `[dry-run] Créerait

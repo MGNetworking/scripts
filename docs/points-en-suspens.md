@@ -74,3 +74,46 @@ pendant des mois sans que cela se voie.
 
 **Concerne** tous les scripts destinés à `cron` : `update-system.sh`,
 `security-check.sh`, `backup-resources.sh`, `docker-cleanup.sh`.
+
+---
+
+## 3. Le harnais confond « non applicable » et « indisponible »
+
+**Soulevé le** 2026-08-29, pendant [TASK-012](../tasks/completed/TASK-012.md).
+
+**Le problème.** Depuis TASK-012, un fichier de cas qui réussit tout ce qu'il a
+pu exécuter, en déclarant quelques cas non applicables, sort en 4 — preuve
+partielle — et `tests/run.sh` traduit ce 4 en 0. Le garde qui empêche le faux
+vert est qu'un 4 exige **au moins une réussite**.
+
+Cette garantie est plus faible qu'elle n'en a l'air. Mesuré avec le démon Docker
+coupé, Docker Desktop jamais arrêté :
+
+```text
+DOCKER_HOST=tcp://127.0.0.1:1 bash tests/acceptance/TASK-011-analyse-statique.sh
+Bilan TASK-011 : 8 réussite(s), 0 échec(s), 21 NON EXÉCUTÉ(s)   → 4
+tests/run.sh acceptance                                          → 0
+```
+
+72 % de la preuve avait disparu, le verdict restait vert. Sur `master` avant
+TASK-012, ce même scénario rendait 3, donc 1 : c'est donc une régression sur
+l'axe de l'honnêteté, consentie en échange de la levée d'un blocage qui frappait
+toutes les tâches.
+
+**La cause.** Les compteurs ne distinguent pas deux natures de saut :
+
+| Nature | Exemple | Ce que ça devrait valoir |
+|---|---|---|
+| non applicable par nature | le profil `debian` n'a pas `systemd`, il ne l'aura jamais | 4 légitime |
+| environnement indisponible | le démon Docker est coupé, la preuve existe mais n'a pas pu être produite | 3 — rien n'est prouvé |
+
+Tout tombe aujourd'hui dans le même compteur, et quelques cas de préflight — qui
+n'ont besoin de rien — suffisent à franchir le seuil.
+
+**Le remède connu.** Un compteur `indisponibles` distinct de `non_executes`,
+avec la règle `indisponibles > 0 → 3`. Il impose de revoir chaque appel `saute`
+de chaque fichier de cas pour qualifier la nature du saut — ce que le périmètre
+de TASK-012 excluait nommément.
+
+**Concerne** tout le niveau `acceptance`, et les niveaux `unit`, `integration`
+et `environment` le jour où ils existeront.

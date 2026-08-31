@@ -8,6 +8,19 @@
 # Un niveau non encore implémenté n'est jamais compté comme réussi. Demandé
 # explicitement, il fait sortir en 3 — un code distinct de l'échec, pour qu'un
 # validator ne puisse pas confondre « rien à exécuter » et « tout va bien ».
+#
+# Le code rendu par un niveau est LU, jamais réduit à réussi/échoué. Quatre
+# situations, et non deux :
+#
+#   0   le niveau a tout vérifié, tout a réussi
+#   4   le niveau a réussi, mais des cas ne s'appliquent pas à cet
+#       environnement — la preuve est partielle, elle existe
+#   3   le niveau n'a RIEN pu vérifier — aucune preuve
+#   *   au moins un cas est en défaut
+#
+# « Presque tout est prouvé, trois cas ne s'appliquent pas ici » et « rien n'est
+# prouvé » ne portent pas le même verdict : le premier vaut réussite, avec son
+# décompte affiché ; le second ne sort jamais en 0.
 
 set -Eeuo pipefail
 
@@ -46,10 +59,12 @@ Exemples :
   tests/run.sh unit integration
 
 Codes de retour :
-  0   tous les niveaux exécutés ont réussi
+  0   tous les niveaux exécutés ont réussi ; les cas non applicables à cet
+      environnement, s'il y en a, sont décomptés à l'écran
   1   au moins un niveau a échoué
   2   erreur d'usage
-  3   un niveau demandé explicitement n'est pas implémenté
+  3   rien n'est prouvé : un niveau demandé explicitement n'est pas
+      implémenté, ou un niveau exécuté n'a rien pu vérifier
 AIDE
 }
 
@@ -116,7 +131,9 @@ fi
 # -------------------------------------------------------------------
 # Exécution
 # -------------------------------------------------------------------
-executes=0
+reussis=0    # niveaux dont tous les cas ont réussi, sans réserve
+partiels=0   # niveaux réussis, comportant des cas non applicables ici
+steriles=0   # niveaux exécutés qui n'ont rien pu vérifier — aucune preuve
 echecs=0
 absents=0
 
@@ -134,14 +151,33 @@ for niveau in "${DEMANDES[@]}"; do
     fi
 
     info "--- Niveau « $niveau » ---"
-    if bash "$script"; then
-        executes=$((executes + 1))
-    else
-        error "Niveau « $niveau » : ÉCHEC"
-        executes=$((executes + 1))
-        echecs=$((echecs + 1))
-    fi
+
+    # Le code est capturé, pas testé : « if bash "$script" » écraserait le 3 et
+    # le 4 en un simple échec. La forme « || code=$? » n'arme pas le trap ERR de
+    # lib/common.sh, la commande n'étant pas la dernière d'une liste ||.
+    code=0
+    bash "$script" || code=$?
+
+    case "$code" in
+        0)
+            reussis=$((reussis + 1))
+            ;;
+        4)
+            warn "Niveau « $niveau » : RÉUSSI, avec des cas non applicables à cet environnement"
+            partiels=$((partiels + 1))
+            ;;
+        3)
+            warn "Niveau « $niveau » : RIEN N'A PU ÊTRE VÉRIFIÉ — aucune preuve produite"
+            steriles=$((steriles + 1))
+            ;;
+        *)
+            error "Niveau « $niveau » : ÉCHEC (code $code)"
+            echecs=$((echecs + 1))
+            ;;
+    esac
 done
+
+executes=$((reussis + partiels + steriles + echecs))
 
 # -------------------------------------------------------------------
 # Bilan
@@ -155,9 +191,24 @@ if [ "$executes" -eq 0 ]; then
     exit 3
 fi
 
-if [ "$EXPLICITE" = "true" ] && [ "$absents" -gt 0 ]; then
-    warn "Validation : $executes niveau(x) réussi(s), $absents non implémenté(s)."
+# Un niveau exécuté qui n'a rien pu vérifier ne vaut pas mieux qu'un niveau
+# absent : dans les deux cas, la preuve manque.
+if [ "$steriles" -gt 0 ]; then
+    warn "Validation : $steriles niveau(x) n'ont rien pu vérifier sur $executes exécuté(s) — rien n'est prouvé pour ceux-là."
     exit 3
+fi
+
+if [ "$EXPLICITE" = "true" ] && [ "$absents" -gt 0 ]; then
+    warn "Validation : $((reussis + partiels)) niveau(x) réussi(s), $absents non implémenté(s)."
+    exit 3
+fi
+
+# Des cas non applicables ne changent pas le verdict, mais restent affichés :
+# un saut silencieux serait un faux vert.
+if [ "$partiels" -gt 0 ]; then
+    success "Validation : $executes niveau(x) réussi(s)."
+    warn "Dont $partiels niveau(x) comportant des cas non applicables à cet environnement — voir leur bilan ci-dessus."
+    exit 0
 fi
 
 success "Validation : $executes niveau(x) réussi(s)."

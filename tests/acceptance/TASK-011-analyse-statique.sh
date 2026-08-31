@@ -23,10 +23,12 @@
 # Chaque groupe de cas comportementaux part d'un conteneur NEUF : deux
 # exécutions dans un conteneur recyclé ne prouveraient aucune idempotence.
 #
-# Ce fichier sort en 3 dès qu'un critère n'a pas pu être vérifié. Le conteneur
-# n'a ni systemd ni CAP_SYS_ADMIN : les chemins qui passent par timedatectl,
-# hostnamectl, « hostname » ou l'activation d'un swap sont déclarés NON
-# EXÉCUTÉS, jamais réussis.
+# Le conteneur n'a ni systemd ni CAP_SYS_ADMIN : les chemins qui passent par
+# timedatectl, hostnamectl, « hostname » ou l'activation d'un swap sont déclarés
+# NON EXÉCUTÉS, jamais réussis. Ce fichier sort alors en 4 — les critères
+# vérifiés le sont, ceux-là ne le sont pas, et leur nombre s'affiche. Il ne sort
+# en 3 que si AUCUNE vérification n'a pu être exécutée : « pas pu vérifier » ne
+# vaut jamais « vérifié », mais ne doit pas non plus effacer ce qui l'a été.
 
 set -Eeuo pipefail
 
@@ -376,9 +378,17 @@ if [ "$echecs" -gt 0 ]; then
     die "TASK-011 : $echecs critère(s) en défaut." 1
 fi
 
+# Testé AVANT le cas des non exécutés : sans cet ordre, une exécution où tout
+# aurait été sauté sortirait en 4, c'est-à-dire en réussite partielle, alors que
+# rien n'aurait été prouvé.
+if [ "$reussites" -eq 0 ]; then
+    warn "TASK-011 : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
 if [ "$non_executes" -gt 0 ]; then
     warn "TASK-011 : $non_executes vérification(s) NON EXÉCUTÉE(s) — les critères correspondants ne sont pas prouvés."
-    exit 3
+    exit 4
 fi
 
 success "TASK-011 : tous les critères vérifiés ($reussites vérifications)."

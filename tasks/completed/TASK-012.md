@@ -1,7 +1,7 @@
 ---
 id: TASK-012
 title: "Distinguer « rien de prouvé » de « cas non applicable » dans le harnais"
-status: ready
+status: completed
 priority: high
 depends_on: []
 environment: host
