@@ -205,3 +205,64 @@ qui ne dépend pas du verdict qu'elle produit.
 
 **Concerne** `tests/acceptance/TASK-011-analyse-statique.sh` §1, et tout futur
 fichier de cas qui prétendrait contrôler un diff après son commit.
+
+---
+
+## 5. Le coût du dispositif agentique
+
+**Soulevé le** 2026-09-02, au terme de la session qui a produit la couche
+agentique et les dix premières tâches.
+
+**Le constat.** Les sous-agents ont consommé environ **3,3 millions de jetons**
+pour dix tâches — de l'ordre de 300 000 par tâche, davantage pour celles qui ont
+demandé plusieurs tours de correction.
+
+### D'où vient le coût
+
+**Un sous-agent démarre à froid.** Il ne connaît pas la conversation : c'est ce
+qui le rend fiable, et c'est ce qui coûte. Il relit à chaque invocation
+`AGENTS.md`, `CLAUDE.md`, la tâche, les fichiers concernés. Le cycle en fait
+travailler trois au minimum, souvent cinq ou six avec les corrections.
+
+### Ce que ce coût achète, et qu'il faut se garder de rogner
+
+**La vérification par mutation** est le poste le plus cher et le plus utile. Sur
+TASK-003, le rédacteur des tests a cassé `lib/common.sh` de quinze façons pour
+vérifier que ses assertions détectent ; le relecteur a refait l'exercice avec
+huit mutations à lui. C'est ce qui sépare « les tests passent » de « les tests
+prouvent ».
+
+**Les relectures ont payé à chaque fois.** Elles ont trouvé une garde de
+dépendance qui ne gardait rien, une ligne cron qui aurait échoué à chaque
+passage en production, une documentation affirmant un arrêt qui n'avait pas
+lieu, et une sur-affirmation introduite par la tâche même censée les retirer.
+Aucun de ces défauts n'aurait été vu autrement.
+
+### Ce qui était excessif
+
+- **les prompts de délégation** font soixante à cent lignes, et recopient du
+  contexte que le sous-agent pourrait lire lui-même ;
+- **les rapports** font deux à trois cents lignes. Le format de
+  `tasks/README.md` §6 en demande peut-être trop pour une tâche sans histoire ;
+- **trois tours de correction sur des commentaires**, lors de TASK-013 : le
+  troisième aurait pu attendre le backlog ;
+- **des suites relancées sans nécessité**, dont une exécution de six minutes
+  lancée deux fois dans un même appel, qui a dépassé le délai.
+
+### Pistes, non décidées
+
+| Piste | Économie estimée |
+|---|---|
+| un **mode léger** — rédacteur et validations, sans relecteur — pour les tâches sans risque : scripts en lecture seule, corrections documentaires | ~40 % |
+| rapport court par défaut, long seulement si la tâche a bloqué ou révélé un défaut | ~15 % |
+| ne pas faire relire les corrections purement documentaires | ~10 % |
+| prompts de délégation resserrés | ~10 % |
+
+**L'arbitrage à tenir.** Le mode léger est la piste la plus rentable et la plus
+dangereuse : c'est le relecteur qui a trouvé tous les défauts sérieux de cette
+session. L'ouvrir aux tâches sans risque se défend ; l'ouvrir aux tâches qui
+touchent un script d'administration reviendrait à supprimer le seul contrôle
+indépendant du dispositif.
+
+**Concerne** `.claude/commands/tache.md`, `tasks/README.md` §6, et la décision
+d'ouvrir ou non un second cycle allégé.
