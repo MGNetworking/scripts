@@ -154,7 +154,15 @@ pending → ready → in_progress → validating → completed
 
 `pending → ready` est un acte **humain ou explicitement délégué** : c'est le
 moment où l'on constate que le périmètre et les validations tiennent debout.
-L'agent ne se donne pas du travail à lui-même.
+
+**La délégation a été donnée le 2026-09-02** par
+[ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+décision 3. L'agent ouvre donc lui-même les tâches qu'il a écrites, lorsqu'il
+constate qu'elles tiennent debout.
+
+Le garde-fou s'est déplacé : il n'est plus dans l'ouverture de la tâche, il est
+dans la relecture du travail produit. Un agent qui s'écrit une tâche complaisante
+sera rattrapé par le relecteur et par les validations, pas par le statut.
 
 `blocked` n'est jamais repris automatiquement.
 
@@ -166,7 +174,10 @@ Une tâche n'est prise par `/tache` que si :
 
 1. son `status` est `ready` ;
 2. toutes ses `depends_on` sont `completed` ;
-3. son `human_approval_required` est `false`, ou l'accord a été donné ;
+3. son `human_approval_required` est `false`, ou l'accord a été donné — et
+   l'accord général l'a été le 2026-09-02 par
+   [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+   décision 2 : ce champ ne suspend plus l'exécution ;
 4. l'environnement qu'elle réclame est disponible.
 
 Départage, dans l'ordre : `priority`, puis ordre d'apparition dans

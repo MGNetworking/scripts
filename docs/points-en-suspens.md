@@ -75,12 +75,22 @@ qui laisse ouverte la première piste du point n° 2 ci-dessous.
 
 ---
 
-## 2. Un échec en tâche planifiée passe inaperçu
+## 2. Un échec en tâche planifiée passe inaperçu — tranché
 
 **Soulevé le** 2026-08-26, conséquence directe du point 1.
 **Indexé au backlog le** 2026-08-27 : [tasks/backlog.md](../tasks/backlog.md) §3.
-Les trois pistes ci-dessous s'excluent mutuellement — le choix est une décision
-d'architecture, elle vous revient avant toute atomisation en tâche.
+**Tranché le** 2026-09-02 par
+[ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md), décision 15 :
+**un script de notification appelé en cas d'échec**, émettant vers `ntfy` ou un
+webhook dont l'URL vit dans un `.env` non versionné.
+
+C'est la seule des trois pistes qui alerte activement, au moment de l'échec, sans
+supposer un serveur de messagerie configuré sur la machine — hypothèse rarement
+vraie sur un VPS. Le contrôle de fraîcheur, lui, reste passif : il faut que
+quelque chose le lise.
+
+Le texte ci-dessous est conservé tel quel : il reste l'énoncé de référence du
+problème et des options écartées.
 
 **Le problème.** Avec la sortie jetée vers `/dev/null`, une mise à jour qui
 échoue ne prévient personne. Le code de retour est correct et le journal
@@ -173,9 +183,16 @@ lisaient déjà le 3 sans le maquiller. Seuls leurs messages ont été précisé
 
 ---
 
-## 4. Les six contrôles de forme de TASK-011 n'ont plus d'objet
+## 4. Les six contrôles de forme de TASK-011 n'ont plus d'objet — tranché
 
 **Soulevé le** 2026-09-01, pendant TASK-013.
+**Tranché le** 2026-09-02 par
+[ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md), décision 13 :
+**le §1 est retiré**, deuxième des trois voies ci-dessous.
+
+`tests/README.md` §1 annonçait déjà sa disparition, et le niveau `integration`
+est le domicile durable de ces preuves. Six `NON EXÉCUTÉ` permanents finissent
+par être ignorés — c'est exactement le bruit qui masque un vrai problème.
 
 `tests/acceptance/TASK-011-analyse-statique.sh` §1 compare le diff de six
 fichiers avec `REF_AVANT`, qui vaut `HEAD` par défaut. Les corrections de
@@ -208,10 +225,22 @@ fichier de cas qui prétendrait contrôler un diff après son commit.
 
 ---
 
-## 5. Le coût du dispositif agentique
+## 5. Le coût du dispositif agentique — tranché
 
 **Soulevé le** 2026-09-02, au terme de la session qui a produit la couche
 agentique et les dix premières tâches.
+**Tranché le** 2026-09-02 par
+[ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md), décisions 5
+et 6 : **mode léger pour les scripts qui ne modifient rien** — lecture seule et
+corrections documentaires — et **rapport court par défaut**.
+
+L'arbitrage énoncé plus bas a été suivi à la lettre : le mode léger s'arrête là
+où un script commence à écrire sur un système. Le relecteur reste obligatoire
+pour tout script qui modifie, et sans exception pour `lib/common.sh`. On rogne où
+le contrôle protège le moins.
+
+Les deux autres pistes — prompts de délégation resserrés, pas de relecture sur
+les corrections documentaires — sont absorbées par ces deux décisions.
 
 **Le constat.** Les sous-agents ont consommé environ **3,3 millions de jetons**
 pour dix tâches — de l'ordre de 300 000 par tâche, davantage pour celles qui ont
