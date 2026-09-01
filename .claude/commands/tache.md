@@ -21,13 +21,33 @@ Refuse et explique pourquoi si :
 
 - son `status` n'est pas `ready` ;
 - une de ses `depends_on` n'est pas dans `tasks/completed/` ;
-- son `human_approval_required` est `true` et l'accord n'a pas été donné dans la
-  conversation ;
 - l'environnement qu'elle réclame est indisponible — pour `container-debian`,
   vérifie que le démon Docker répond, et **arrête-toi s'il ne répond pas**. Ne
   remplace jamais une validation comportementale par une analyse statique en la
   présentant comme équivalente ;
 - l'arbre Git n'est pas propre. Ne remise rien, ne supprime rien : signale.
+
+`human_approval_required: true` **ne bloque plus** — ADR-0003, décision 2. Le
+champ signale ce qui mérite une lecture attentive ; il ne suspend pas
+l'exécution. Un script destructif s'écrit comme un autre : il ne s'exécutera
+jamais ailleurs que dans un conteneur jetable.
+
+### Choisir le cycle : complet ou léger
+
+ADR-0003, décision 5.
+
+| La tâche | Cycle |
+|---|---|
+| produit un script en **lecture seule** — `check-*`, `audit-*`, `*-status` | **léger** |
+| ne touche que de la **documentation** | **léger** |
+| produit ou modifie un script qui **écrit sur le système** | **complet** |
+| touche `lib/common.sh`, `tests/` ou `.claude/` | **complet**, sans exception |
+
+**Cycle léger** : étapes 5 et 6, validations, puis étape 8. Pas de relecteur.
+**Cycle complet** : toutes les étapes, relecteur compris.
+
+Dans le doute, prends le cycle complet. Annonce lequel tu as retenu, et
+pourquoi, avant de commencer.
 
 ## 3. Préparer
 
@@ -58,8 +78,12 @@ Passe-lui la tâche et ce qu'a produit l'étape précédente.
 
 ## 7. Valider et relire
 
-Délègue au sous-agent **`relecteur`**. Il est en lecture seule : il constate,
-il ne répare pas.
+**Cycle léger** : lance les commandes du champ `validation`, consigne leurs
+codes de retour réels, et passe à l'étape 8. Une validation en échec reste un
+échec — le mode léger allège la relecture, jamais la preuve.
+
+**Cycle complet** : délègue au sous-agent **`relecteur`**. Il est en lecture
+seule : il constate, il ne répare pas.
 
 **Selon son verdict :**
 
@@ -127,7 +151,15 @@ Passe-lui le verdict complet du relecteur : il n'a pas suivi la conversation.
 
 ## 8. Rendre compte
 
-Écris `tasks/reports/$1-report.md` au format de `tasks/README.md` §6.
+Écris `tasks/reports/$1-report.md`.
+
+**Rapport court par défaut** — ADR-0003, décision 6 : ce qui a été produit, les
+commandes lancées avec leurs codes de retour, le verdict. Une trentaine de
+lignes suffisent pour une tâche sans histoire.
+
+**Format complet** de `tasks/README.md` §6 dès que la tâche a bloqué, a demandé
+plus d'un tour de correction, ou a révélé un défaut — c'est là que le détail
+sert à quelqu'un.
 
 Le rapport consigne **les faits observés** : les commandes réellement lancées,
 leurs vrais codes de retour, les validations réellement exécutées. Une commande
@@ -142,13 +174,29 @@ réussie. Une réserve se dit.
   et les tâches que celle-ci débloque en `ready` ;
 - `git add` et `git commit` sur la branche `agent/$1`, message conventionnel en
   français, avec la ligne `Tâche : $1` ;
-- **jamais de `git push`, jamais de fusion, jamais de commit sur `master`** ;
+- **si la tâche est `completed`** : `git switch master`, puis
+  `git merge --no-ff agent/$1`, puis `git branch -d agent/$1`. Sans cette
+  fusion, la tâche suivante repartirait d'un `master` qui l'ignore ;
+- **si la tâche est `blocked`** : garde la branche, ne fusionne pas ;
+- **pas de `git push` ici** : il est groupé en fin de domaine ;
+- jamais de `rebase`, de `reset --hard` ni de `push --force` ;
 - `git status` final.
 
 ## 10. Résumer
 
 En quelques lignes : ce qui a été fait, ce qui a été prouvé, ce qui reste en
 suspens, et la prochaine tâche prête.
+
+## 11. Enchaîner
+
+S'il reste une tâche `ready` **du même domaine**, reprends à l'étape 1 sans
+demander confirmation — ADR-0003, décision 4.
+
+Quand le domaine est achevé :
+
+- `git push origin master` ;
+- rends un point d'étape court : scripts produits, ce qui a été prouvé, ce qui
+  reste ouvert, domaine suivant.
 
 ---
 
@@ -158,3 +206,7 @@ exactement, quelle décision est attendue, et les conséquences de chaque option
 
 Une question à laquelle Maxime peut répondre en une phrase — pas un appel à
 reprendre les commandes.
+
+**Avant de poser cette question**, vérifie qu'ADR-0003 ne l'a pas déjà tranchée :
+ses vingt-quatre décisions valent autorisation permanente, et une question déjà
+répondue est une interruption de trop.
