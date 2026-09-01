@@ -106,9 +106,12 @@ pistes reste entier.
 
 ---
 
-## 3. Le harnais confond « non applicable » et « indisponible »
+## 3. Le harnais confond « non applicable » et « indisponible » — traité
 
 **Soulevé le** 2026-08-29, pendant [TASK-012](../tasks/completed/TASK-012.md).
+**Traité le** 2026-09-01 par TASK-013. Le texte ci-dessous est conservé tel
+quel — il reste la mesure de référence du défaut. Ce qui a été fait est consigné
+à la fin de la section.
 
 **Le problème.** Depuis TASK-012, un fichier de cas qui réussit tout ce qu'il a
 pu exécuter, en déclarant quelques cas non applicables, sort en 4 — preuve
@@ -146,3 +149,59 @@ de TASK-012 excluait nommément.
 
 **Concerne** tout le niveau `acceptance`, et les niveaux `unit`, `integration`
 et `environment` le jour où ils existeront.
+
+### Ce que TASK-013 a fait
+
+Le remède connu a été appliqué tel quel : un compteur `indisponibilites`
+distinct, alimenté par une seconde fonction de saut, avec la règle
+`indisponibilites > 0 → 3`. Les vingt-cinq appels `saute` des trois fichiers de
+cas ont été relus un par un et qualifiés ; le fichier de cas conteneurisé de
+TASK-011 a reçu un verdict `INDISPO` en plus de son `SKIP`, faute de quoi ses
+sauts arrivaient sans leur nature.
+
+Le scénario mesuré ci-dessus donne désormais :
+
+```text
+DOCKER_HOST=tcp://127.0.0.1:1 bash tests/acceptance/TASK-011-analyse-statique.sh
+Bilan TASK-011 : 8 réussite(s), 0 échec(s), 21 NON EXÉCUTÉ(s)
+                 — dont 9 non applicable(s) par nature et 12 indisponibilité(s)  → 3
+DOCKER_HOST=tcp://127.0.0.1:1 tests/run.sh acceptance                            → 3
+```
+
+Ni `tests/run.sh` ni `run-acceptance.sh` n'ont eu à changer de logique : ils
+lisaient déjà le 3 sans le maquiller. Seuls leurs messages ont été précisés.
+
+---
+
+## 4. Les six contrôles de forme de TASK-011 n'ont plus d'objet
+
+**Soulevé le** 2026-09-01, pendant TASK-013.
+
+`tests/acceptance/TASK-011-analyse-statique.sh` §1 compare le diff de six
+fichiers avec `REF_AVANT`, qui vaut `HEAD` par défaut. Les corrections de
+TASK-011 étant commitées depuis le 2026-08-29, `git diff HEAD` est vide sur un
+arbre propre : les six contrôles sortent en `NON EXÉCUTÉ` à chaque exécution, et
+ne reviendront jamais d'eux-mêmes.
+
+TASK-013 les a qualifiés **non applicables par nature** — rien n'a manqué, c'est
+l'objet de la comparaison qui a disparu, par construction et tant que la
+référence reste `HEAD` sur un arbre propre. La justification longue est écrite
+sur place, dans le fichier de cas.
+
+**La réserve.** C'est le seul saut du harnais dont la nature ait demandé à être
+tranchée, et l'argument contraire s'entend : la preuve reste *rejouable* ici, en
+fixant `TASK011_REF` sur le commit antérieur. Ce qui manque n'est pas une pièce
+de l'environnement mais un paramètre du test — d'où la qualification retenue,
+qui ne dépend pas du verdict qu'elle produit.
+
+**Ce qu'il faudrait décider.** Trois voies, aucune ne relevant de TASK-013 :
+
+- inscrire dans le fichier de cas le commit de référence réel, ce qui rendrait
+  les six contrôles exécutables à nouveau — mais gèlerait un identifiant de
+  commit dans un test ;
+- retirer le §1, dont `tests/README.md` §1 annonce déjà qu'il disparaîtra avec
+  TASK-011, le niveau `integration` étant le domicile durable de ces preuves ;
+- le laisser tel quel, six `NON EXÉCUTÉ` visibles à chaque exécution.
+
+**Concerne** `tests/acceptance/TASK-011-analyse-statique.sh` §1, et tout futur
+fichier de cas qui prétendrait contrôler un diff après son commit.

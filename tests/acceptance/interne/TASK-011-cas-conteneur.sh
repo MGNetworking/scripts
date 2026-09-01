@@ -14,8 +14,16 @@
 #
 #   RESULTAT|PASS|libellé
 #   RESULTAT|FAIL|libellé — détail
-#   RESULTAT|SKIP|libellé — raison
+#   RESULTAT|SKIP|libellé — raison        non applicable PAR NATURE
+#   RESULTAT|INDISPO|libellé — raison     ENVIRONNEMENT INDISPONIBLE
 #   FIN|groupe|nombre-de-vérifications
+#
+# Les deux dernières lignes ne se confondent pas, et c'est l'objet de TASK-013.
+# SKIP dit « ce conteneur n'aura jamais systemd ni CAP_SYS_ADMIN » : la limite
+# est assumée, le fichier appelant peut sortir en 4. INDISPO dit « l'index apt
+# n'a pas pu être rafraîchi » : la preuve existe, elle n'a pas été produite, et
+# l'appelant sort alors en 3. Un verdict inconnu de l'appelant est compté en
+# échec — ajouter une nature ici impose donc de la traiter là-bas.
 #
 # La ligne FIN est le témoin de bonne fin : sans elle, l'appelant sait que le
 # groupe s'est interrompu et le compte pour un échec. Le code de retour, lui,
@@ -62,8 +70,18 @@ fail() {
     fi
 }
 
+# skip <libellé> — cas NON APPLICABLE PAR NATURE dans ce conteneur : systemd
+# absent, CAP_SYS_ADMIN refusé, outil volontairement hors de l'image minimale.
 skip() {
     printf 'RESULTAT|SKIP|%s\n' "$1"
+    VERIFICATIONS=$((VERIFICATIONS + 1))
+}
+
+# skip_indisponible <libellé> — ENVIRONNEMENT INDISPONIBLE : le conteneur est
+# conforme, c'est une ressource extérieure qui a manqué — le réseau, le miroir
+# apt. La preuve existe et serait produite ailleurs ; l'appelant sort en 3.
+skip_indisponible() {
+    printf 'RESULTAT|INDISPO|%s\n' "$1"
     VERIFICATIONS=$((VERIFICATIONS + 1))
 }
 
@@ -666,7 +684,7 @@ groupe_hosts_existant() {
 groupe_logging() {
     if ! command -v logrotate >/dev/null 2>&1; then
         if ! apt-get update -qq >/dev/null 2>&1 || ! apt-get install -y -qq logrotate >/dev/null 2>&1; then
-            skip "configure-logging.sh — logrotate absent de l'image et non installable (réseau indisponible ?)"
+            skip_indisponible "configure-logging.sh — logrotate absent de l'image et non installable, apt-get n'a pas abouti"
             return 0
         fi
     fi
@@ -788,7 +806,7 @@ groupe_enfants() {
     local sans avec
 
     if ! apt-get update -qq >/dev/null 2>&1; then
-        skip "apt-get insensible à ASSUME_YES — index de paquets non rafraîchissable"
+        skip_indisponible "apt-get insensible à ASSUME_YES — index de paquets non rafraîchissable"
     else
         sans="$(apt-get -s upgrade 2>/dev/null | cksum)"
         avec="$(ASSUME_YES=true apt-get -s upgrade 2>/dev/null | cksum)"
@@ -799,7 +817,7 @@ groupe_enfants() {
 
     if ! command -v logrotate >/dev/null 2>&1 \
         && ! apt-get install -y -qq logrotate >/dev/null 2>&1; then
-        skip "logrotate insensible à ASSUME_YES — logrotate non installable"
+        skip_indisponible "logrotate insensible à ASSUME_YES — logrotate non installable"
     else
         local regle="$REP_TMP/regle-test"
         printf '/var/log/mgnetworking/*.log {\n    weekly\n    rotate 8\n    missingok\n    notifempty\n}\n' > "$regle"

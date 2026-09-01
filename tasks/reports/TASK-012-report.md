@@ -177,7 +177,7 @@ sont littéralement satisfaits, le remède est hors périmètre, et le travail n
 dissimule rien puisqu'il mesure et annonce lui-même la limite.
 
 Consigné en trois endroits pour qu'il survive : `docs/points-en-suspens.md` §3,
-[TASK-013](../pending/TASK-013.md), et `tests/README.md` §2.
+[TASK-013](../completed/TASK-013.md), et `tests/README.md` §2.
 
 ## Réserves
 

@@ -62,6 +62,10 @@ CODE=0
 reussites=0
 echecs=0
 non_executes=0
+# Les deux natures de saut, décomptées séparément — voir tests/README.md §2.
+# « non_executes » reste leur total.
+non_applicables=0
+indisponibilites=0
 
 nettoyer() {
     rm -rf "$REP_TMP"
@@ -87,9 +91,22 @@ ko() {
     echecs=$((echecs + 1))
 }
 
-saute() {
-    warn "NON EXÉCUTÉ : $1 — $2"
+# saute_par_nature <libellé> <raison> — cas NON APPLICABLE PAR NATURE : aucune exécution ne
+# le rendra atteignable ici. Les deux sauts du §11 sont de cette nature, et le
+# fichier sort donc en 4.
+saute_par_nature() {
+    warn "NON EXÉCUTÉ (non applicable par nature) : $1 — $2"
     non_executes=$((non_executes + 1))
+    non_applicables=$((non_applicables + 1))
+}
+
+# saute_indisponible <libellé> <raison> — ENVIRONNEMENT INDISPONIBLE : la preuve
+# existe, elle n'a pas pu être produite. Un seul suffit à faire sortir ce
+# fichier en 3.
+saute_indisponible() {
+    warn "NON EXÉCUTÉ (environnement indisponible) : $1 — $2"
+    non_executes=$((non_executes + 1))
+    indisponibilites=$((indisponibilites + 1))
 }
 
 # Exécute une commande en capturant flux et code, sans armer le trap ERR.
@@ -452,7 +469,7 @@ if [ -z "$NIVEAU_ABSENT" ]; then
 fi
 
 if [ -z "$NIVEAU_ABSENT" ]; then
-    saute "niveau non implémenté → 3" \
+    saute_indisponible "niveau non implémenté → 3" \
         "aucun niveau annoncé NON IMPLÉMENTÉ, ni par le dépôt ni par le bac à sable"
 else
     lancer bash "$RUN_EPROUVE" "$NIVEAU_ABSENT"
@@ -484,7 +501,7 @@ titre "7. Ordre du garde dans les fichiers réels"
 for relatif in $CAS_REELS; do
     fichier="$SCRIPTS_ROOT/$relatif"
     if [ ! -f "$fichier" ]; then
-        saute "ordre du garde dans $relatif" "fichier absent"
+        saute_indisponible "ordre du garde dans $relatif" "fichier absent"
         continue
     fi
     ligne_sterile="$(grep -n 'reussites" -eq 0' "$fichier" | head -n 1 | cut -d: -f1)"
@@ -513,11 +530,17 @@ done
 # ===================================================================
 # 8. Diagnostic : environnement indisponible
 # ===================================================================
-# Les compteurs ne distinguent pas « non applicable par nature » (le conteneur
-# n'a pas systemd) de « environnement indisponible » (le démon Docker ne répond
-# pas). Ce cas mesure ce que rend un fichier de cas réel quand l'essentiel de sa
-# preuve est hors d'atteinte. Le contrat de TASK-012 exige seulement qu'il ne
-# sorte pas en 0 ; le code observé est affiché, quel qu'il soit.
+# Ce cas mesure ce que rend un fichier de cas réel quand l'essentiel de sa preuve
+# est hors d'atteinte. Le contrat de TASK-012 exige seulement qu'il ne sorte pas
+# en 0 ; le code observé est affiché, quel qu'il soit.
+#
+# À l'époque de TASK-012, les compteurs ne distinguaient pas « non applicable par
+# nature » (le conteneur n'a pas systemd) de « environnement indisponible » (le
+# démon Docker ne répond pas) : le code observé ici était 4, et les trois lignes
+# « LIMITE CONNUE » ci-dessous s'affichaient. TASK-013 a introduit la
+# distinction ; le code attendu est désormais 3. L'assertion, elle, ne bouge pas
+# — elle accepte 3 comme 4, et c'est ce qui permet de constater le changement
+# sans le décréter.
 titre "8. Diagnostic — un fichier de cas privé de son environnement"
 
 PATH_SANS_DOCKER=""
@@ -538,7 +561,7 @@ fi
 
 CAS_DOCKER="$SCRIPTS_ROOT/tests/acceptance/TASK-002-environnement-conteneurise.sh"
 if [ -z "$PATH_SANS_DOCKER" ] || [ ! -f "$CAS_DOCKER" ]; then
-    saute "fichier de cas privé de Docker" "docker n'est pas dans le PATH, la simulation n'a pas de sens"
+    saute_indisponible "fichier de cas privé de Docker" "docker n'est pas dans le PATH, la simulation n'a pas de sens"
 else
     lancer env PATH="$PATH_SANS_DOCKER" bash "$CAS_DOCKER"
     case "$CODE" in
@@ -569,9 +592,9 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 if [ ! -f "$LANCEUR" ]; then
-    saute "tests/run.sh lint dans le conteneur" "lanceur introuvable : $LANCEUR"
+    saute_indisponible "tests/run.sh lint dans le conteneur" "lanceur introuvable : $LANCEUR"
 elif [ "$DOCKER_UTILISABLE" = "false" ]; then
-    saute "tests/run.sh lint dans le conteneur" "le démon Docker ne répond pas"
+    saute_indisponible "tests/run.sh lint dans le conteneur" "le démon Docker ne répond pas"
 else
     lancer bash "$LANCEUR" -- tests/run.sh lint
     assert_code 0 "tests/run.sh lint dans le conteneur (shellcheck présent)"
@@ -609,17 +632,17 @@ titre "11. Hors de portée de cet environnement"
 # complet depuis ici s'appellerait sans fin. Le critère « tests/run.sh
 # acceptance sort en 0 sur l'état actuel du dépôt » se vérifie donc à la main,
 # hors du niveau — il ne peut pas être prouvé de l'intérieur.
-saute "tests/run.sh acceptance sur le dépôt réel" "récursion : ce fichier fait partie du niveau qu'il faudrait lancer"
+saute_par_nature "tests/run.sh acceptance sur le dépôt réel" "récursion : ce fichier fait partie du niveau qu'il faudrait lancer"
 
 # Le profil systemd n'existe pas : aucun fichier de cas réel ne peut aujourd'hui
 # être placé dans un environnement où ses sauts disparaîtraient. La preuve que
 # « 0 saut → 0 » sur un fichier réel reste hors d'atteinte.
-saute "un fichier de cas réel sortant en 0 sans aucun saut" "aucun environnement du dépôt ne rend exécutables les cas systemd et CAP_SYS_ADMIN"
+saute_par_nature "un fichier de cas réel sortant en 0 sans aucun saut" "aucun environnement du dépôt ne rend exécutables les cas systemd et CAP_SYS_ADMIN"
 
 # ===================================================================
 # Bilan
 # ===================================================================
-info "Bilan TASK-012 : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s)"
+info "Bilan TASK-012 : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s) — dont $non_applicables non applicable(s) par nature et $indisponibilites indisponibilité(s) d'environnement"
 
 if [ "$echecs" -gt 0 ]; then
     die "TASK-012 : $echecs critère(s) en défaut." 1
@@ -630,6 +653,15 @@ fi
 # rien n'aurait été prouvé.
 if [ "$reussites" -eq 0 ]; then
     warn "TASK-012 : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
+# Une indisponibilité suffit — le garde ajouté par TASK-013. Les deux sauts du
+# §11 n'en sont pas : la récursion et l'absence de profil systemd sont des
+# limites permanentes, ce fichier sort donc en 4 sur un environnement complet.
+# Testé AVANT les non applicables : des deux natures, la plus grave l'emporte.
+if [ "$indisponibilites" -gt 0 ]; then
+    warn "TASK-012 : $indisponibilites cas n'ont pas pu être produits faute d'environnement — rien n'est prouvé de fiable."
     exit 3
 fi
 

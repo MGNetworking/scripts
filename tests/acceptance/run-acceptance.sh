@@ -10,9 +10,10 @@
 # Quatre verdicts par fichier, jamais trois :
 #
 #   0   tous les critères ont été vérifiés et sont satisfaits
-#   4   les critères vérifiés sont satisfaits, mais certains cas ne
-#       s'appliquaient pas à cet environnement — la preuve est partielle
-#   3   AUCUN critère n'a pu être vérifié — rien n'est prouvé
+#   4   les critères vérifiés sont satisfaits, mais certains cas n'ont pas été
+#       exécutés, sans indisponibilité déclarée — la preuve est partielle
+#   3   rien n'est prouvé : aucun critère n'a pu être vérifié, OU l'un d'eux
+#       n'a pas pu l'être faute d'environnement
 #   *   au moins un critère est en défaut (ÉCHEC)
 #
 # Le verdict 3 ne se confond pas avec 0 : « pas pu vérifier » n'est pas
@@ -23,6 +24,13 @@
 # « rien n'a tourné ». Le premier laisse une preuve, le second aucune. Le
 # décompte reste affiché dans les deux cas — un saut invisible serait pire que
 # le faux vert qu'on cherche à empêcher.
+#
+# TASK-013 a scindé le 3 en deux situations que ce dispatcher ne peut pas
+# distinguer par le seul code de retour, et n'a pas à distinguer : « aucun cas
+# n'a tourné » et « un cas n'a pas pu être produit faute d'environnement »
+# appellent le même verdict — rien n'est prouvé, le lot n'y change rien. Le
+# détail des deux natures est publié par le bilan de chaque fichier, affiché
+# juste au-dessus de la ligne de ce dispatcher : lui ne compte que des fichiers.
 
 set -Eeuo pipefail
 
@@ -45,8 +53,8 @@ fi
 info "Acceptance — ${#fichiers[@]} fichier(s) de critères"
 
 reussis=0    # tout vérifié, tout satisfait
-partiels=0   # satisfaits, avec des cas non applicables à cet environnement
-steriles=0   # aucun critère vérifié — rien n'est prouvé
+partiels=0   # fichiers satisfaits, comportant des cas non exécutés sans indisponibilité
+steriles=0   # rien n'est prouvé : aucun cas vérifié, ou environnement manquant
 echoues=0
 
 for fichier in "${fichiers[@]}"; do
@@ -61,7 +69,7 @@ for fichier in "${fichiers[@]}"; do
            reussis=$((reussis + 1)) ;;
         4) warn "$relatif : critères satisfaits, avec des cas non applicables à cet environnement — voir le bilan du fichier ci-dessus"
            partiels=$((partiels + 1)) ;;
-        3) warn "$relatif : RIEN N'A PU ÊTRE VÉRIFIÉ — aucun critère prouvé"
+        3) warn "$relatif : RIEN N'A PU ÊTRE VÉRIFIÉ — aucun critère prouvé, ou environnement indisponible : voir le bilan du fichier ci-dessus"
            steriles=$((steriles + 1)) ;;
         *) error "$relatif : ÉCHEC (code $code)"
            echoues=$((echoues + 1)) ;;
@@ -72,10 +80,11 @@ if [ "$echoues" -gt 0 ]; then
     die "Acceptance : $echoues fichier(s) en échec, $reussis satisfait(s), $partiels partiel(s), $steriles sans preuve." 1
 fi
 
-# Un fichier qui n'a rien pu vérifier laisse les critères de sa tâche sans
-# preuve : le reste du lot ne rachète pas ce silence.
+# Un fichier qui n'a rien pu vérifier — ou dont une preuve a manqué d'environ-
+# nement — laisse les critères de sa tâche sans garantie : le reste du lot ne
+# rachète pas ce silence.
 if [ "$steriles" -gt 0 ]; then
-    warn "Acceptance : $steriles fichier(s) n'ont RIEN pu vérifier — rien n'est prouvé pour ceux-là."
+    warn "Acceptance : $steriles fichier(s) n'ont RIEN pu prouver de fiable — rien n'est acquis pour ceux-là."
     exit 3
 fi
 

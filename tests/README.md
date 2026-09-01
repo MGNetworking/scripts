@@ -196,6 +196,7 @@ tests/acceptance/
 ├── TASK-002-environnement-conteneurise.sh   exécuté sur l'hôte
 ├── TASK-011-analyse-statique.sh             exécuté sur l'hôte
 ├── TASK-012-semantique-codes.sh             exécuté sur l'hôte
+├── TASK-013-natures-de-saut.sh              exécuté sur l'hôte
 └── interne/
     └── TASK-011-cas-conteneur.sh        exécuté DANS le conteneur, jamais sur l'hôte
 ```
@@ -220,8 +221,8 @@ verdict global.
 | 0 | tous les cas ont été exécutés et ont réussi |
 | 1 | au moins un cas est en défaut |
 | 2 | erreur d'usage |
-| 3 | **aucun cas n'a pu être exécuté** — rien n'est prouvé |
-| 4 | les cas exécutés ont réussi, mais certains ne s'appliquaient pas à cet environnement — la preuve est partielle, elle existe |
+| 3 | **rien n'est prouvé** : aucun cas n'a pu être exécuté, ou l'un d'eux n'a pas pu l'être faute d'environnement |
+| 4 | les cas exécutés ont réussi, mais certains ne s'appliquaient pas **par nature** à cet environnement — la preuve est partielle, elle existe |
 
 Le **3** et le **4** sont deux façons très différentes de ne pas tout vérifier,
 longtemps confondues sous le même code :
@@ -235,34 +236,65 @@ Le 4 n'ouvre pas la porte au faux vert que le 3 avait fermée : il exige **au
 moins une réussite**. Une suite intégralement sautée retombe sur le 3, et un
 fichier de cas teste donc « aucune réussite » *avant* « des cas sautés ».
 
-#### Ce que le 4 ne garantit pas
+#### Les deux natures de saut
 
-Cette garantie est **plus faible qu'elle n'en a l'air**, et c'est mesuré, pas
-supposé. Démon Docker rendu injoignable (`DOCKER_HOST=tcp://127.0.0.1:1`, Docker
-Desktop jamais arrêté), le fichier de cas de TASK-011 donne :
+« Au moins une réussite » ne suffisait pas. Mesuré, démon Docker rendu
+injoignable (`DOCKER_HOST=tcp://127.0.0.1:1`, Docker Desktop jamais arrêté), le
+fichier de cas de TASK-011 donnait :
 
 ```text
 Bilan TASK-011 : 8 réussites, 0 échec, 21 NON EXÉCUTÉ(s)  → code 4
 tests/run.sh acceptance                                    → code 0
 ```
 
-72 % de la preuve avait disparu, le verdict global restait vert.
+72 % de la preuve avait disparu, le verdict global restait vert. Quelques cas de
+préflight, qui n'ont besoin de rien pour tourner, suffisaient à franchir le
+seuil.
 
-La cause tient aux compteurs : ils ne distinguent pas **« non applicable par
-nature »** — le profil `debian` n'a pas `systemd` et ne l'aura jamais — de
-**« environnement indisponible »** — le démon Docker est coupé, la preuve existe
-mais n'a pas pu être produite. Les deux tombent dans `non_executes`, et quelques
-cas de préflight, qui n'ont besoin de rien pour tourner, suffisent à franchir le
-seuil « au moins une réussite ».
+TASK-013 a donc scindé le décompte des sauts en deux natures, que le seul
+compteur `non_executes` confondait :
 
-À lire donc pour ce qu'il dit exactement : **un code 4 garantit qu'au moins un
-cas a été prouvé, pas que l'essentiel l'a été.** Devant un 4, lire le bilan et le
-décompte des `NON EXÉCUTÉ` avant de conclure — la ligne `info` du §5 est là pour
-ça.
+| Nature | Exemple | Verdict |
+|---|---|---|
+| **non applicable par nature** | le profil `debian` n'a pas `systemd` et ne l'aura jamais ; `swapon` exige `CAP_SYS_ADMIN` ; un fichier de cas ne peut pas lancer le niveau dont il fait partie | **4** — la limite est assumée, ce qui a été prouvé le reste |
+| **environnement indisponible** | le démon Docker ne répond pas, `git` est absent, le miroir `apt` est injoignable | **3** — la preuve existe, elle n'a pas pu être produite |
 
-Le remède connu — un compteur distinct pour les indisponibilités d'environnement,
-qui les ferait basculer du côté du 3 plutôt que du 4 — est versé au backlog. Il
-dépasse le périmètre de la tâche qui a introduit le code 4.
+La première est une limite permanente de l'environnement de test ; la seconde un
+accident, qui doit interrompre le verdict. **Une seule indisponibilité fait
+sortir le fichier en 3**, quel que soit le nombre de cas réussis par ailleurs.
+
+Un saut se déclare donc avec sa nature, et l'ordre des gardes du bilan devient :
+échec, puis aucune réussite, puis indisponibilité, puis non applicable.
+
+**Règle de prudence : dans le doute, indisponibilité.** Un rouge à tort se voit
+et se corrige ; un vert à tort ne se voit pas. Deux qualifications méritent
+d'être connues, parce qu'elles ne vont pas de soi :
+
+- un outil **absent de l'image** — `setpriv`, `zoneinfo`, un paquet obsolète à
+  mettre à jour — est *non applicable par nature* : l'image est minimale à
+  dessein, elle fonctionne comme prévu, c'est une limite assumée. Un outil
+  **installable mais non installé faute de réseau** est une *indisponibilité* :
+  là, l'environnement a échoué ;
+- les six contrôles de forme du diff de TASK-011 sont comptés *non applicables
+  par nature* depuis que ses corrections sont commitées : sur un arbre propre,
+  `git diff HEAD` ne produit rien. Rien n'a manqué — c'est l'objet de la
+  comparaison qui a disparu. Mais **pas définitivement** : le diff redevient non
+  vide dès qu'un de ces six fichiers est modifié sans être commité, c'est-à-dire
+  exactement dans la situation où ce contrôle sert. Ce n'est donc pas une limite
+  permanente comme l'absence de `systemd` du profil `debian` — c'est un cas
+  **sans objet dans l'état courant du dépôt**, une troisième catégorie que ce
+  harnais ne nomme pas. Il est rangé avec les non applicables faute de mieux :
+  l'autre option ferait sortir le fichier en 3 sur un environnement pourtant
+  complet. La justification complète est écrite sur place, dans le fichier de
+  cas, et la réserve est consignée au §4 de
+  [docs/points-en-suspens.md](../docs/points-en-suspens.md).
+
+Un code 4 dit donc désormais **« rien d'atteignable n'a été manqué »** — mais
+cette garantie ne vaut que ce que valent les qualifications : elle repose sur la
+relecture, un saut à la fois, de celui qui les a écrites. Un saut ajouté sans
+qualification réfléchie la ruine en silence. Le décompte des deux natures reste
+affiché à chaque bilan — un saut invisible serait pire que le faux vert qu'on
+cherche à empêcher.
 
 ### Ce que rend `tests/run.sh`
 
@@ -271,7 +303,7 @@ dépasse le périmètre de la tâche qui a introduit le code 4.
 | 0 | tous les niveaux exécutés ont réussi — les cas non applicables, s'il y en a, sont décomptés à l'écran |
 | 1 | au moins un niveau a échoué |
 | 2 | erreur d'usage — option ou niveau inconnu |
-| 3 | rien n'est prouvé : un niveau demandé explicitement n'est pas implémenté, ou un niveau exécuté n'a rien pu vérifier |
+| 3 | rien n'est prouvé : un niveau demandé explicitement n'est pas implémenté, un niveau exécuté n'a rien pu vérifier, ou l'un de ses cas n'a pas pu être produit faute d'environnement |
 
 `tests/run.sh` **ne rend jamais 4** : il lit ce code, l'affiche, et le traduit
 en réussite. C'est le point d'entrée du dépôt, son contrat tient en une ligne —
@@ -499,19 +531,58 @@ Trois règles propres aux tests :
 
 ### `tests/lib/assert.sh`
 
-Les assertions communes vivent là : `titre`, `ok`, `ko`, `saute`, `assert_code`,
-`assert_code_non_nul`, `assert_egal`, `assert_non_vide`, `assert_contient`,
-`assert_absent`, et `bilan` — qui applique le modèle ci-dessous et sort avec le
-code qui convient.
+Les assertions communes vivent là : `titre`, `ok`, `ko`, `saute`,
+`saute_par_nature`, `saute_indisponible`, `assert_code`, `assert_code_non_nul`,
+`assert_egal`, `assert_non_vide`, `assert_contient`, `assert_absent`, et `bilan`
+— qui applique le modèle ci-dessous et sort avec le code qui convient.
 
 ```bash
 source "$SCRIPTS_ROOT/tests/lib/assert.sh"
 
 titre "1. Journalisation"
 assert_code 1 "$CODE" "die sort en 1 par défaut"
-saute "cas systemd" "le conteneur n'a pas systemd"
+saute "cas non exécuté" "la raison, sans qualification"
+saute_par_nature "cas systemd" "le conteneur n'a pas systemd"
+saute_indisponible "lint conteneurisé" "le démon Docker ne répond pas"
 bilan "lib/common.sh"
 ```
+
+Trois fonctions de saut, qui ne se remplacent pas l'une l'autre :
+
+| Fonction | Ce qu'elle affiche | Compteur | Verdict |
+|---|---|---|---|
+| `saute` | `NON EXÉCUTÉ : …` | `non_applicables` | 4 |
+| `saute_par_nature` | `NON EXÉCUTÉ (non applicable par nature) : …` | `non_applicables` | 4 |
+| `saute_indisponible` | `NON EXÉCUTÉ (environnement indisponible) : …` | `indisponibilites` | 3 |
+
+`saute` et `saute_par_nature` rendent le **même verdict** : seul le message
+diffère, et avec lui ce que le harnais affirme. La distinction est là parce que
+**la qualification d'un saut se relit, elle ne s'obtient pas par défaut**.
+
+- `saute` est le libellé **neutre** : le cas n'a pas tourné, le harnais n'en dit
+  pas plus. C'est ce que servent les quelque soixante-dix sauts de `tests/unit/`
+  et `tests/integration/`, qui n'ont pas été examinés un par un — et dont
+  plusieurs tiennent à une propriété de la **machine** (`/etc/os-release`
+  illisible sur cet hôte, harnais lancé sous `root`) et non à une limite de
+  nature ;
+- `saute_par_nature` est une **signature** : l'employer, c'est déclarer qu'on a
+  examiné ce cas précis et conclu qu'aucune exécution ne le rendra jamais
+  atteignable ici.
+
+Le compteur, lui, reste **commun aux deux** : `non_applicables` agrège les sauts
+relus et ceux qui ne le sont pas. Il est conservé tel quel pour qu'**aucun
+verdict existant ne change** tant que la relecture n'a pas eu lieu — le partage
+du compteur est un écart assumé, qui se referme saut par saut, en remplaçant
+`saute` par la fonction qui convient.
+
+Ce partage a une conséquence sur l'affichage : la ligne de bilan de
+`tests/lib/assert.sh` ne peut pas nommer la nature de ce qu'elle décompte, et ne
+la nomme donc pas — elle annonce `N sans indisponibilité déclarée`, ce que le
+compteur sait, et rien de plus. Même règle pour les dispatchers de niveau et
+pour `tests/run.sh`, qui ne comptent que des fichiers ou des niveaux : ils
+parlent de « cas non applicables à cet environnement », sans qualifier une
+nature que personne ne leur a transmise. Sous-affirmer ne produit jamais de faux
+vert ; sur-affirmer, si. Voir §2 — et la règle de prudence qui l'accompagne.
 
 Bash pur, aucun framework : `bats` est absent de la machine de développement et
 ne se justifie pas pour ce volume. La bibliothèque ne pose ni
@@ -525,16 +596,27 @@ et ne redéfinit rien de ce que `lib/common.sh` fournit déjà.
 > jusqu'à la racine. Le jour où il existerait, tous les scripts de `tests/`
 > chargeraient ce fichier-là au lieu du socle du dépôt.
 
-Les fichiers de `tests/acceptance/` définissent encore leurs assertions
-localement. Les uniformiser est une tâche en soi, pas un effet de bord.
+Les trois premiers fichiers de `tests/acceptance/` définissent encore leurs
+assertions localement — TASK-013 y a ajouté `saute_indisponible` à l'identique
+plutôt que de les réécrire. Leur saut qualifié s'y nomme `saute_par_nature`,
+comme ici, et non `saute` : leurs quelques appels ont été relus un par un, et le
+nom le dit. Aucun `saute` neutre n'y est défini — un saut ajouté sans
+qualification échouera bruyamment au lieu d'hériter d'une nature que personne ne
+lui a donnée.
+`TASK-002-environnement-conteneurise.sh` n'en déclare aucun, ses onze sauts
+étant tous des indisponibilités. `TASK-013-natures-de-saut.sh`, lui, s'appuie
+sur cette bibliothèque. Uniformiser les autres est une tâche en soi, pas un
+effet de bord.
 
 ### Le bilan d'un fichier de cas
 
-Trois compteurs — réussites, échecs, non exécutés — et un bilan qui les traduit
-en code de retour, **dans cet ordre** :
+Trois compteurs de verdict — réussites, échecs, non exécutés — dont le dernier
+se scinde en deux natures — `non_applicables` et `indisponibilites`, dont il
+reste le total. Et un bilan qui les traduit en code de retour, **dans cet
+ordre** :
 
 ```bash
-info "Bilan TASK-0xx : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s)"
+info "Bilan TASK-0xx : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s) — dont $non_applicables non applicable(s) par nature et $indisponibilites indisponibilité(s) d'environnement"
 
 if [ "$echecs" -gt 0 ]; then
     die "TASK-0xx : $echecs critère(s) en défaut." 1
@@ -542,6 +624,11 @@ fi
 
 if [ "$reussites" -eq 0 ]; then
     warn "TASK-0xx : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
+if [ "$indisponibilites" -gt 0 ]; then
+    warn "TASK-0xx : $indisponibilites cas n'ont pas pu être produits faute d'environnement — rien n'est prouvé de fiable."
     exit 3
 fi
 
@@ -553,11 +640,28 @@ fi
 success "TASK-0xx : tous les critères vérifiés ($reussites vérifications)."
 ```
 
-L'ordre n'est pas décoratif : un échec prime sur tout, et « aucune réussite » se
-teste **avant** « des cas non applicables ». Sans cela, une suite intégralement
-sautée — démon Docker arrêté, par exemple — sortirait en 4, c'est-à-dire en
-réussite partielle, sans avoir rien prouvé.
+L'ordre n'est pas décoratif : un échec prime sur tout, « aucune réussite » se
+teste **avant** « des cas non applicables », et une indisponibilité
+d'environnement **avant** eux aussi. Sans le premier de ces ordres, une suite
+intégralement sautée — démon Docker arrêté, par exemple — sortirait en 4,
+c'est-à-dire en réussite partielle, sans avoir rien prouvé. Sans le second, une
+suite dont il ne reste que le préflight en sortirait de même : c'est le faux
+vert mesuré au §2, fermé par TASK-013.
 
 La ligne `info` du bilan n'est pas facultative : c'est elle qui rend visible le
-nombre de cas non applicables. Le dispatcher, lui, ne compte que des fichiers ;
-le détail vient d'ici.
+nombre de cas sautés, et la nature de chacun. Le dispatcher, lui, ne compte que
+des fichiers ; le détail vient d'ici.
+
+**Règle de qualification du bilan.** Un fichier de cas dont tous les sauts sont
+qualifiés — chaque appel étant `saute_par_nature` ou `saute_indisponible`, aucun
+`saute` neutre — peut nommer la nature des sauts dans son propre bilan, et
+employer le libellé « non applicable(s) par nature » du modèle ci-dessus. C'est
+le cas des trois fichiers de `tests/acceptance/` qui déclarent leurs assertions
+localement : leurs appels ont été relus un par un, le fichier sait donc ce qu'il
+décompte. Il suffit qu'un seul `saute` neutre y apparaisse pour que ce libellé
+redevienne illégitime.
+
+Un fichier qui s'appuie sur `tests/lib/assert.sh` n'a pas ce choix : il hérite
+du libellé neutre de sa bibliothèque, `N sans indisponibilité déclarée`. La
+bibliothèque ignore, de ses appelants, lesquels ont été relus — elle ne peut
+donc pas qualifier ce qu'elle décompte, et ne le fait pas.

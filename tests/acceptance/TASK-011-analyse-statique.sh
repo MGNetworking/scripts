@@ -29,6 +29,14 @@
 # vérifiés le sont, ceux-là ne le sont pas, et leur nombre s'affiche. Il ne sort
 # en 3 que si AUCUNE vérification n'a pu être exécutée : « pas pu vérifier » ne
 # vaut jamais « vérifié », mais ne doit pas non plus effacer ce qui l'a été.
+#
+# NATURE DES SAUTS (TASK-013). Ces sauts-là sont NON APPLICABLES PAR NATURE : le
+# profil « debian » n'aura jamais systemd, et aucune exécution ne l'y mettra.
+# Ils valent 4. Les sauts dus au démon Docker qui ne répond pas, à git
+# introuvable ou au miroir apt injoignable sont d'une autre nature —
+# l'ENVIRONNEMENT A MANQUÉ — et valent 3. C'est le scénario mesuré au §3 de
+# docs/points-en-suspens.md : 21 des 29 vérifications de ce fichier
+# s'évaporaient, et le verdict restait vert.
 
 set -Eeuo pipefail
 
@@ -74,6 +82,10 @@ CODE=0
 reussites=0
 echecs=0
 non_executes=0
+# Les deux natures de saut, décomptées séparément — voir tests/README.md §2.
+# « non_executes » reste leur total.
+non_applicables=0
+indisponibilites=0
 
 trap 'rm -rf "$REP_TMP"' EXIT
 
@@ -92,9 +104,20 @@ ko() {
     echecs=$((echecs + 1))
 }
 
-saute() {
-    warn "NON EXÉCUTÉ : $1"
+# saute_par_nature <libellé> — cas NON APPLICABLE PAR NATURE : aucune exécution ne le
+# rendra atteignable ici. Le fichier peut sortir en 4.
+saute_par_nature() {
+    warn "NON EXÉCUTÉ (non applicable par nature) : $1"
     non_executes=$((non_executes + 1))
+    non_applicables=$((non_applicables + 1))
+}
+
+# saute_indisponible <libellé> — ENVIRONNEMENT INDISPONIBLE : la preuve existe,
+# elle n'a pas pu être produite. Un seul suffit à faire sortir ce fichier en 3.
+saute_indisponible() {
+    warn "NON EXÉCUTÉ (environnement indisponible) : $1"
+    non_executes=$((non_executes + 1))
+    indisponibilites=$((indisponibilites + 1))
 }
 
 # verifier <0-si-vrai> <libellé> [détail]
@@ -172,7 +195,33 @@ controler_forme() {
     git -C "$SCRIPTS_ROOT" diff "$REF_AVANT" -- "$fichier" > "$diff" 2>/dev/null || true
 
     if [ ! -s "$diff" ]; then
-        saute "forme de $fichier — aucun écart avec « $REF_AVANT », la comparaison n'a plus de référence"
+        # SANS OBJET TANT QUE L'ARBRE EST PROPRE, et c'est le seul saut de tout
+        # le harnais dont la nature ait demandé à être tranchée (TASK-013).
+        #
+        # Les corrections de TASK-011 sont dans HEAD depuis leur commit : sur un
+        # arbre propre, « git diff HEAD » ne produit rien. Rien n'a manqué — git
+        # répond, le dépôt est intact, la commande a abouti. C'est l'OBJET de la
+        # comparaison qui a disparu.
+        #
+        # Disparu, mais pas définitivement : « git diff HEAD » redevient non vide
+        # dès qu'un de ces six fichiers est modifié sans être commité —
+        # c'est-à-dire exactement dans la situation où ce contrôle sert. Ce n'est
+        # donc PAS une limite permanente de l'environnement, et la comparaison
+        # avec « le profil debian n'aura jamais systemd » serait fausse : le
+        # profil ne changera pas d'avis, l'arbre de travail, si.
+        #
+        # C'est une troisième catégorie, que le harnais ne nomme pas : un cas
+        # sans objet dans l'état courant du dépôt. Faute de mieux, il est compté
+        # avec les non applicables par nature, et c'est la moins fausse des deux
+        # options disponibles : qualifier ces six cas en indisponibilité ferait
+        # sortir ce fichier en 3 sur un environnement pourtant complet —
+        # annoncer « rien n'est prouvé » là où rien ne manque. Les rejouer reste
+        # possible en fixant TASK011_REF sur le commit antérieur : un acte
+        # volontaire de l'opérateur, pas une propriété de l'environnement.
+        #
+        # Réserve consignée au §4 de docs/points-en-suspens.md : ces six cas
+        # n'ont plus d'objet sur cette branche et disparaîtront avec ce fichier.
+        saute_par_nature "forme de $fichier — aucun écart avec « $REF_AVANT », la comparaison n'a plus de référence"
         return 0
     fi
 
@@ -230,7 +279,7 @@ if [ "$GIT_UTILISABLE" = "true" ]; then
         controler_forme "$fichier"
     done
 else
-    saute "forme des corrections — git indisponible, le diff ne peut pas être relu"
+    saute_indisponible "forme des corrections — git indisponible, le diff ne peut pas être relu"
 fi
 
 # ===================================================================
@@ -302,7 +351,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
         "shellcheck a bien tourné dans le conteneur" \
         "le lint annonce lui-même son analyse approfondie non exécutée"
 else
-    saute "tests/run.sh lint dans le conteneur — le démon Docker ne répond pas"
+    saute_indisponible "tests/run.sh lint dans le conteneur — le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -326,11 +375,17 @@ executer_groupe() {
                 libelle="${statut#*|}"
                 statut="${statut%%|*}"
                 vus=$((vus + 1))
+                # SKIP et INDISPO viennent du fichier de cas conteneurisé, qui
+                # qualifie lui-même la nature de chacun de ses sauts : lui seul
+                # sait si c'est CAP_SYS_ADMIN qui manquait — pour toujours — ou
+                # le miroir apt — pour cette fois. Un verdict inconnu reste un
+                # échec : une nature ajoutée là-bas et oubliée ici se voit.
                 case "$statut" in
-                    PASS) ok "[$groupe] $libelle" ;;
-                    FAIL) ko "[$groupe] $libelle" ;;
-                    SKIP) saute "[$groupe] $libelle" ;;
-                    *)    ko "[$groupe] verdict illisible : $ligne" ;;
+                    PASS)    ok "[$groupe] $libelle" ;;
+                    FAIL)    ko "[$groupe] $libelle" ;;
+                    SKIP)    saute_par_nature "[$groupe] $libelle" ;;
+                    INDISPO) saute_indisponible "[$groupe] $libelle" ;;
+                    *)       ko "[$groupe] verdict illisible : $ligne" ;;
                 esac
                 ;;
         esac
@@ -353,7 +408,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
     done
 else
     for groupe in $GROUPES; do
-        saute "groupe « $groupe » — le démon Docker ne répond pas"
+        saute_indisponible "groupe « $groupe » — le démon Docker ne répond pas"
     done
 fi
 
@@ -365,14 +420,14 @@ titre "5. Hors de portée de cet environnement"
 # Ces déclarations ne sont pas des cas manqués : ce sont des cas dont on sait
 # qu'ils ne peuvent pas être joués ici. Les taire ferait croire à une
 # couverture complète.
-saute "update-system.sh appliquant réellement « apt-get upgrade » — l'image ne fournit pas de paquet obsolète à mettre à jour"
-saute "configure-swap.sh créant et activant un fichier d'échange — swapon exige CAP_SYS_ADMIN, refusé au conteneur non privilégié"
-saute "configure-logging.sh sur un serveur sans le groupe « adm » — l'image Debian le fournit toujours"
+saute_par_nature "update-system.sh appliquant réellement « apt-get upgrade » — l'image ne fournit pas de paquet obsolète à mettre à jour"
+saute_par_nature "configure-swap.sh créant et activant un fichier d'échange — swapon exige CAP_SYS_ADMIN, refusé au conteneur non privilégié"
+saute_par_nature "configure-logging.sh sur un serveur sans le groupe « adm » — l'image Debian le fournit toujours"
 
 # ===================================================================
 # Bilan
 # ===================================================================
-info "Bilan TASK-011 : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s)"
+info "Bilan TASK-011 : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s) — dont $non_applicables non applicable(s) par nature et $indisponibilites indisponibilité(s) d'environnement"
 
 if [ "$echecs" -gt 0 ]; then
     die "TASK-011 : $echecs critère(s) en défaut." 1
@@ -383,6 +438,16 @@ fi
 # rien n'aurait été prouvé.
 if [ "$reussites" -eq 0 ]; then
     warn "TASK-011 : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
+# Une indisponibilité suffit. La mesure du §3 de docs/points-en-suspens.md
+# l'impose : démon Docker coupé, ce fichier annonçait 8 réussites pour 21 NON
+# EXÉCUTÉ(s) et sortait en 4, traduit en 0 par tests/run.sh. Les 8 réussites
+# étaient des contrôles statiques, qui n'ont besoin de rien. Testé AVANT les non
+# applicables : des deux natures, la plus grave l'emporte.
+if [ "$indisponibilites" -gt 0 ]; then
+    warn "TASK-011 : $indisponibilites cas n'ont pas pu être produits faute d'environnement — rien n'est prouvé de fiable."
     exit 3
 fi
 

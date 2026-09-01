@@ -16,6 +16,15 @@
 # l'ont été, et en 3 si AUCUNE vérification n'a pu être exécutée : « pas pu
 # vérifier » ne vaut jamais « vérifié », mais n'efface pas non plus ce qui a été
 # prouvé. Le nombre de cas non exécutés est affiché dans les deux cas.
+#
+# NATURE DES SAUTS (TASK-013). Les onze sauts de ce fichier sont TOUS des
+# indisponibilités d'environnement : client docker hors du PATH, démon qui ne
+# répond pas, conteneur qui ne démarre pas, script absent du dépôt. Aucun n'est
+# non applicable par nature — tout ce que ce fichier vérifie est vérifiable dès
+# que Docker fonctionne. D'où le verdict : un seul de ces sauts et le fichier
+# sort en 3, jamais en 4. C'est le scénario exact que TASK-013 ferme — le démon
+# coupé laissait passer un 4, traduit en 0 par tests/run.sh, alors que la quasi-
+# totalité de la preuve avait disparu.
 
 set -Eeuo pipefail
 
@@ -47,6 +56,10 @@ CODE=0
 reussites=0
 echecs=0
 non_executes=0
+# Les deux natures de saut, décomptées séparément — voir tests/README.md §2.
+# « non_executes » reste leur total.
+non_applicables=0
+indisponibilites=0
 
 # -------------------------------------------------------------------
 # Nettoyage
@@ -94,9 +107,23 @@ ko() {
     echecs=$((echecs + 1))
 }
 
-saute() {
-    warn "NON EXÉCUTÉ : $1 — $2"
+# Ce fichier ne déclare AUCUNE fonction de saut par nature, et c'est un fait,
+# pas un oubli : ses onze sauts sont tous des indisponibilités d'environnement
+# (voir l'en-tête). Une fonction sans appelant, gardée « par symétrie » derrière
+# une directive shellcheck, dirait moins que cette phrase. Le jour où un cas non
+# applicable par nature apparaîtrait ici, « saute_par_nature » de
+# tests/lib/assert.sh en donne la forme.
+#
+# Le compteur « non_applicables » reste, lui, à zéro et affiché : le bilan doit
+# publier les deux natures, y compris celle qui n'a rien à publier.
+
+# saute_indisponible <libellé> <raison> — ENVIRONNEMENT INDISPONIBLE : la
+# preuve existe, elle n'a pas pu être produite. Un seul suffit à faire sortir
+# ce fichier en 3.
+saute_indisponible() {
+    warn "NON EXÉCUTÉ (environnement indisponible) : $1 — $2"
     non_executes=$((non_executes + 1))
+    indisponibilites=$((indisponibilites + 1))
 }
 
 # Exécute le lanceur (ou toute commande) en capturant flux et code de retour,
@@ -213,7 +240,7 @@ if [ -n "$PATH_SANS_DOCKER" ]; then
     lancer env PATH="$PATH_SANS_DOCKER" bash "$LANCEUR" --profil profil-qui-n-existe-pas -- true
     assert_code 2 "profil inexistant sans docker : l'usage prime sur l'environnement"
 else
-    saute "usage avant Docker" "docker n'est pas dans le PATH, la simulation n'a pas de sens"
+    saute_indisponible "usage avant Docker" "docker n'est pas dans le PATH, la simulation n'a pas de sens"
 fi
 
 # ===================================================================
@@ -227,7 +254,7 @@ if [ -n "$PATH_SANS_DOCKER" ]; then
     assert_contient "$FIC_ERR" "docker est introuvable" "client absent : message explicite"
     assert_absent "$FIC_ERR" "[SUCCESS]" "client absent : aucun faux succès"
 else
-    saute "client docker absent" "docker n'est pas dans le PATH, impossible de l'en retirer"
+    saute_indisponible "client docker absent" "docker n'est pas dans le PATH, impossible de l'en retirer"
 fi
 
 # DOCKER_HOST sur un port fermé : le client est là, le démon ne répond pas.
@@ -239,7 +266,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
     assert_absent "$FIC_ERR" "[SUCCESS]" "démon injoignable : aucun faux succès"
     aucun_conteneur_residuel "démon injoignable : aucun conteneur créé"
 else
-    saute "démon injoignable" "le démon ne répond déjà pas, la comparaison ne prouverait rien"
+    saute_indisponible "démon injoignable" "le démon ne répond déjà pas, la comparaison ne prouverait rien"
 fi
 
 # ===================================================================
@@ -271,7 +298,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
     assert_code 0 "--reconstruire --dry-run"
     assert_contient "$FIC_ERR" "docker build --pull --no-cache" "--reconstruire ajoute --pull --no-cache"
 else
-    saute "--dry-run" "le démon Docker ne répond pas"
+    saute_indisponible "--dry-run" "le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -287,7 +314,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
     aucun_conteneur_residuel "construction en échec : aucun conteneur"
     rm -f "$DOCKERFILE_TEMP"
 else
-    saute "échec de construction" "le démon Docker ne répond pas"
+    saute_indisponible "échec de construction" "le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -345,10 +372,10 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
         assert_code 0 "Linux/System/system-info.sh s'exécute directement (bit exécutable du montage)"
         assert_contient "$FIC_OUT" "Nom d'hôte" "system-info.sh produit son rapport sur stdout"
     else
-        saute "bit exécutable du montage" "Linux/System/system-info.sh est absent du dépôt"
+        saute_indisponible "bit exécutable du montage" "Linux/System/system-info.sh est absent du dépôt"
     fi
 else
-    saute "exécution nominale" "le démon Docker ne répond pas"
+    saute_indisponible "exécution nominale" "le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -372,7 +399,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
     assert_code 3 "exit 3 de la commande transmis malgré la collision avec le code d'environnement"
     assert_contient "$FIC_ERR" "code de retour 3" "collision de code : message levant l'ambiguïté"
 else
-    saute "fidélité du code de retour" "le démon Docker ne répond pas"
+    saute_indisponible "fidélité du code de retour" "le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -408,7 +435,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
 
     aucun_conteneur_residuel "aucun conteneur ne survit aux exécutions"
 else
-    saute "état de départ identique" "le démon Docker ne répond pas"
+    saute_indisponible "état de départ identique" "le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -432,7 +459,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
     if [ -z "$conteneur" ]; then
         kill -TERM "$pid_lanceur" 2>/dev/null || true
         wait "$pid_lanceur" 2>/dev/null || true
-        saute "filet de sécurité à l'interruption" "le conteneur n'a pas démarré dans le délai imparti"
+        saute_indisponible "filet de sécurité à l'interruption" "le conteneur n'a pas démarré dans le délai imparti"
     else
         kill -TERM "$pid_lanceur" 2>/dev/null || true
         wait "$pid_lanceur" 2>/dev/null || true
@@ -441,7 +468,7 @@ if [ "$DOCKER_UTILISABLE" = "true" ]; then
         assert_contient "$FIC_ERR" "Conteneur résiduel" "interruption : la suppression est annoncée"
     fi
 else
-    saute "filet de sécurité à l'interruption" "le démon Docker ne répond pas"
+    saute_indisponible "filet de sécurité à l'interruption" "le démon Docker ne répond pas"
 fi
 
 # ===================================================================
@@ -449,7 +476,7 @@ fi
 # ===================================================================
 nettoyer
 
-info "Bilan TASK-002 : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s)"
+info "Bilan TASK-002 : $reussites vérification(s) réussie(s), $echecs échec(s), $non_executes NON EXÉCUTÉ(s) — dont $non_applicables non applicable(s) par nature et $indisponibilites indisponibilité(s) d'environnement"
 
 if [ "$echecs" -gt 0 ]; then
     die "TASK-002 : $echecs critère(s) en défaut." 1
@@ -460,6 +487,16 @@ fi
 # dire en réussite partielle, alors que rien n'aurait été prouvé.
 if [ "$reussites" -eq 0 ]; then
     warn "TASK-002 : aucune vérification n'a pu être exécutée — rien n'est prouvé."
+    exit 3
+fi
+
+# Une indisponibilité suffit : « au moins une réussite » ne fermait pas le faux
+# vert. Les six cas de préflight de ce fichier n'ont besoin ni de docker ni du
+# démon ; ils franchissaient le seuil à eux seuls pendant que les trente autres
+# disparaissaient. Testé AVANT les non applicables : la nature la plus grave
+# l'emporte.
+if [ "$indisponibilites" -gt 0 ]; then
+    warn "TASK-002 : $indisponibilites cas n'ont pas pu être produits faute d'environnement — rien n'est prouvé de fiable."
     exit 3
 fi
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-013
 title: "Distinguer un cas non applicable d'un environnement indisponible"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-012

@@ -13,14 +13,22 @@
 # situations, et non deux :
 #
 #   0   le niveau a tout vérifié, tout a réussi
-#   4   le niveau a réussi, mais des cas ne s'appliquent pas à cet
-#       environnement — la preuve est partielle, elle existe
-#   3   le niveau n'a RIEN pu vérifier — aucune preuve
+#   4   le niveau a réussi, mais des cas n'ont pas été exécutés, sans
+#       indisponibilité déclarée — la preuve est partielle, elle existe
+#   3   le niveau n'a RIEN pu prouver de fiable : aucun cas n'a tourné, ou l'un
+#       d'eux n'a pas pu être produit faute d'environnement
 #   *   au moins un cas est en défaut
 #
 # « Presque tout est prouvé, trois cas ne s'appliquent pas ici » et « rien n'est
 # prouvé » ne portent pas le même verdict : le premier vaut réussite, avec son
 # décompte affiché ; le second ne sort jamais en 0.
+#
+# TASK-013 a séparé les deux natures de saut à l'intérieur du 4. Un cas non
+# exécuté sans indisponibilité déclarée — qu'il soit hors d'atteinte par nature,
+# comme systemd sur le profil « debian », ou simplement non relu — laisse le 4.
+# Un cas qu'un environnement défaillant a empêché de produire — démon Docker
+# coupé — fait basculer son fichier, donc son niveau, en 3. Ce script n'a rien
+# eu à changer pour cela : il lisait déjà le 3 sans le maquiller.
 
 set -Eeuo pipefail
 
@@ -64,7 +72,8 @@ Codes de retour :
   1   au moins un niveau a échoué
   2   erreur d'usage
   3   rien n'est prouvé : un niveau demandé explicitement n'est pas
-      implémenté, ou un niveau exécuté n'a rien pu vérifier
+      implémenté, un niveau exécuté n'a rien pu vérifier, ou l'un de ses cas
+      n'a pas pu être produit faute d'environnement
 AIDE
 }
 
@@ -132,8 +141,8 @@ fi
 # Exécution
 # -------------------------------------------------------------------
 reussis=0    # niveaux dont tous les cas ont réussi, sans réserve
-partiels=0   # niveaux réussis, comportant des cas non applicables ici
-steriles=0   # niveaux exécutés qui n'ont rien pu vérifier — aucune preuve
+partiels=0   # niveaux réussis, comportant des cas non exécutés sans indisponibilité
+steriles=0   # niveaux sans preuve fiable — rien exécuté, ou environnement absent
 echecs=0
 absents=0
 
@@ -167,7 +176,7 @@ for niveau in "${DEMANDES[@]}"; do
             partiels=$((partiels + 1))
             ;;
         3)
-            warn "Niveau « $niveau » : RIEN N'A PU ÊTRE VÉRIFIÉ — aucune preuve produite"
+            warn "Niveau « $niveau » : RIEN N'A PU ÊTRE VÉRIFIÉ — aucune preuve produite, ou environnement indisponible"
             steriles=$((steriles + 1))
             ;;
         *)
@@ -192,9 +201,10 @@ if [ "$executes" -eq 0 ]; then
 fi
 
 # Un niveau exécuté qui n'a rien pu vérifier ne vaut pas mieux qu'un niveau
-# absent : dans les deux cas, la preuve manque.
+# absent : dans les deux cas, la preuve manque. Un niveau dont un cas a manqué
+# d'environnement non plus.
 if [ "$steriles" -gt 0 ]; then
-    warn "Validation : $steriles niveau(x) n'ont rien pu vérifier sur $executes exécuté(s) — rien n'est prouvé pour ceux-là."
+    warn "Validation : $steriles niveau(x) n'ont rien pu prouver de fiable sur $executes exécuté(s) — rien n'est prouvé pour ceux-là."
     exit 3
 fi
 
@@ -203,8 +213,9 @@ if [ "$EXPLICITE" = "true" ] && [ "$absents" -gt 0 ]; then
     exit 3
 fi
 
-# Des cas non applicables ne changent pas le verdict, mais restent affichés :
-# un saut silencieux serait un faux vert.
+# Des cas non exécutés sans indisponibilité déclarée ne changent pas le verdict,
+# mais restent affichés : un saut silencieux serait un faux vert. Ceux qui ont
+# manqué d'environnement, eux, ont déjà fait sortir leur niveau en 3 plus haut.
 if [ "$partiels" -gt 0 ]; then
     success "Validation : $executes niveau(x) réussi(s)."
     warn "Dont $partiels niveau(x) comportant des cas non applicables à cet environnement — voir leur bilan ci-dessus."
