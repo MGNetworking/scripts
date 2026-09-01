@@ -10,15 +10,22 @@
 # comportement de script n'est modifié ». Ces cinq scripts d'administration
 # tournent sur un serveur réel et n'avaient jusqu'ici aucun test.
 #
-# La preuve est donc conduite sur trois plans :
+# La preuve est conduite sur deux plans :
 #
-#   1. la forme des corrections — le diff ne contient que les transformations
-#      annoncées, et rien d'autre ;
-#   2. l'analyse statique elle-même, dans le conteneur qui embarque shellcheck ;
-#   3. le comportement, par exécution réelle des cinq scripts : préflight,
+#   1. l'analyse statique elle-même, dans le conteneur qui embarque shellcheck ;
+#   2. le comportement, par exécution réelle des cinq scripts : préflight,
 #      aide, --dry-run, idempotence, et surtout le chemin « -y », seul à même
 #      de prouver que confirm() voit toujours ASSUME_YES après son passage à
 #      « export ».
+#
+# Un troisième plan a existé : le contrôle de forme du diff, qui vérifiait que
+# les corrections de TASK-011 n'avaient touché que ce qu'elles annonçaient. Il a
+# été retiré le 2026-09-02 (ADR-0003, décision 13). Les corrections étant
+# commitées, « git diff HEAD » était vide sur un arbre propre : ses six contrôles
+# sortaient en NON EXÉCUTÉ à chaque exécution et n'en seraient jamais revenus.
+# Six sauts permanents finissent par être ignorés — c'est le bruit qui masque un
+# vrai problème. Le niveau « integration » est le domicile durable de ces
+# preuves.
 #
 # Chaque groupe de cas comportementaux part d'un conteneur NEUF : deux
 # exécutions dans un conteneur recyclé ne prouveraient aucune idempotence.
@@ -47,17 +54,7 @@ source "$_dir/lib/common.sh"
 LANCEUR="$SCRIPTS_ROOT/tests/env/run-in-container.sh"
 CAS_CONTENEUR="tests/acceptance/interne/TASK-011-cas-conteneur.sh"
 
-# Les six fichiers corrigés par TASK-011.
-FICHIERS_CORRIGES="
-Linux/System/configure-hostname.sh
-Linux/System/configure-logging.sh
-Linux/System/configure-swap.sh
-Linux/System/configure-timezone.sh
-Linux/System/update-system.sh
-tests/lint.sh
-"
-
-# Les cinq scripts, sans tests/lint.sh : eux seuls ont vu leur code touché.
+# Les cinq scripts corrigés par TASK-011 : eux seuls ont vu leur code touché.
 SCRIPTS_CORRIGES="
 Linux/System/configure-hostname.sh
 Linux/System/configure-logging.sh
@@ -68,11 +65,6 @@ Linux/System/update-system.sh
 
 # Groupes de cas, dans l'ordre. Un conteneur neuf par groupe.
 GROUPES="preflight aide dry-run regex enfants timezone hostname hosts-existant swap-fstab logging update"
-
-# Référence de comparaison pour le contrôle de forme. HEAD tant que les
-# corrections ne sont pas commitées ; sinon le commit qui les précède, à passer
-# par l'environnement.
-REF_AVANT="${TASK011_REF:-HEAD}"
 
 REP_TMP="$(mktemp -d)"
 F_OUT="$REP_TMP/stdout"
@@ -147,33 +139,9 @@ if command -v docker >/dev/null 2>&1; then
     fi
 fi
 
-GIT_UTILISABLE="false"
-if command -v git >/dev/null 2>&1 && git -C "$SCRIPTS_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-    GIT_UTILISABLE="true"
-fi
-
-# ===================================================================
-# 1. Forme des corrections — le diff ne dit que ce qu'il annonce
-# ===================================================================
-# Trois transformations ont été annoncées, et trois seulement :
-#   ASSUME_YES="true"   ->  export ASSUME_YES="true"
-#   $ADRESSE_HOTE[      ->  ${ADRESSE_HOTE}[
-#   $FICHIER_SWAP[      ->  ${FICHIER_SWAP}[
-# Toute autre ligne modifiée serait une évolution fonctionnelle déguisée.
-titre "1. Forme des corrections"
-
-# Les deux dernières expressions sont écrites entre guillemets doubles avec
-# des échappements plutôt qu'entre apostrophes : le résultat est le même pour
-# sed, mais l'analyse statique ne les prend pas pour des variables oubliées.
-transformer() {
-    printf '%s\n' "$1" | sed \
-        -e 's/ASSUME_YES="true"/export ASSUME_YES="true"/' \
-        -e "s/\\\$ADRESSE_HOTE\\[/\${ADRESSE_HOTE}[/g" \
-        -e "s/\\\$FICHIER_SWAP\\[/\${FICHIER_SWAP}[/g"
-}
-
-# Vrai pour un commentaire ou une ligne vide : tout le reste est du code, et
-# du code modifié serait, par définition, un changement de comportement.
+# Vrai pour un commentaire ou une ligne vide. Servait au contrôle de forme du
+# §1, retiré ; reste employé au §2 pour vérifier qu'une directive shellcheck
+# porte bien une justification au-dessus d'elle.
 est_commentaire() {
     local ligne="$1"
     local indentation="${ligne%%[![:space:]]*}"
@@ -183,104 +151,6 @@ est_commentaire() {
         *)    return 1 ;;
     esac
 }
-
-controler_forme() {
-    local fichier="$1"
-    local diff="$REP_TMP/diff"
-    local retirees="$REP_TMP/retirees"
-    local ajoutees="$REP_TMP/ajoutees"
-    local attendues="$REP_TMP/attendues"
-    local ligne anomalies=0
-
-    git -C "$SCRIPTS_ROOT" diff "$REF_AVANT" -- "$fichier" > "$diff" 2>/dev/null || true
-
-    if [ ! -s "$diff" ]; then
-        # SANS OBJET TANT QUE L'ARBRE EST PROPRE, et c'est le seul saut de tout
-        # le harnais dont la nature ait demandé à être tranchée (TASK-013).
-        #
-        # Les corrections de TASK-011 sont dans HEAD depuis leur commit : sur un
-        # arbre propre, « git diff HEAD » ne produit rien. Rien n'a manqué — git
-        # répond, le dépôt est intact, la commande a abouti. C'est l'OBJET de la
-        # comparaison qui a disparu.
-        #
-        # Disparu, mais pas définitivement : « git diff HEAD » redevient non vide
-        # dès qu'un de ces six fichiers est modifié sans être commité —
-        # c'est-à-dire exactement dans la situation où ce contrôle sert. Ce n'est
-        # donc PAS une limite permanente de l'environnement, et la comparaison
-        # avec « le profil debian n'aura jamais systemd » serait fausse : le
-        # profil ne changera pas d'avis, l'arbre de travail, si.
-        #
-        # C'est une troisième catégorie, que le harnais ne nomme pas : un cas
-        # sans objet dans l'état courant du dépôt. Faute de mieux, il est compté
-        # avec les non applicables par nature, et c'est la moins fausse des deux
-        # options disponibles : qualifier ces six cas en indisponibilité ferait
-        # sortir ce fichier en 3 sur un environnement pourtant complet —
-        # annoncer « rien n'est prouvé » là où rien ne manque. Les rejouer reste
-        # possible en fixant TASK011_REF sur le commit antérieur : un acte
-        # volontaire de l'opérateur, pas une propriété de l'environnement.
-        #
-        # Réserve consignée au §4 de docs/points-en-suspens.md : ces six cas
-        # n'ont plus d'objet sur cette branche et disparaîtront avec ce fichier.
-        saute_par_nature "forme de $fichier — aucun écart avec « $REF_AVANT », la comparaison n'a plus de référence"
-        return 0
-    fi
-
-    grep '^-' "$diff" | grep -v '^---' | sed 's/^-//' > "$retirees" || true
-    grep '^+' "$diff" | grep -v '^+++' | sed 's/^+//' > "$ajoutees" || true
-
-    : > "$attendues"
-    while IFS= read -r ligne; do
-        transformer "$ligne" >> "$attendues"
-    done < "$retirees"
-
-    # tests/lint.sh : rien d'autre que des commentaires n'a bougé.
-    if [ "$fichier" = "tests/lint.sh" ]; then
-        while IFS= read -r ligne; do
-            if ! est_commentaire "$ligne"; then
-                anomalies=$((anomalies + 1))
-                printf '        ligne de code modifiée : %s\n' "$ligne" >&2
-            fi
-        done < <(cat "$retirees" "$ajoutees")
-        verifier "$([ "$anomalies" -eq 0 ] && echo 0 || echo 1)" \
-            "tests/lint.sh : seuls des commentaires ont changé" "$anomalies ligne(s) de code"
-        return 0
-    fi
-
-    # Les cinq scripts : toute ligne retirée doit se retrouver, transformée,
-    # parmi les lignes ajoutées ; et toute ligne ajoutée est soit un
-    # commentaire, soit la transformée d'une ligne retirée.
-    while IFS= read -r ligne; do
-        if est_commentaire "$ligne"; then
-            anomalies=$((anomalies + 1))
-            printf '        commentaire retiré : %s\n' "$ligne" >&2
-            continue
-        fi
-        if ! grep -qxF -- "$(transformer "$ligne")" "$ajoutees"; then
-            anomalies=$((anomalies + 1))
-            printf '        ligne retirée sans transformée connue : %s\n' "$ligne" >&2
-        fi
-    done < "$retirees"
-
-    while IFS= read -r ligne; do
-        est_commentaire "$ligne" && continue
-        if ! grep -qxF -- "$ligne" "$attendues"; then
-            anomalies=$((anomalies + 1))
-            printf '        ligne ajoutée hors transformations annoncées : %s\n' "$ligne" >&2
-        fi
-    done < "$ajoutees"
-
-    verifier "$([ "$anomalies" -eq 0 ] && echo 0 || echo 1)" \
-        "$fichier : le diff ne contient que les transformations annoncées" \
-        "$anomalies anomalie(s)"
-}
-
-if [ "$GIT_UTILISABLE" = "true" ]; then
-    for fichier in $FICHIERS_CORRIGES; do
-        controler_forme "$fichier"
-    done
-else
-    saute_indisponible "forme des corrections — git indisponible, le diff ne peut pas être relu"
-fi
 
 # ===================================================================
 # 2. Contrôles statiques du dépôt
