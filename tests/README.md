@@ -251,6 +251,10 @@ tests/run.sh acceptance                                    → code 0
 préflight, qui n'ont besoin de rien pour tourner, suffisaient à franchir le
 seuil.
 
+Ces chiffres sont ceux du 2026-09-01, avant le retrait du §1 de ce fichier de
+cas. Ils gardent leur valeur de démonstration : c'est le mécanisme qu'ils
+mettent en évidence, pas leur total.
+
 TASK-013 a donc scindé le décompte des sauts en deux natures, que le seul
 compteur `non_executes` confondait :
 
@@ -275,18 +279,15 @@ d'être connues, parce qu'elles ne vont pas de soi :
   dessein, elle fonctionne comme prévu, c'est une limite assumée. Un outil
   **installable mais non installé faute de réseau** est une *indisponibilité* :
   là, l'environnement a échoué ;
-- les six contrôles de forme du diff de TASK-011 sont comptés *non applicables
-  par nature* depuis que ses corrections sont commitées : sur un arbre propre,
-  `git diff HEAD` ne produit rien. Rien n'a manqué — c'est l'objet de la
-  comparaison qui a disparu. Mais **pas définitivement** : le diff redevient non
-  vide dès qu'un de ces six fichiers est modifié sans être commité, c'est-à-dire
-  exactement dans la situation où ce contrôle sert. Ce n'est donc pas une limite
-  permanente comme l'absence de `systemd` du profil `debian` — c'est un cas
-  **sans objet dans l'état courant du dépôt**, une troisième catégorie que ce
-  harnais ne nomme pas. Il est rangé avec les non applicables faute de mieux :
-  l'autre option ferait sortir le fichier en 3 sur un environnement pourtant
-  complet. La justification complète est écrite sur place, dans le fichier de
-  cas, et la réserve est consignée au §4 de
+- les six contrôles de forme du diff de TASK-011 ont été **retirés** le
+  2026-09-02 ([ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+  décision 13). Ils avaient été comptés *non applicables par nature* dès lors que
+  les corrections étaient commitées : sur un arbre propre, `git diff HEAD` ne
+  produit rien, et l'objet de la comparaison avait disparu. Le saut était
+  cependant permanent en pratique, et six `NON EXÉCUTÉ` affichés à chaque
+  exécution finissent par être ignorés — c'est le bruit qui masque un vrai
+  problème. Le niveau `integration` est le domicile durable de ces preuves.
+  L'énoncé du cas et la réserve restent lisibles au §4 de
   [docs/points-en-suspens.md](../docs/points-en-suspens.md).
 
 Un code 4 dit donc désormais **« rien d'atteignable n'a été manqué »** — mais
