@@ -1,7 +1,7 @@
 ---
 id: TASK-013
 title: "Distinguer un cas non applicable d'un environnement indisponible"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-012
@@ -31,6 +31,7 @@ acceptance_criteria:
   - les deux natures sont affichées séparément dans le bilan de chaque fichier
   - la sémantique est documentée dans tests/README.md
   - aucun cas existant ne change de verdict lorsque l'environnement est complet
+  - le fichier de cas de cette tâche ne compte aucun échec ; son code 4 est admis, comme pour tout fichier comportant des cas non applicables
 validation:
   - "tests/run.sh lint"
   - "tests/run.sh acceptance"
@@ -40,6 +41,8 @@ implementation_notes:
   - éprouver l'indisponibilité par DOCKER_HOST sur port fermé ou PATH amputé, jamais en arrêtant Docker Desktop
   - la qualification touche chaque appel « saute » — c'est un travail de relecture ligne à ligne, pas une transformation mécanique
   - un saut dont la nature est ambiguë vaut indisponibilité : c'est le choix prudent
+  - attention au piège : la règle ci-dessus s'oppose au critère « aucun cas existant ne change de verdict ». Les sauts existants — systemd, swapon, apt sans paquet obsolète, groupe adm — sont non applicables PAR NATURE et doivent le rester, sinon les fichiers passent de 4 à 3 et tests/run.sh acceptance devient rouge
+  - le seul cas réellement ambigu est celui des six contrôles de forme du diff de TASK-011, devenus NON EXÉCUTÉ après leur commit. Si les qualifier en indisponibilité fait basculer ce fichier en 3, il faut soit les traiter à part, soit bloquer et le dire — pas les qualifier au jugé pour que le vert tienne
 ---
 
 # TASK-013 — Nature des sauts

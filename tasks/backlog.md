@@ -22,7 +22,7 @@ Prochain identifiant libre : **TASK-017**.
 | [TASK-002](completed/TASK-002.md) | Fournir un environnement de test conteneurisé jetable | `completed` | haute | 001 | hôte | non |
 | [TASK-011](completed/TASK-011.md) | Remettre le dépôt au niveau de l'analyse statique `shellcheck` | `completed` | haute | — | conteneur | non |
 | [TASK-012](completed/TASK-012.md) | Distinguer « rien de prouvé » de « cas non applicable » dans le harnais | `completed` | haute | — | hôte | non |
-| [TASK-013](pending/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | `pending` | moyenne | 012 | hôte | non |
+| [TASK-013](pending/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | `ready` | moyenne | 012 | hôte | non |
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `completed` | haute | 001, 002 | conteneur | non |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | `completed` | haute | 003 | hôte | non |
 | [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `pending` | moyenne | 003 | conteneur | **oui** |
