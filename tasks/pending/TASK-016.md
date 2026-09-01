@@ -23,7 +23,7 @@ out_of_scope:
   - les scripts Synology hérités
   - update-system.sh et configure-logging.sh, non concernés
 acceptance_criteria:
-  - une erreur d'usage rend le code 2 sur les six scripts, quelle qu'en soit la nature
+  - une erreur d'usage rend le code 2 sur les six scripts, quelle qu'en soit la nature — à l'exception du privilège insuffisant, qui reste en 1 par ADR-0003 décision 10
   - une valeur d'argument invalide rend le même code sur tous les scripts
   - tout message d'erreur porte le préfixe [ERROR], y compris ceux produits par une expansion Bash
   - un diagnostic métier n'est plus doublé par le message du trap ERR
@@ -38,7 +38,9 @@ implementation_notes:
   - les quatre défauts sont reproduits et confirmés par deux sous-agents lors de TASK-004
   - « ${1:?message} » produit un message sans préfixe et sort en 1 — c'est la cause du défaut 1
   - le doublon de trap vient d'un « die » appelé dans une substitution de commande
-  - la convention « erreur d'usage → 2 » n'est écrite nulle part : l'inscrire quelque part fait partie du travail
+  - la convention « erreur d'usage → 2 » n'est écrite nulle part : l'inscrire dans docs/architecture-technique.md fait partie du travail
+  - ADR-0003 décision 10 borne la convention : require_root garde le code 1, un privilège insuffisant étant un échec d'exécution et non une erreur d'usage. Ne pas l'aligner sur 2
+  - si TASK-015 est passée avant, docs/architecture-technique.md porte déjà la distinction : la compléter, ne pas la réécrire
 ---
 
 # TASK-016 — Cohérence des erreurs d'usage

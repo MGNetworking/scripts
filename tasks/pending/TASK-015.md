@@ -22,7 +22,10 @@ out_of_scope:
   - enable_full_logging, non couvert par les tests unitaires
   - la refonte de la journalisation
 acceptance_criteria:
-  - la décision retenue pour chaque défaut est écrite et justifiée
+  - load_config rend ses variables visibles d'un processus fils, pour un .env écrit en affectations nues
+  - set +a est rétabli même lorsque le source du fichier de configuration échoue
+  - un journal devenu inécrivable n'interrompt plus le script — un avertissement sur stderr, une seule fois, puis l'exécution se poursuit
+  - le message du trap ERR nomme le fichier réellement fautif, y compris quand l'échec vient de lib/common.sh
   - tests/env/run-in-container.sh -- tests/run.sh unit sort en 0 après correction
   - les assertions qui épinglaient l'ancien comportement sont retournées dans le même commit
   - les huit scripts du dépôt sont revalidés — une régression du socle les casse tous
@@ -33,6 +36,10 @@ validation:
   - "tests/env/run-in-container.sh -- bash -c 'for s in Linux/System/*.sh; do \"$s\" --help >/dev/null || exit 1; done'"
   - "tests/run.sh acceptance"
 implementation_notes:
+  - les trois arbitrages sont tranchés par ADR-0003 décisions 7, 8 et 9 — voir la section « Les décisions sont prises » en fin de fichier. Rien à décider, tout à mettre en œuvre
+  - set +a doit être rétabli même si le source échoue, sinon tout ce que le script déclare ensuite serait exporté à son insu
+  - l'avertissement de journal inaccessible doit être émis UNE SEULE FOIS, pas à chaque appel de info
+  - docs/architecture-technique.md est à mettre à jour : contrat du socle et distinction entre code 1 et code 2
   - lib/common.sh est chargé par les huit scripts : toute régression est globale
   - les assertions concernées sont repérées dans tests/unit/common.test.sh, autour de FILS_NUE
   - la mutation « set -a dans load_config » fait tomber la suite aujourd'hui — c'est le signe que le test épingle bien le comportement actuel
@@ -99,3 +106,48 @@ trois options ont des conséquences différentes sur la façon d'écrire les scr
 Et les tests unitaires épinglent aujourd'hui le comportement actuel : les
 retourner fait partie du même commit, sans quoi la suite passe au rouge. Ce n'est
 pas un travail à mener sans décision préalable.
+
+---
+
+## Les décisions sont prises — 2026-09-02
+
+Par [ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md).
+**Il n'y a plus rien à arbitrer ici : il y a à mettre en œuvre.**
+
+### Défaut 1 → `set -a` dans `load_config` (décision 7)
+
+`load_config` encadre son `source` par `set -a` / `set +a`. Toute la
+configuration atteint les processus fils.
+
+Rien ne change dans les fichiers `.env` ni dans la façon de les écrire :
+`config/README.md` continue de prescrire des affectations nues. Les deux autres
+options — statu quo documenté, `export` explicite dans chaque `.env` — sont
+écartées.
+
+`set +a` doit être rétabli **même si le `source` échoue**, sans quoi tout ce que
+le script déclare ensuite se retrouverait exporté à son insu.
+
+### Défaut 2 → avertir une fois, puis continuer (décision 8)
+
+Si le fichier de journal devient inécrivable en cours d'exécution, le socle
+écrit **un seul** avertissement sur la sortie d'erreur, puis poursuit sans
+journal. Il ne meurt pas, il ne se tait pas non plus.
+
+« Une seule fois » est un critère à tenir : un script qui appelle `info`
+cinquante fois ne doit pas produire cinquante avertissements.
+
+### Défaut connexe → `BASH_SOURCE` dans le `trap ERR` (décision 9)
+
+Le message désigne le fichier réellement fautif. La correction est explicitement
+autorisée dans le périmètre de cette tâche.
+
+### Ce qui n'est pas dans cette tâche
+
+`require_root` **conserve le code 1** (décision 10) : un privilège insuffisant
+est un échec d'exécution, pas une erreur d'usage. Aucun script n'est modifié pour
+cela, et la distinction est à inscrire dans `docs/architecture-technique.md` :
+
+```text
+2  erreur d'usage      option inconnue, argument manquant, valeur invalide
+1  échec d'exécution   privilège insuffisant, dépendance absente, opération échouée
+```
