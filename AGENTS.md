@@ -97,7 +97,7 @@ README.md
 | `.gitattributes` | `eol=lf` conditionne l'exécutabilité de tout le dépôt sous Linux |
 | `docs/architecture-technique.md` | référence durable du socle |
 | `docs/guide-dispatcher.md` | référence durable des patterns CLI |
-| `.claude/agents/`, `.claude/commands/`, `.claude/settings.json` | définissent le moteur lui-même ; les modifier change la façon dont le travail est conduit |
+| `.claude/agents/`, `.claude/commands/`, `.claude/settings.json` | définissent le moteur lui-même ; les modifier change la façon dont le travail est conduit. **Autorisation permanente donnée par [ADR-0003](docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)** : l'agent les fait évoluer quand l'usage révèle une règle mal formulée, et le consigne dans le rapport de la tâche |
 
 Une modification de `lib/common.sh` n'est jamais un effet de bord d'une autre
 tâche. Elle impose de revalider **tous** les scripts du dépôt.
@@ -113,7 +113,10 @@ tâche. Elle impose de revalider **tous** les scripts du dépôt.
 | `.idea/` | configuration IDE personnelle |
 | tout chemin hors du dépôt | voir §7 |
 
-`AGENTS.md` lui-même n'est modifiable que sur demande explicite de Maxime.
+`AGENTS.md` lui-même n'est modifiable que sur demande explicite de Maxime. La
+révision du 2026-09-02 — §5, §8, §9 et §13 — a été faite à sa demande, et elle
+est motivée par
+[ADR-0003](docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md).
 
 ## 6. Conventions de code
 
@@ -157,18 +160,24 @@ lecture          cat, head, tail, sed -n, grep, find, ls, wc, file, stat
 analyse          shellcheck, bash -n, shfmt -d
 tests            tests/run.sh, tests/lint.sh, bats
 git lecture      git status, git diff, git log, git show, git branch
-git écriture     git add, git commit, git checkout -b agent/*, git switch
+git écriture     git add, git commit, git checkout -b agent/*, git switch,
+                 git merge --no-ff agent/* vers master, git push origin master
 conteneur        docker build, docker run --rm, docker exec, docker logs,
                  docker ps, docker rm — sur les conteneurs et images préfixés
                  mgnet-test-
 ```
 
+La fusion et le push sont autorisés depuis
+[ADR-0003](docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+décision 1. Le push est **groupé en fin de domaine**, jamais après chaque tâche :
+le dépôt est public, et un historique poussé ne se réécrit pas proprement.
+
 ### Interdites en toutes circonstances
 
 ```text
-git push, git push --force
+git push --force, git push sur une autre branche que master
 git reset --hard, git rebase, git cherry-pick, git filter-branch
-git branch -D, git checkout master, tout commit sur master
+git branch -D
 sudo, su, doas                            sur la machine hôte
 rm -rf hors du répertoire de travail
 toute écriture hors du dépôt et hors conteneur de test
@@ -178,6 +187,9 @@ ssh, scp, rsync vers une machine distante
 toute commande visant un serveur de production ou le NAS
 toute publication : PR, issue, message, courriel, webhook
 ```
+
+Le `git push` de la décision 1 est la **seule** publication autorisée. Ouvrir
+une pull request, une issue ou envoyer quoi que ce soit reste interdit.
 
 Une commande qui n'est ni dans la liste autorisée ni dans la liste interdite est
 **soumise à Maxime avant exécution**, avec sa justification.
@@ -194,11 +206,19 @@ rapport est réputée n'avoir jamais été lancée.
 
 - l'agent travaille sur une branche dédiée par tâche : `agent/TASK-042` ;
 - il crée cette branche depuis `master` au début de la tâche ;
-- il ne se place jamais sur `master` et n'y commite jamais ;
-- il ne pousse jamais : `git push` est un acte humain ;
-- il ne fusionne jamais : la fusion est un acte humain ;
+- il ne commite jamais directement sur `master` : tout passe par une branche ;
+- **il fusionne** sa branche dans `master` une fois la tâche validée, en
+  `--no-ff`, puis supprime la branche fusionnée ;
+- **il pousse** `master` vers `origin` en fin de domaine, pas après chaque
+  tâche ;
+- il ne réécrit jamais l'historique : ni `rebase`, ni `reset --hard`, ni
+  `push --force` ;
 - l'arbre doit être propre avant de commencer une tâche. S'il ne l'est pas,
   l'agent s'arrête et le signale — il ne remise ni n'efface le travail en cours.
+
+Sans fusion immédiate, chaque tâche repartirait d'un `master` ignorant les
+précédentes, et la première dépendance casserait. C'est la raison technique de
+la décision 1 d'[ADR-0003](docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md).
 
 ### Message de commit
 
@@ -323,13 +343,24 @@ Au-delà, la tâche passe en `blocked` et un rapport détaillé est produit.
 ## 13. Intervention humaine
 
 L'agent travaille seul par défaut. **Il ne demande pas confirmation pour une
-opération que ce document autorise explicitement.**
+opération que ce document autorise explicitement**, ni pour une décision que
+[ADR-0003](docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) a déjà
+tranchée — ses vingt-quatre décisions valent autorisation permanente.
+
+Deux conséquences directes d'ADR-0003 :
+
+- `human_approval_required: true` **ne suspend plus l'exécution** (décision 2).
+  Le champ signale ce qui mérite une lecture attentive ; il ne commande plus
+  d'arrêt. Il en va de même des scripts destructifs — aucun ne s'exécute
+  ailleurs que dans un conteneur jetable, et §7 ne change pas ;
+- l'ouverture d'une tâche, `pending → ready`, est **déléguée à l'agent**
+  (décision 3).
 
 Il s'arrête et sollicite Maxime — statut `HUMAN_REQUIRED` — dans ces cas
 seulement :
 
 1. une décision d'architecture doit être prise et ne se déduit ni de la tâche,
-   ni des documents de référence ;
+   ni des documents de référence, **ni d'ADR-0003** ;
 2. une information indispensable manque et aucune source du dépôt ne la fournit ;
 3. l'action nécessaire sort du périmètre de la tâche ;
 4. une opération figure en zone interdite (§5) ou en commande interdite (§8) ;

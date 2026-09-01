@@ -1,7 +1,7 @@
 ---
 id: TASK-015
 title: "Trancher deux défauts de lib/common.sh révélés par les tests unitaires"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-003

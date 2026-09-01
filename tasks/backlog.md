@@ -12,6 +12,13 @@ entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
 Prochain identifiant libre : **TASK-017**.
 
+Depuis le 2026-09-02, le chantier se déroule en autonomie :
+[ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) fixe
+les vingt-quatre décisions qui l'encadrent — conduite du travail, contrat du
+socle, cibles, politique de sécurité. L'agent écrit ses tâches, les ouvre, les
+exécute, fusionne et pousse en fin de domaine. Il ne demande plus confirmation
+de ce que cet ADR a tranché.
+
 ---
 
 ## 1. Tâches atomisées
@@ -25,9 +32,9 @@ Prochain identifiant libre : **TASK-017**.
 | [TASK-013](completed/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | `completed` | moyenne | 012 | hôte | non |
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `completed` | haute | 001, 002 | conteneur | non |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | `completed` | haute | 003 | hôte | non |
-| [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `pending` | moyenne | 003 | conteneur | **oui** |
+| [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `ready` | moyenne | 003 | conteneur | **oui** |
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `completed` | moyenne | 002, 003 | conteneur | non |
-| [TASK-016](pending/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `pending` | moyenne | 004 | conteneur | non |
+| [TASK-016](pending/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `ready` | moyenne | 004 | conteneur | non |
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 
@@ -164,17 +171,17 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 
 | Entrée | Source | Note |
 |---|---|---|
-| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | trois pistes concurrentes (courriel, webhook, contrôle de fraîcheur) — **décision d'architecture, approbation humaine requise** |
-| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | débloque la validation de `configure-timezone.sh` et `configure-hostname.sh` |
-| Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | écarté pour l'instant : coûteux en limites d'usage, et prématuré tant que les règles n'ont pas été éprouvées |
-| Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | après le premier passage réel de `/tache` — il révélera les règles mal formulées |
+| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 15 : script de notification vers `ntfy` ou webhook. À atomiser dans `Linux/System` |
+| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4 |
+| Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | **ouvert** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décisions 1 à 4 : fusion et push par l'agent, ouverture des tâches déléguée, point d'étape par domaine |
+| Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | **autorisé en permanence** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 5 : mode léger pour les scripts en lecture seule, relecteur obligatoire dès qu'un script écrit |
 | Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
 | Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011. Non traité par [TASK-012](completed/TASK-012.md), qui l'a laissé hors périmètre — le harnais a désormais le code 4 pour l'exprimer |
 | Les niveaux `unit` et `integration` gardent ~70 sauts non qualifiés | [TASK-013](reports/TASK-013-report.md) | ils n'affirment plus rien depuis TASK-013, mais leur nature n'est pas établie : le faux vert reste ouvert un étage plus bas |
 | `docker info` sans borne de temps dans trois fichiers de cas | [TASK-013](reports/TASK-013-report.md) | un Docker Desktop en cours de démarrage suspend l'appel — constaté, plus de dix minutes. Un fichier de cas peut suspendre le niveau indéfiniment |
-| Les scripts sont versionnés en `100644` | [TASK-009](reports/TASK-009-report.md) | après un `git clone`, aucun script du dépôt n'est exécutable. TASK-009 contourne le problème pour la tâche planifiée, elle ne le résout pas |
+| Les scripts sont versionnés en `100644` | [TASK-009](reports/TASK-009-report.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 11 : bit `+x` posé dans Git sur tous les `.sh` |
 | Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
-| `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | contraire à la convention « erreur d'usage → 2 », mais cohérent sur les cinq scripts et conforme à `lib/common.sh` |
+| `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 10 : le 1 est conservé — un privilège insuffisant est un échec d'exécution, pas une erreur d'usage. Aucun script modifié |
 | Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
 | Les liens entre tâches cassent à chaque changement de statut | reprise de TASK-002 | le répertoire fait partie du chemin : six liens rompus au seul passage de `blocked/` à `completed/`. À traiter par une convention de lien, ou par un contrôle automatique dans `tests/` |
 | `run-in-container.sh` : message de démon injoignable tronqué, et `--profil --dry-run` mal analysé | [TASK-002](reports/TASK-002-report.md) | deux défauts mineurs, relevés et non corrigés |
