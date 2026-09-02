@@ -35,6 +35,11 @@ Le fichier vaut par défaut /swapfile. Un swap déjà actif n'est jamais remplac
 sans confirmation, et jamais désactivé si la mémoire libre ne suffit pas à
 absorber ce qu'il contient.
 
+Le chemin donné à --file doit être ABSOLU, et ne peut donc pas commencer par un
+tiret. Un chemin relatif ferait naître le fichier d'échange dans le répertoire
+courant, quel qu'il soit ; une valeur commençant par un tiret est une option du
+script, pas un chemin. Les deux sont refusés avec le code 2.
+
 Exemples :
   configure-swap.sh                       # état actuel
   configure-swap.sh 2G
@@ -42,7 +47,8 @@ Exemples :
   configure-swap.sh                       # ou SRV_SWAP_SIZE dans server.env
 
 Options :
-      --file <chemin>   Fichier d'échange à utiliser (défaut : /swapfile)
+      --file <chemin>   Fichier d'échange à utiliser, en chemin absolu
+                        (défaut : /swapfile)
       --dry-run         Afficher les opérations sans les exécuter.
   -y, --yes             Ne pas demander de confirmation.
   -h, --help            Afficher cette aide
@@ -50,6 +56,50 @@ Options :
 Attention : les partitions de swap ne sont pas gérées par ce script, qui ne
 traite que les fichiers d'échange.
 AIDE
+}
+
+# -------------------------------------------------------------------
+# Validation de la valeur de --file
+# -------------------------------------------------------------------
+# Deux refus, pour deux dangers distincts :
+#
+#   1. une valeur commençant par un tiret est une option du script, avalée comme
+#      chemin. « configure-swap.sh 512M --file --dry-run » donnait un fichier
+#      d'échange nommé « --dry-run » et un essai à blanc silencieusement perdu ;
+#   2. un chemin relatif ferait naître le fichier d'échange dans le répertoire
+#      courant. « configure-swap.sh --file 2G » — l'ordre inversé — prend « 2G »
+#      pour un chemin, et la taille vient alors de SRV_SWAP_SIZE : plus rien
+#      n'arrête le script. Un fichier d'échange n'a de sens qu'à un emplacement
+#      choisi ; il n'existe aucun usage légitime d'un chemin relatif ici.
+#
+# La fonction renseigne FICHIER_SWAP plutôt que d'écrire sur stdout, et n'est
+# jamais appelée dans une substitution de commande : son « die » quitterait
+# sinon le seul sous-shell, et le code remonté déclencherait le trap ERR de
+# lib/common.sh — le refus se verrait doublé d'un « Échec (code 2) à la
+# ligne … » sans intérêt. Aucune substitution de commande n'a lieu non plus à
+# l'intérieur : le contrôle est un « case » de Bash pur, exécuté avant que
+# dirname ou df ne voient la valeur. C'est le motif de valider_horaire, dans
+# configure-cron.sh.
+valider_fichier_swap() {
+    local chemin="$1"
+
+    case "$chemin" in
+        -*)
+            error "Valeur refusée pour --file : « $chemin »."
+            error "Une valeur commençant par un tiret est une option, pas un chemin :"
+            error "elle serait consommée par --file, et l'option perdue en silence."
+            die "Écrire le chemin après --file — par exemple : --file /swapfile --dry-run" 2
+            ;;
+        /*)
+            ;;
+        *)
+            error "Chemin relatif refusé pour --file : « $chemin »."
+            error "Le fichier d'échange naîtrait dans le répertoire courant, quel qu'il soit."
+            die "Donner un chemin absolu — par exemple : --file /swapfile" 2
+            ;;
+    esac
+
+    FICHIER_SWAP="$chemin"
 }
 
 while [ "${1:-}" != "" ]; do
@@ -60,7 +110,8 @@ while [ "${1:-}" != "" ]; do
         --file)
             shift
             [ -n "${1:-}" ] || die "--file attend un chemin." 2
-            FICHIER_SWAP="$1"; shift
+            valider_fichier_swap "$1"
+            shift
             ;;
         --dry-run)  DRY_RUN="true"; shift ;;
         # ASSUME_YES est lue par confirm(), dans lib/common.sh.

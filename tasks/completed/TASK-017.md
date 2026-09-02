@@ -1,7 +1,7 @@
 ---
 id: TASK-017
 title: "Durcir la validation de --file dans configure-swap.sh"
-status: ready
+status: completed
 priority: high
 depends_on:
   - TASK-016

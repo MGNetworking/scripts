@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-019**.
+Prochain identifiant libre : **TASK-020**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) fixe
@@ -35,8 +35,9 @@ de ce que cet ADR a tranché.
 | [TASK-015](completed/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `completed` | moyenne | 003 | conteneur | **oui** |
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `completed` | moyenne | 002, 003 | conteneur | non |
 | [TASK-016](completed/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `completed` | moyenne | 004 | conteneur | non |
-| [TASK-017](pending/TASK-017.md) | Durcir la validation de `--file` dans `configure-swap.sh` | `ready` | haute | 016 | conteneur | non |
-| [TASK-018](pending/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | `pending` | moyenne | 017 | conteneur | non |
+| [TASK-017](completed/TASK-017.md) | Durcir la validation de `--file` dans `configure-swap.sh` | `completed` | haute | 016 | conteneur | non |
+| [TASK-019](pending/TASK-019.md) | Contrôler la nature de la cible de `--file`, pas seulement la forme du chemin | `ready` | haute | 017 | conteneur | non |
+| [TASK-018](pending/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | `ready` | moyenne | 017 | conteneur | non |
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 
@@ -208,6 +209,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-013](completed/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | [rapport](reports/TASK-013-report.md) |
 | [TASK-015](completed/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | [rapport](reports/TASK-015-report.md) |
 | [TASK-016](completed/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | [rapport](reports/TASK-016-report.md) |
+| [TASK-017](completed/TASK-017.md) | Durcir la validation de `--file` dans `configure-swap.sh` | [rapport](reports/TASK-017-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

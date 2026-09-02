@@ -30,6 +30,17 @@
 # décision 10). Avec une option inconnue ou une valeur invalide, il rend 2 :
 # les arguments sont vérifiés avant les privilèges.
 #
+# TASK-017 y ajoute le verrouillage de la validation de --file, section 5 du
+# groupe « 1 bis » et groupe « 3 bis » :
+#
+#   e. une valeur commençant par un tiret est refusée en 2, sans que dirname
+#      la voie ni que le trap ERR double le diagnostic
+#   f. un chemin relatif est refusé en 2, et rien ne naît dans le répertoire
+#      courant — le cas grave, éprouvé avec SRV_SWAP_SIZE imposé
+#   g. --dry-run et -y placés APRÈS un --file valide restent actifs : c'est
+#      l'assertion qui manquait, et la seule qui prouve que --file ne consomme
+#      plus l'option suivante
+#
 # CE FICHIER MODIFIE LE SYSTÈME. Il n'écrit rien tant qu'il n'a pas reconnu un
 # système jetable (conteneur Docker, ou MGNET_TEST_JETABLE=1) : ailleurs, les
 # groupes modifiants se déclarent NON EXÉCUTÉS plutôt que de réécrire
@@ -130,6 +141,19 @@ trap 'rm -rf "$REP_TMP"' EXIT
 lancer() {
     CODE=0
     ( "$@" ) >"$F_OUT" 2>"$F_ERR" </dev/null || CODE=$?
+}
+
+# lancer_depuis <répertoire> <commande...> — « lancer », depuis un répertoire
+# de travail donné.
+#
+# Le « cd » a lieu DANS le sous-shell : le répertoire courant du harnais n'est
+# jamais déplacé, et un cas qui échoue ne laisse pas les suivants ailleurs.
+# Utile au seul cas où le répertoire courant est l'objet même de la preuve — un
+# chemin relatif donné à --file y ferait naître le fichier d'échange.
+lancer_depuis() {
+    local repertoire="$1"; shift
+    CODE=0
+    ( cd "$repertoire" && "$@" ) >"$F_OUT" 2>"$F_ERR" </dev/null || CODE=$?
 }
 
 sortie()  { cat "$F_OUT"; }
@@ -625,6 +649,104 @@ else
         "configure-timezone.sh sans fuseau : l'aide n'est pas déversée sur stderr"
 fi
 
+# --- 5. La valeur de --file est contrôlée — TASK-017 ------------------------
+# « --file » acceptait n'importe quelle chaîne non vide. Le contrôle posé par
+# TASK-016 — « [ -n "${1:-}" ] » — ne rejetait que la valeur VIDE : son objet
+# était le code de retour, pas la nature de la valeur. Deux dangers restaient
+# ouverts, et deux refus distincts les ferment.
+#
+# Les deux cas meurent pendant l'analyse des arguments, avant require_root et
+# avant la moindre écriture : ils ont leur place dans ce groupe non modifiant.
+
+# a. Une valeur commençant par un tiret — l'option avalée.
+#
+#   $ configure-swap.sh 512M --file --dry-run
+#   [INFO] Fichier d'échange : --dry-run
+#   dirname: unrecognized option '--dry-run'
+#   [ERROR] Échec (code 1) à la ligne 195 de configure-swap.sh.
+#
+# Rien n'était écrit, mais PAR ACCIDENT : dirname refusait une chaîne commençant
+# par deux tirets et « set -Eeuo pipefail » tuait le script avant l'allocation.
+# Le garde-fou disparaissait avec n'importe quelle autre valeur — d'où le cas b.
+#
+# Les deux assertions d'absence épinglent les deux lignes exactes de cette trace
+# — « dirname: » et « Échec (code » — et le DÉCOMPTE des lignes [ERROR] voit
+# revenir celle du trap même si son libellé change un jour dans lib/common.sh.
+# Ce refus en produit QUATRE : trois « error » puis le « die ».
+lancer bash "$SWAP_SH" 512M --file --dry-run
+assert_code 2 "$CODE" "configure-swap.sh --file --dry-run : erreur d'usage"
+assert_contient "$(erreur)" "[ERROR] Valeur refusée pour --file : « --dry-run »." \
+    "configure-swap.sh --file --dry-run : nomme la valeur refusée"
+assert_absent "$(erreur)" "dirname:" \
+    "configure-swap.sh --file --dry-run : dirname ne voit jamais la valeur"
+assert_absent "$(erreur)" "Échec (code" \
+    "configure-swap.sh --file --dry-run : le trap ERR n'ajoute aucune ligne au diagnostic"
+assert_absent "$(erreur)" "Fichier d'échange : --dry-run" \
+    "configure-swap.sh --file --dry-run : l'option n'est jamais retenue comme chemin"
+assert_egal "4" "$(nb_lignes_contenant '[ERROR]')" \
+    "configure-swap.sh --file --dry-run : stderr porte les quatre lignes du refus, pas une de plus"
+
+# b. Un chemin relatif — le fichier d'échange égaré, le cas grave.
+#
+# L'ordre inversé « configure-swap.sh --file 2G » prend « 2G » pour un chemin.
+# SRV_SWAP_SIZE est imposé DANS L'ENVIRONNEMENT DE L'APPEL, et ce n'est pas un
+# détail : sans lui le script s'arrêterait faute de taille, sur le seul
+# diagnostic d'état, et le cas ne prouverait rien du chemin. Avec lui, plus rien
+# n'arrêtait le script avant la création du fichier.
+#
+# Le répertoire courant est un répertoire VIDE et jetable — c'est là que le
+# fichier serait né — et son contenu est relevé avant et après.
+# contenu_repertoire <répertoire> <destination> — ce que le répertoire porte.
+# « find » plutôt que « ls » : un nom de fichier exotique y survit (SC2012), et
+# la ligne d'en-tête garantit qu'un relevé vide reste un relevé, et non un
+# fichier vide qu'une redirection ratée produirait tout aussi bien.
+contenu_repertoire() {
+    local repertoire="$1" destination="$2"
+    {
+        printf 'contenu de %s\n' "$repertoire"
+        find "$repertoire" -mindepth 1 -printf '%y %s %P\n' 2>/dev/null | sort
+    } > "$destination"
+}
+
+REP_COURANT_VIDE="$REP_TMP/cwd-vide"
+mkdir -p "$REP_COURANT_VIDE"
+contenu_repertoire "$REP_COURANT_VIDE" "$REP_TMP/cwd-avant"
+
+lancer_depuis "$REP_COURANT_VIDE" env SRV_SWAP_SIZE=512M bash "$SWAP_SH" --file 2G
+assert_code 2 "$CODE" "configure-swap.sh --file 2G : erreur d'usage"
+assert_contient "$(erreur)" "[ERROR] Chemin relatif refusé pour --file : « 2G »." \
+    "configure-swap.sh --file 2G : nomme le chemin relatif refusé"
+assert_absent "$(erreur)" "Échec (code" \
+    "configure-swap.sh --file 2G : le trap ERR n'ajoute aucune ligne au diagnostic"
+assert_egal "3" "$(nb_lignes_contenant '[ERROR]')" \
+    "configure-swap.sh --file 2G : stderr porte les trois lignes du refus, pas une de plus"
+# Le refus a lieu AVANT tout : ni résumé des opérations, ni création. C'est
+# cette paire d'absences qui rougit si la contrainte de chemin absolu tombe —
+# le relevé de répertoire ci-dessous, lui, resterait vert, le script effaçant
+# de lui-même le fichier qu'il vient de créer quand swapon échoue.
+assert_absent "$(erreur)" "Opérations prévues" \
+    "configure-swap.sh --file 2G : aucune opération n'est même envisagée"
+assert_absent "$(erreur)" "Création de" \
+    "configure-swap.sh --file 2G : aucun fichier d'échange n'est créé"
+
+contenu_repertoire "$REP_COURANT_VIDE" "$REP_TMP/cwd-apres"
+assert_empreinte_egale "$REP_TMP/cwd-avant" "$REP_TMP/cwd-apres" \
+    "configure-swap.sh --file 2G ne dépose rien dans le répertoire courant"
+
+# c. Le refus tient à l'ABSENCE de chemin absolu, et non à la ressemblance de
+# « 2G » avec une taille : un chemin relatif ordinaire est refusé de la même
+# façon. Sans ce cas, une correction qui se contenterait de rejeter les tailles
+# passerait le cas b.
+lancer bash "$SWAP_SH" 512M --file essai/swapfile
+assert_code 2 "$CODE" "configure-swap.sh --file essai/swapfile : erreur d'usage"
+assert_contient "$(erreur)" "[ERROR] Chemin relatif refusé pour --file : « essai/swapfile »." \
+    "configure-swap.sh --file essai/swapfile : nomme le chemin relatif refusé"
+
+# d. Non-régression : « --file » sans valeur rend toujours 2, avec le message
+# exact que la section 1 de ce groupe épingle. Le durcissement de TASK-017 a
+# laissé ce contrôle intact — les assertions de la section 1 sont la preuve, et
+# celle-ci n'a donc pas à être dupliquée ici.
+
 titre "1 ter. Privilèges et OS"
 
 # --- Refus sans privilège ---------------------------------------------------
@@ -811,6 +933,33 @@ else
     assert_contient "$(erreur)" "créer      /swapfile (2048 Mo)" \
         "configure-swap.sh annonce la création à 2048 Mo, valeur portée jusqu'au résumé"
 
+    # --- Garde de non-régression : une option derrière --file — TASK-017 ---
+    # CE CAS NE DÉMONTRE PAS LE CORRECTIF, et il faut le savoir pour ne pas s'y
+    # fier à tort. Mesuré par le relecteur sur le configure-swap.sh de master :
+    # « 2G --file /swapfile --dry-run » y donnait DÉJÀ « Mode --dry-run » et le
+    # code 0. L'ancien code ne consommait qu'un seul jeton ; le défaut
+    # n'apparaissait que lorsque l'option ÉTAIT elle-même la valeur — c'est le
+    # cas 5a qui le prouve, pas celui-ci.
+    #
+    # Ce que ce cas apporte : la garantie qu'en fermant le défaut, on n'a pas
+    # cassé le chemin nominal. Une validation trop gourmande qui consommerait le
+    # jeton suivant le ferait rougir. Aucune autre assertion de ce fichier ne
+    # place une option derrière une valeur de --file.
+    dry_run_inoffensif "configure-swap.sh 2G --file /swapfile --dry-run" \
+        bash "$SWAP_SH" 2G --file /swapfile --dry-run
+    assert_contient "$(erreur)" "[INFO] Mode --dry-run : aucune modification effectuée." \
+        "configure-swap.sh 2G --file /swapfile --dry-run : --dry-run reste actif après --file"
+    assert_contient "$(erreur)" "[INFO] Fichier d'échange : /swapfile" \
+        "configure-swap.sh 2G --file /swapfile --dry-run : le chemin donné est bien retenu"
+
+    # Un chemin absolu AUTRE que le défaut : sans lui, les deux assertions
+    # précédentes passeraient encore si --file était purement et simplement
+    # ignoré, /swapfile étant la valeur par défaut de FICHIER_SWAP.
+    dry_run_inoffensif "configure-swap.sh 512M --file /var/swapfile-essai --dry-run" \
+        bash "$SWAP_SH" 512M --file /var/swapfile-essai --dry-run
+    assert_contient "$(erreur)" "créer      /var/swapfile-essai (512 Mo)" \
+        "configure-swap.sh --file <chemin absolu> vise bien le fichier demandé"
+
     # Sans taille, configure-swap.sh n'est qu'un diagnostic : il ne doit pas
     # davantage écrire.
     dry_run_inoffensif "configure-swap.sh sans taille" bash "$SWAP_SH"
@@ -828,6 +977,88 @@ else
             ok "configure-logging.sh --dry-run ne dépose pas la règle"
         fi
     fi
+fi
+
+# ===================================================================
+# 3 bis. -y reste actif après --file — TASK-017
+# ===================================================================
+# « -y » ne s'observe pas comme « --dry-run ». confirm() n'est appelé qu'APRÈS
+# la sortie du mode d'essai à blanc : le prouver exige une exécution RÉELLE, et
+# c'est la seule de ce fichier.
+#
+# Elle est bornée par construction : le fichier d'échange visé est placé dans le
+# répertoire jetable du test, jamais /swapfile. swapon est refusé au conteneur
+# non privilégié — le script le diagnostique, supprime lui-même son fichier
+# incomplet et sort en 1. Ce qui est éprouvé ici n'est donc pas l'activation du
+# swap, qui reste NON EXÉCUTÉE au groupe 5, mais la seule ligne « Confirmation
+# automatique », que « -y » seul produit.
+#
+# Les deux moitiés sont mises en regard — sans « -y » puis avec — parce que la
+# seconde seule ne dirait pas d'où vient la différence. L'entrée standard est
+# fermée par « lancer » : confirm() y lit une réponse vide et refuse.
+#
+# Une empreinte encadre le groupe. Elle prouve que cette exécution réelle n'a
+# rien laissé hors du répertoire jetable, et protège du même geste la garde
+# d'état du groupe 4, qui suit.
+#
+# PORTÉE EXACTE, pour ne pas s'y fier à tort : comme le cas « --dry-run » de la
+# section 3, ce groupe est une garde de NON-RÉGRESSION, pas la démonstration du
+# correctif. Le relecteur a mesuré que « -y » derrière une valeur de --file
+# fonctionnait déjà sur master : l'ancien code ne consommait qu'un seul jeton, et
+# le défaut n'apparaissait que lorsque l'option ÉTAIT la valeur. Ce qui prouve le
+# correctif, c'est le cas 5a. Ce groupe garantit qu'on ne l'a pas payé en cassant
+# le chemin nominal.
+titre "3 bis. -y reste actif après --file"
+
+if [ "$EST_ROOT" != "true" ]; then
+    saute "-y reste actif après --file <chemin absolu>" \
+        "require_root arrête le script avant confirm() — l'exécution réelle exige root"
+elif [ "$JETABLE" != "true" ]; then
+    saute "-y reste actif après --file <chemin absolu>" \
+        "ce cas exécute réellement configure-swap.sh — réservé à un système jetable"
+else
+    FICHIER_ESSAI="$REP_TMP/swapfile-essai"
+    empreinte "$REP_TMP/y-avant"
+
+    # La moitié témoin : sans « -y », le script demande et renonce.
+    lancer bash "$SWAP_SH" 64M --file "$FICHIER_ESSAI"
+    assert_code 0 "$CODE" "configure-swap.sh 64M --file <absolu> sans -y : renonce proprement"
+    assert_contient "$(erreur)" "[INFO] Abandon à la demande de l'utilisateur." \
+        "configure-swap.sh sans -y : demande confirmation et renonce"
+    assert_absent "$(erreur)" "Confirmation automatique" \
+        "configure-swap.sh sans -y : aucune confirmation automatique"
+    if [ -e "$FICHIER_ESSAI" ]; then
+        ko "configure-swap.sh sans -y ne crée aucun fichier d'échange" "$FICHIER_ESSAI existe"
+    else
+        ok "configure-swap.sh sans -y ne crée aucun fichier d'échange"
+    fi
+
+    # La même commande, « -y » placé APRÈS la valeur de --file. C'est la seule
+    # différence entre les deux appels.
+    lancer bash "$SWAP_SH" 64M --file "$FICHIER_ESSAI" -y
+    assert_contient "$(erreur)" "[INFO] Confirmation automatique : Appliquer ces opérations ?" \
+        "configure-swap.sh 64M --file <absolu> -y : -y reste actif après --file"
+    assert_absent "$(erreur)" "Abandon à la demande de l'utilisateur" \
+        "configure-swap.sh avec -y : plus aucune demande de confirmation"
+    assert_contient "$(erreur)" "[INFO] Fichier d'échange : $FICHIER_ESSAI" \
+        "configure-swap.sh avec -y : le chemin donné est bien retenu"
+
+    # La suite appartient au contrat de cet environnement, et non au correctif :
+    # swapon y est refusé. Si ce code passait un jour à 0, le swap aurait été
+    # RÉELLEMENT activé et le saut du groupe 5 aurait cessé d'être vrai — mieux
+    # vaut alors une assertion rouge qu'un silence.
+    assert_code 1 "$CODE" "configure-swap.sh avec -y : swapon refusé au conteneur, échec d'exécution"
+    assert_contient "$(erreur)" "[ERROR] L'activation du swap a échoué." \
+        "configure-swap.sh avec -y : l'échec de swapon est diagnostiqué"
+    if [ -e "$FICHIER_ESSAI" ]; then
+        ko "configure-swap.sh supprime le fichier d'échange incomplet" "$FICHIER_ESSAI subsiste"
+    else
+        ok "configure-swap.sh supprime le fichier d'échange incomplet"
+    fi
+
+    empreinte "$REP_TMP/y-apres"
+    assert_empreinte_egale "$REP_TMP/y-avant" "$REP_TMP/y-apres" \
+        "l'exécution réelle du groupe 3 bis ne laisse rien hors du répertoire jetable"
 fi
 
 # ===================================================================
