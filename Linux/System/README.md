@@ -50,6 +50,7 @@ sudo ./Linux/System/configure-timezone.sh Europe/Paris
 ./Linux/System/configure-swap.sh                     # état du swap, sans root
 sudo ./Linux/System/configure-swap.sh 2G             # créer ou redimensionner
 sudo ./Linux/System/configure-swap.sh 2G --dry-run
+sudo ./Linux/System/configure-swap.sh 2G --file /var/swapfile   # chemin absolu
 
 sudo ./Linux/System/configure-cron.sh --dry-run          # afficher le fichier
 sudo ./Linux/System/configure-cron.sh                    # une fois par serveur
@@ -125,8 +126,9 @@ Les sept scripts suivent la même convention, détaillée dans
 
 Le 2 reproche quelque chose à l'appelant, qui n'a qu'à corriger sa ligne de
 commande. Une valeur refusée en fait partie : `configure-swap.sh 12X`,
-`configure-timezone.sh Zone/Inexistante`, `configure-hostname.sh mon_serveur` et
-`configure-cron.sh --horaire "@weekly"` sortent tous en 2, sans avoir rien tenté.
+`configure-swap.sh --file 2G`, `configure-timezone.sh Zone/Inexistante`,
+`configure-hostname.sh mon_serveur` et `configure-cron.sh --horaire "@weekly"`
+sortent tous en 2, sans avoir rien tenté.
 
 Le 1 constate que le travail n'a pas pu être fait alors que la demande était
 recevable. **Un manque de privilège en relève** : lancer sans `sudo` l'un des
@@ -176,3 +178,19 @@ désactive puis recrée le fichier d'échange et complète `/etc/fstab`, sauvega
 au préalable. Il refuse de désactiver un swap dont le contenu ne tiendrait pas
 en mémoire disponible. Les partitions de swap et les systèmes de fichiers btrfs
 et ZFS ne sont pas pris en charge.
+
+**`--file` n'accepte qu'un chemin absolu.** Deux valeurs sont refusées avant
+toute action, avec le code 2 :
+
+- **une valeur commençant par un tiret**, parce que c'est une option du script et
+  non un chemin. `configure-swap.sh 512M --file --dry-run` faisait autrement de
+  `--dry-run` le nom du fichier d'échange, et l'essai à blanc était perdu en
+  silence — l'utilisateur croyait le demander sans l'obtenir ;
+- **un chemin relatif**, parce que le fichier d'échange naîtrait dans le
+  répertoire courant, quel qu'il soit. `configure-swap.sh --file 2G` — l'ordre
+  inversé — prend `2G` pour un chemin, et si `SRV_SWAP_SIZE` est défini dans
+  `config/server.env`, la taille ne manque même pas : plus rien n'arrêtait le
+  script.
+
+Un fichier d'échange n'a de sens qu'à un emplacement choisi ; il n'existe aucun
+usage légitime d'un chemin relatif ici.

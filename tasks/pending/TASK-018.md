@@ -1,7 +1,7 @@
 ---
 id: TASK-018
 title: "Supprimer le doublement du trap ERR sur les substitutions de commande"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-017
