@@ -16,6 +16,20 @@
 #
 #   +. OS non supporté refusé (require_os)           groupe « préflight »
 #
+# TASK-016 y ajoute le verrouillage de quatre corrections de codes de retour et
+# de messages, groupe « 1 bis » :
+#
+#   a. --file sans valeur : code 2, message préfixé [ERROR], UNE ligne
+#   b. valeur d'argument invalide : code 2 sur les trois scripts concernés
+#   c. le trap ERR ne double plus le diagnostic de configure-swap.sh
+#   d. un argument obligatoire manquant ne déverse plus l'aide sur stderr
+#
+# et la non-régression qui les borne, groupe « 1 ter » : sans privilège mais
+# avec des arguments valides, un script rend toujours 1 — un privilège
+# insuffisant est un échec d'exécution, pas une erreur d'usage (ADR-0003,
+# décision 10). Avec une option inconnue ou une valeur invalide, il rend 2 :
+# les arguments sont vérifiés avant les privilèges.
+#
 # CE FICHIER MODIFIE LE SYSTÈME. Il n'écrit rien tant qu'il n'a pas reconnu un
 # système jetable (conteneur Docker, ou MGNET_TEST_JETABLE=1) : ailleurs, les
 # groupes modifiants se déclarent NON EXÉCUTÉS plutôt que de réécrire
@@ -227,6 +241,72 @@ assert_aucune_ecriture() {
     fi
 }
 
+# --- Mesure du VOLUME de stderr --------------------------------------------
+# Ce que ces deux fonctions permettent d'exiger n'est pas dans le contenu d'un
+# message mais dans sa QUANTITÉ : « une seule ligne », « une seule ligne
+# [ERROR] ». C'est la seule forme d'assertion qui empêche une aide entière ou un
+# second diagnostic de revenir sur stderr — une assertion de contenu reste verte
+# pendant qu'on ajoute des lignes autour d'elle.
+#
+# Le « || [ -n "$ligne" ] » compte la dernière ligne même si le fichier ne se
+# termine pas par un saut de ligne : sans lui, un diagnostic sans « \n » final
+# serait décompté à zéro et l'assertion passerait pour de mauvaises raisons.
+
+# nb_lignes_erreur — nombre de lignes de stderr du dernier « lancer ».
+nb_lignes_erreur() {
+    local ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        n=$(( n + 1 ))
+    done < "$F_ERR"
+    printf '%s' "$n"
+}
+
+# nb_lignes_contenant <motif> — lignes de stderr portant ce motif LITTÉRAL.
+# « contient » vient de tests/lib/assert.sh : les crochets de [ERROR] y sont
+# littéraux, là où un grep les prendrait pour une classe de caractères.
+nb_lignes_contenant() {
+    local motif="$1"
+    local ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        if contient "$ligne" "$motif"; then
+            n=$(( n + 1 ))
+        fi
+    done < "$F_ERR"
+    printf '%s' "$n"
+}
+
+# assert_au_plus <maximum> <obtenu> <libellé>
+# Une borne, et non une égalité : elle laisse la place à une reformulation du
+# diagnostic sans laisser passer les vingt-huit lignes d'une aide.
+assert_au_plus() {
+    local maximum="$1" obtenu="$2" libelle="$3"
+    if [ "$obtenu" -le "$maximum" ] 2>/dev/null; then
+        ok "$libelle — $obtenu ligne(s), $maximum au maximum"
+    else
+        ko "$libelle" "au plus $maximum ligne(s) attendue(s), obtenu $obtenu"
+    fi
+}
+
+# valeur_imposee_par_config <variable> — la variable est-elle déjà fournie ?
+#
+# Les cas « argument obligatoire manquant » n'ont de sens que si config/server.env
+# ne fournit pas la valeur : le script la prendrait alors et ne diagnostiquerait
+# rien. lib/common.sh charge ce fichier avec « set -a » depuis TASK-015, donc la
+# variable est exportée jusqu'ici ; le contrôle du fichier double la vérification
+# pour le cas où elle serait vide mais définie.
+SERVER_ENV="$SCRIPTS_ROOT/config/server.env"
+valeur_imposee_par_config() {
+    local variable="$1"
+    if [ -n "${!variable:-}" ]; then
+        return 0
+    fi
+    if [ -f "$SERVER_ENV" ] \
+        && grep -qE "^[[:space:]]*(export[[:space:]]+)?$variable=." "$SERVER_ENV"; then
+        return 0
+    fi
+    return 1
+}
+
 # ===================================================================
 # Reconnaissance de l'environnement
 # ===================================================================
@@ -351,6 +431,202 @@ for script in $SIX_SCRIPTS; do
     assert_contient "$(erreur)" "Option inconnue" "$nom nomme l'option inconnue"
 done
 
+# ===================================================================
+# 1 bis. Erreurs d'usage — les quatre corrections de TASK-016
+# ===================================================================
+# Ces cas sont placés dans le groupe « préflight » parce qu'ils n'écrivent RIEN :
+# chacun meurt pendant l'analyse des arguments ou la validation, avant
+# require_root et avant la moindre modification. Le groupe reste non modifiant,
+# et la garde d'état du groupe « idempotence » n'en est pas troublée.
+#
+# La convention verrouillée ici est celle de docs/architecture-technique.md §6 :
+#
+#   2  erreur d'usage      option inconnue, argument manquant, VALEUR INVALIDE
+#   1  échec d'exécution   privilège insuffisant, dépendance absente
+#
+# Les quatre défauts que TASK-016 a corrigés étaient tous des écarts à cette
+# règle, et aucune assertion ne les voyait — c'est ce trou que ce sous-groupe
+# ferme.
+titre "1 bis. Erreurs d'usage — codes, préfixes et volume de stderr"
+
+# --- 1. Un argument d'option manquant : code 2, préfixé, en UNE ligne -------
+# « --file » était lu par « FICHIER_SWAP="${1:?--file attend un chemin}" ». Cette
+# expansion écrit un message brut de bash — sans préfixe [ERROR], précédé du nom
+# du script et d'un numéro de ligne — et fait sortir le shell en 1. Les trois
+# assertions ferment trois aspects distincts du défaut : le code, la forme du
+# message, et son volume.
+lancer bash "$SWAP_SH" --file
+assert_code 2 "$CODE" "configure-swap.sh --file sans valeur : erreur d'usage"
+assert_contient "$(erreur)" "[ERROR] --file attend un chemin." \
+    "configure-swap.sh --file sans valeur : message préfixé [ERROR]"
+assert_egal "1" "$(nb_lignes_erreur)" \
+    "configure-swap.sh --file sans valeur : une seule ligne sur stderr"
+# Le décompte ci-dessus ne suffit PAS à voir revenir « ${1:?…} » : le message
+# brut de bash tient lui aussi sur une ligne. Cette assertion-ci nomme sa forme
+# — « configure-swap.sh: line 62: 1: --file attend un chemin » — et c'est elle,
+# avec les deux précédentes, qui ferme le défaut.
+assert_absent "$(erreur)" "configure-swap.sh: line" \
+    "configure-swap.sh --file sans valeur : aucun message brut de bash sur stderr"
+
+# --- 2. Une valeur d'argument invalide rend 2 sur les trois scripts ---------
+# configure-swap.sh appelait déjà « die … 2 » ; configure-timezone.sh et
+# configure-hostname.sh appelaient « die » sans code, donc 1. Le même appel mal
+# formé rendait ainsi deux codes différents selon le script visé.
+#
+# Les chemins de validation éprouvés ici sont ceux propres à chaque script, et
+# non un seul cas répété : fuseau inexistant, répertoire technique de zoneinfo,
+# tentative de remontée d'arborescence, caractère interdit dans un nom d'hôte.
+lancer bash "$TIMEZONE_SH" Zone/Inexistante
+assert_code 2 "$CODE" "configure-timezone.sh refuse un fuseau inexistant"
+assert_contient "$(erreur)" "[ERROR] Fuseau inconnu : « Zone/Inexistante »." \
+    "configure-timezone.sh nomme le fuseau refusé"
+
+lancer bash "$TIMEZONE_SH" posix/UTC
+assert_code 2 "$CODE" "configure-timezone.sh refuse un répertoire technique de zoneinfo"
+assert_contient "$(erreur)" "[ERROR] « posix/UTC » est un répertoire technique de zoneinfo, pas un fuseau." \
+    "configure-timezone.sh explique pourquoi posix/ est refusé"
+
+lancer bash "$TIMEZONE_SH" ../etc/passwd
+assert_code 2 "$CODE" "configure-timezone.sh refuse un fuseau contenant « .. »"
+assert_contient "$(erreur)" "[ERROR] Fuseau invalide : « ../etc/passwd »." \
+    "configure-timezone.sh nomme le fuseau invalide"
+
+lancer bash "$HOSTNAME_SH" mon_serveur
+assert_code 2 "$CODE" "configure-hostname.sh refuse un caractère interdit dans le nom"
+assert_contient "$(erreur)" "[ERROR] Segment invalide : « mon_serveur » — lettres, chiffres et tirets uniquement." \
+    "configure-hostname.sh dit quels caractères il accepte"
+
+# « -mauvais- » n'atteint JAMAIS valider_nom : son tiret initial le fait basculer
+# sur « Option inconnue » dès l'analyse des arguments. Le code est le même — 2 —
+# mais pour une autre raison. L'assertion de message le dit explicitement, faute
+# de quoi ce cas passerait pour une preuve de la validation du nom, qu'il
+# n'exerce pas. C'est la nuance relevée par le relecteur de TASK-016.
+lancer bash "$HOSTNAME_SH" -mauvais-
+assert_code 2 "$CODE" "configure-hostname.sh refuse « -mauvais- »"
+assert_contient "$(erreur)" "[ERROR] Option inconnue : -mauvais-" \
+    "configure-hostname.sh traite « -mauvais- » en option inconnue, et non en nom invalide"
+
+# Les trois autres branches de valider_nom. Sans elles, une seule des cinq
+# sorties de la fonction serait épinglée, et un « die » sans code rétabli sur
+# les quatre autres passerait sans être vu.
+lancer bash "$HOSTNAME_SH" "mon..serveur"
+assert_code 2 "$CODE" "configure-hostname.sh refuse un segment vide"
+assert_contient "$(erreur)" "[ERROR] Nom invalide : segment vide" \
+    "configure-hostname.sh nomme le segment vide"
+
+lancer bash "$HOSTNAME_SH" "serveur.-x"
+assert_code 2 "$CODE" "configure-hostname.sh refuse un segment commençant par un tiret"
+assert_contient "$(erreur)" "commence ou finit par un tiret" \
+    "configure-hostname.sh explique le refus du tiret"
+
+# 254 caractères : un de trop pour le nom entier, mais chaque segment reste sous
+# la limite de 63, faute de quoi c'est l'autre branche qui répondrait.
+nom_trop_long="$(printf 'a%.0s' $(seq 1 60)).$(printf 'b%.0s' $(seq 1 60)).$(printf 'c%.0s' $(seq 1 60)).$(printf 'd%.0s' $(seq 1 60)).eeeeeeeeee"
+assert_egal "254" "${#nom_trop_long}" "le nom d'essai fait bien 254 caractères"
+lancer bash "$HOSTNAME_SH" "$nom_trop_long"
+assert_code 2 "$CODE" "configure-hostname.sh refuse un nom de plus de 253 caractères"
+assert_contient "$(erreur)" "[ERROR] Nom trop long : 254 caractères (253 au maximum)." \
+    "configure-hostname.sh nomme la longueur refusée"
+
+lancer bash "$HOSTNAME_SH" "$(printf 'z%.0s' $(seq 1 64))"
+assert_code 2 "$CODE" "configure-hostname.sh refuse un segment de plus de 63 caractères"
+assert_contient "$(erreur)" "(63 caractères au maximum)" \
+    "configure-hostname.sh nomme la limite de segment"
+
+lancer bash "$SWAP_SH" abc
+assert_code 2 "$CODE" "configure-swap.sh refuse une taille non numérique"
+
+lancer bash "$SWAP_SH" 12X
+assert_code 2 "$CODE" "configure-swap.sh refuse une unité inconnue"
+
+# Ce « die » est hors de en_megaoctets — il n'a jamais souffert du doublon de
+# trap — mais il relève de la même convention et rendait déjà 2. L'y épingler
+# évite qu'il en sorte par la suite.
+lancer bash "$SWAP_SH" 32
+assert_code 2 "$CODE" "configure-swap.sh refuse une taille inférieure au minimum"
+assert_contient "$(erreur)" "[ERROR] Taille trop faible : 32 Mo (64 Mo au minimum)." \
+    "configure-swap.sh nomme le minimum"
+
+# --- 3. Le trap ERR ne double plus le diagnostic ----------------------------
+# en_megaoctets rendait sa valeur par « printf » sur stdout : elle s'exécutait
+# donc dans une substitution de commande. Son « die » ne quittait que ce
+# sous-shell ; le code remonté au shell principal faisait échouer l'affectation,
+# et le trap ERR de lib/common.sh ajoutait une seconde ligne :
+#
+#   [ERROR] Taille invalide : « abc » (exemples : 2G, 512M, 2048).
+#   [ERROR] Échec (code 2) à la ligne 143 de configure-swap.sh.
+#
+# La fonction renseigne désormais une variable globale et s'appelle hors
+# substitution. UNE ASSERTION D'ABSENCE EST FACILE À ÉCRIRE CREUSE : sur un
+# stderr vide, mal capturé ou pris sur le mauvais flux, elle serait verte sans
+# rien prouver. Trois gardes l'encadrent donc — le code, la présence effective du
+# diagnostic métier, et le DÉCOMPTE des lignes [ERROR], qui reste juste même si
+# le libellé du trap change un jour dans lib/common.sh.
+lancer bash "$SWAP_SH" abc
+assert_code 2 "$CODE" "configure-swap.sh abc : erreur d'usage"
+assert_contient "$(erreur)" "[ERROR] Taille invalide : « abc » (exemples : 2G, 512M, 2048)." \
+    "configure-swap.sh abc : le diagnostic métier est bien là — la garde de l'assertion d'absence"
+assert_absent "$(erreur)" "Échec (code" \
+    "configure-swap.sh abc : le trap ERR n'ajoute aucune ligne au diagnostic"
+assert_egal "1" "$(nb_lignes_contenant '[ERROR]')" \
+    "configure-swap.sh abc : stderr ne porte qu'une seule ligne [ERROR]"
+
+# L'autre « die » de en_megaoctets, sur la branche des unités. Il empruntait le
+# même sous-shell et souffrait du même doublon.
+lancer bash "$SWAP_SH" 12X
+assert_contient "$(erreur)" "[ERROR] Unité inconnue dans « 12X » (attendu G ou M)." \
+    "configure-swap.sh 12X : le diagnostic métier est bien là"
+assert_absent "$(erreur)" "Échec (code" \
+    "configure-swap.sh 12X : le trap ERR n'ajoute aucune ligne au diagnostic"
+assert_egal "1" "$(nb_lignes_contenant '[ERROR]')" \
+    "configure-swap.sh 12X : stderr ne porte qu'une seule ligne [ERROR]"
+
+# --- 4. Un argument obligatoire manquant : un diagnostic, pas l'aide --------
+# configure-hostname.sh appelait « show_help >&2 » : vingt-huit lignes d'aide sur
+# stderr, dans lesquelles les deux lignes de diagnostic se perdaient.
+#
+# C'est LE DÉCOMPTE qui verrouille ce point. Les assertions de contenu
+# resteraient toutes vertes si l'aide revenait autour d'elles ; seule une borne
+# sur le nombre de lignes s'y oppose. Les assertions d'absence de « Usage : » et
+# de « Options : » la doublent en nommant ce qui n'a rien à faire là.
+if valeur_imposee_par_config SRV_HOSTNAME; then
+    saute "configure-hostname.sh sans nom : diagnostic court plutôt que l'aide entière" \
+        "SRV_HOSTNAME est fourni par l'environnement ou config/server.env — le script ne diagnostiquerait rien"
+else
+    lancer bash "$HOSTNAME_SH"
+    assert_code 2 "$CODE" "configure-hostname.sh sans nom : erreur d'usage"
+    assert_contient "$(erreur)" "[ERROR] Nom d'hôte manquant." \
+        "configure-hostname.sh sans nom : dit ce qui manque"
+    assert_contient "$(erreur)" "configure-hostname.sh --help" \
+        "configure-hostname.sh sans nom : renvoie vers l'aide au lieu de la déverser"
+    assert_au_plus 5 "$(nb_lignes_erreur)" \
+        "configure-hostname.sh sans nom : stderr reste court"
+    assert_absent "$(sortie)" "Usage :" \
+        "configure-hostname.sh sans nom : l'aide n'est pas non plus écrite sur stdout"
+    assert_absent "$(erreur)" "Usage :" \
+        "configure-hostname.sh sans nom : l'aide n'est pas déversée sur stderr"
+    assert_absent "$(erreur)" "Options :" \
+        "configure-hostname.sh sans nom : la liste des options n'est pas déversée sur stderr"
+fi
+
+# Le script voisin, sur le même critère. Il n'a jamais porté le défaut : cette
+# assertion l'empêche de le contracter.
+if valeur_imposee_par_config SRV_TIMEZONE; then
+    saute "configure-timezone.sh sans fuseau : diagnostic court plutôt que l'aide entière" \
+        "SRV_TIMEZONE est fourni par l'environnement ou config/server.env — le script ne diagnostiquerait rien"
+else
+    lancer bash "$TIMEZONE_SH"
+    assert_code 2 "$CODE" "configure-timezone.sh sans fuseau : erreur d'usage"
+    assert_contient "$(erreur)" "[ERROR] Fuseau horaire manquant." \
+        "configure-timezone.sh sans fuseau : dit ce qui manque"
+    assert_au_plus 5 "$(nb_lignes_erreur)" \
+        "configure-timezone.sh sans fuseau : stderr reste court"
+    assert_absent "$(erreur)" "Usage :" \
+        "configure-timezone.sh sans fuseau : l'aide n'est pas déversée sur stderr"
+fi
+
+titre "1 ter. Privilèges et OS"
+
 # --- Refus sans privilège ---------------------------------------------------
 # require_root sort en 1 : dans ce dépôt, le code 2 est réservé à l'erreur
 # d'usage. system-info.sh est absent de cette liste — son cas est l'inverse,
@@ -378,9 +654,32 @@ else
     assert_code 1 "$CODE" "update-system.sh refuse de s'exécuter sans privilège"
 
     # L'erreur d'usage prime sur le manque de privilège : sinon un appel mal
-    # formé serait masqué par un message de permission.
-    sans_root bash "$UPDATE_SH" --option-qui-n-existe-pas
-    assert_code 2 "$CODE" "update-system.sh : l'option inconnue prime sur le manque de privilège"
+    # formé serait masqué par un message de permission. Les CINQ scripts sont
+    # éprouvés, et non le seul update-system.sh : la garantie porte sur l'ORDRE
+    # « arguments puis privilèges », qui se vérifie script par script.
+    for script in $CINQ_MODIFIANTS; do
+        nom="$(basename "$script")"
+        sans_root bash "$script" --option-qui-n-existe-pas
+        assert_code 2 "$CODE" "$nom sans privilège : l'option inconnue prime, code 2"
+    done
+
+    # Même ordre pour une VALEUR invalide : la validation précède require_root.
+    # Ces trois cas sont le pendant exact des trois précédents — mêmes scripts,
+    # mêmes arguments, mais valides — et c'est leur mise en regard qui prouve la
+    # frontière d'ADR-0003 décision 10 : 1 quand la commande est juste et que
+    # seul le privilège manque, 2 dès que la commande elle-même est fautive.
+    sans_root bash "$HOSTNAME_SH" mon_serveur
+    assert_code 2 "$CODE" "configure-hostname.sh sans privilège : le nom invalide prime, code 2"
+
+    sans_root bash "$TIMEZONE_SH" Zone/Inexistante
+    assert_code 2 "$CODE" "configure-timezone.sh sans privilège : le fuseau inconnu prime, code 2"
+
+    sans_root bash "$SWAP_SH" abc
+    assert_code 2 "$CODE" "configure-swap.sh sans privilège : la taille invalide prime, code 2"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh abc sans privilège : le trap ERR n'ajoute aucune ligne"
+
+    rm -rf "$LOG_DIR_NOBODY"
 fi
 
 # --- Refus d'un OS non supporté --------------------------------------------
@@ -498,6 +797,19 @@ else
         bash "$SWAP_SH" 512M --dry-run
     assert_contient "$(erreur)" "aucune modification effectuée" \
         "configure-swap.sh --dry-run annonce qu'il n'a rien modifié"
+
+    # La conversion des unités est le SEUL endroit où le passage d'un « printf »
+    # sur stdout à une variable globale — la correction du doublon de trap —
+    # pouvait abîmer une valeur sans que rien d'autre ne s'en aperçoive : une
+    # variable mal renseignée resterait vide, et « $(( nombre * 1024 )) » ne
+    # produirait plus 2048. Le cas 512M ci-dessus n'emprunte pas cette branche,
+    # l'unité M étant recopiée telle quelle.
+    dry_run_inoffensif "configure-swap.sh 2G --dry-run" \
+        bash "$SWAP_SH" 2G --dry-run
+    assert_contient "$(erreur)" "Taille demandée : 2048 Mo (argument : 2G)" \
+        "configure-swap.sh convertit 2G en 2048 Mo"
+    assert_contient "$(erreur)" "créer      /swapfile (2048 Mo)" \
+        "configure-swap.sh annonce la création à 2048 Mo, valeur portée jusqu'au résumé"
 
     # Sans taille, configure-swap.sh n'est qu'un diagnostic : il ne doit pas
     # davantage écrire.

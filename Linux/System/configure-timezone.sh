@@ -109,20 +109,22 @@ fi
 # -------------------------------------------------------------------
 # Validation
 # -------------------------------------------------------------------
+# Un fuseau refusé est une valeur d'argument invalide : code 2, comme l'option
+# inconnue et l'argument manquant (voir docs/architecture-technique.md §6).
 valider_fuseau() {
     local fuseau="$1"
 
     case "$fuseau" in
         posix/*|right/*)
-            die "« $fuseau » est un répertoire technique de zoneinfo, pas un fuseau." ;;
+            die "« $fuseau » est un répertoire technique de zoneinfo, pas un fuseau." 2 ;;
         *.tab|*.list|/*|*..*)
-            die "Fuseau invalide : « $fuseau »." ;;
+            die "Fuseau invalide : « $fuseau »." 2 ;;
     esac
 
     if [ ! -f "$REPERTOIRE_FUSEAUX/$fuseau" ]; then
         error "Fuseau inconnu : « $fuseau »."
         error "Lister les fuseaux disponibles : configure-timezone.sh --list"
-        die "Aucune modification effectuée."
+        die "Aucune modification effectuée." 2
     fi
 }
 

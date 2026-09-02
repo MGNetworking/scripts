@@ -112,6 +112,35 @@ toucher.
 Aucun rechargement n'est nécessaire après le dépôt : cron relit `/etc/cron.d`
 dès que son contenu change.
 
+## Codes de retour
+
+Les sept scripts suivent la même convention, détaillée dans
+[docs/architecture-technique.md §6](../../docs/architecture-technique.md) :
+
+```text
+0  succès
+2  erreur d'usage      option inconnue, argument manquant, valeur invalide
+1  échec d'exécution   privilège insuffisant, dépendance absente, opération échouée
+```
+
+Le 2 reproche quelque chose à l'appelant, qui n'a qu'à corriger sa ligne de
+commande. Une valeur refusée en fait partie : `configure-swap.sh 12X`,
+`configure-timezone.sh Zone/Inexistante`, `configure-hostname.sh mon_serveur` et
+`configure-cron.sh --horaire "@weekly"` sortent tous en 2, sans avoir rien tenté.
+
+Le 1 constate que le travail n'a pas pu être fait alors que la demande était
+recevable. **Un manque de privilège en relève** : lancer sans `sudo` l'un des
+scripts qui modifient le système rend 1, la commande tapée étant juste.
+`system-info.sh` fait exception et rend 0 — il ne fait que lire, il n'a jamais
+eu besoin de privilège.
+
+Les arguments sont vérifiés avant les privilèges, si bien qu'une commande à la
+fois mal formée et sans `sudo` rend 2 — le reproche le plus utile en premier.
+
+Tout message d'erreur porte le préfixe `[ERROR]` et part sur `stderr`. Un
+argument obligatoire manquant produit un diagnostic de quelques lignes qui
+renvoie vers `--help`, jamais l'aide entière.
+
 ## Risques
 
 `system-info.sh` est en lecture seule : il n'écrit rien et ne modifie rien.

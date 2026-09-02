@@ -1,7 +1,7 @@
 ---
 id: TASK-016
 title: "Uniformiser les codes de retour et les messages d'erreur d'usage"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-004

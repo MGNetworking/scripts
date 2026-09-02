@@ -398,6 +398,67 @@ Un script vérifie donc ses arguments **avant** ses privilèges : lancée sans
 `sudo` et avec une option inconnue, la commande sort en 2, parce que c'est le
 reproche le plus utile à celui qui l'a tapée.
 
+Une **valeur d'argument invalide** relève du 2 au même titre qu'une option
+inconnue : taille de swap illisible, fuseau horaire inexistant, nom d'hôte mal
+formé, horaire de cron à quatre champs. La demande était mal formulée, rien n'a
+été tenté.
+
+### Deux façons de perdre le code ou le message
+
+**`${1:?message}` n'est pas un contrôle d'argument.** L'expansion écrit sur
+`stderr` un message brut, sans préfixe `[ERROR]` ni journalisation, et sort
+en 1 — donc à la fois hors convention de forme et hors convention de code :
+
+```text
+configure-swap.sh: line 57: 1: --file attend un chemin
+```
+
+Le contrôle s'écrit explicitement :
+
+```bash
+--file)
+    shift
+    [ -n "${1:-}" ] || die "--file attend un chemin." 2
+    FICHIER_SWAP="$1"; shift
+    ;;
+```
+
+**`die` appelé dans une substitution de commande double le diagnostic.** Une
+fonction de validation qui rend sa valeur sur `stdout` s'exécute dans un
+sous-shell : son `die` n'en fait sortir que le sous-shell, et le code non nul
+remonté au shell principal déclenche le `trap ERR`, qui ajoute un second message
+sans rapport avec la faute :
+
+```text
+[ERROR] Taille invalide : « abc » (exemples : 2G, 512M, 2048).
+[ERROR] Échec (code 2) à la ligne 143 de configure-swap.sh.
+```
+
+La validation se fait donc **hors substitution de commande** : la fonction
+renseigne une variable au lieu d'écrire sur `stdout`, et son `die` s'applique
+alors au script entier.
+
+```bash
+TAILLE_MO=""
+en_megaoctets() { … TAILLE_MO="$nombre" … }
+en_megaoctets "$TAILLE_DEMANDEE"       # et non "$(en_megaoctets …)"
+```
+
+`valider_horaire` dans `configure-cron.sh` et `en_megaoctets` dans
+`configure-swap.sh` suivent cette forme.
+
+### Un diagnostic n'est pas un manuel
+
+Un argument obligatoire manquant se signale en deux ou trois lignes, terminées
+par un renvoi vers `--help` — jamais par un `show_help >&2`, dont les vingt-huit
+lignes noieraient le diagnostic qu'elles étaient censées éclairer.
+
+```text
+[ERROR] Nom d'hôte manquant.
+[ERROR] Le passer en argument, ou définir SRV_HOSTNAME dans config/server.env.
+[ERROR] Aide complète : configure-hostname.sh --help
+```
+
 ### Le message d'échec nomme le fichier fautif
 
 `lib/common.sh` installe un `trap ERR` qui annonce le code, la ligne et le
