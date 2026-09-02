@@ -78,10 +78,12 @@ if [ -z "$NOUVEAU_NOM" ]; then
     ORIGINE_NOM="config/server.env"
 fi
 
+# Trois lignes, pas l'aide entière : déversée ici, elle noierait le diagnostic
+# sous vingt-huit lignes de stderr. L'appelant est renvoyé vers --help.
 if [ -z "$NOUVEAU_NOM" ]; then
     error "Nom d'hôte manquant."
     error "Le passer en argument, ou définir SRV_HOSTNAME dans config/server.env."
-    show_help >&2
+    error "Aide complète : configure-hostname.sh --help"
     exit 2
 fi
 
@@ -90,25 +92,28 @@ fi
 # -------------------------------------------------------------------
 # Un nom invalide accepté ici se paierait par des services qui refusent de
 # démarrer : la validation précède donc toute modification.
+#
+# Un nom refusé est une valeur d'argument invalide : code 2, comme l'option
+# inconnue et l'argument manquant (voir docs/architecture-technique.md §6).
 valider_nom() {
     local nom="$1"
 
     if [ "${#nom}" -gt 253 ]; then
-        die "Nom trop long : ${#nom} caractères (253 au maximum)."
+        die "Nom trop long : ${#nom} caractères (253 au maximum)." 2
     fi
 
     local segment
     local IFS='.'
     for segment in $nom; do
         if [ -z "$segment" ]; then
-            die "Nom invalide : segment vide (point en trop dans « $nom »)."
+            die "Nom invalide : segment vide (point en trop dans « $nom »)." 2
         fi
         if [ "${#segment}" -gt 63 ]; then
-            die "Segment trop long : « $segment » (63 caractères au maximum)."
+            die "Segment trop long : « $segment » (63 caractères au maximum)." 2
         fi
         case "$segment" in
-            -*|*-)      die "Segment invalide : « $segment » commence ou finit par un tiret." ;;
-            *[!a-zA-Z0-9-]*) die "Segment invalide : « $segment » — lettres, chiffres et tirets uniquement." ;;
+            -*|*-)      die "Segment invalide : « $segment » commence ou finit par un tiret." 2 ;;
+            *[!a-zA-Z0-9-]*) die "Segment invalide : « $segment » — lettres, chiffres et tirets uniquement." 2 ;;
         esac
     done
 }

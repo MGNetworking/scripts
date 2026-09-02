@@ -228,6 +228,35 @@ Ce que le niveau `integration` apporte en propre :
 - le cas **« le nom demandé est déjà un alias de la ligne `127.0.1.1` »**,
   chemin de `hosts_deja_conforme()` qu'aucun cas existant n'emprunte.
 
+#### Le verrou des codes de retour — groupes « 1 bis » et « 1 ter »
+
+TASK-016 a corrigé quatre écarts à la convention des codes de retour. Les
+groupes `1 bis` et `1 ter` de `linux-system.test.sh` les épinglent, faute de
+quoi rien n'empêcherait la dérive de revenir — c'est ce qui était arrivé à la
+dette `shellcheck`, invisible depuis les premiers commits.
+
+| Ce qui est verrouillé | Par quelle forme d'assertion |
+|---|---|
+| `--file` sans valeur rend 2, préfixé `[ERROR]` | code, contenu, **une seule ligne** sur `stderr`, et absence du message brut de bash |
+| une valeur invalide rend 2 sur les trois scripts | code, sur six chemins de validation distincts |
+| le `trap ERR` ne double plus le diagnostic | **absence** de `Échec (code …)`, gardée par le code, la présence du diagnostic métier et le **décompte** des lignes `[ERROR]` |
+| un argument obligatoire manquant ne déverse pas l'aide | **borne** sur le nombre de lignes de `stderr`, doublée par l'absence de `Usage :` et `Options :` |
+| sans privilège : 1 si la commande est juste, 2 si elle est fautive | les deux moitiés en regard, sur les cinq scripts modifiants |
+
+Deux formes reviennent, et ce n'est pas un hasard. **Le décompte** est la seule
+qui voie revenir des lignes en trop : une assertion de contenu reste verte
+pendant qu'on en ajoute autour d'elle. **L'assertion d'absence**, elle, est
+facile à écrire creuse — sur un `stderr` vide ou mal capturé elle passe sans
+rien prouver ; chacune est donc encadrée de gardes qui exigent que le flux
+contienne bien ce qu'on y attend par ailleurs.
+
+Les six assertions ont été éprouvées par mutation des scripts — `${1:?…}`
+rétabli, `die` sans code dans `valider_fuseau` puis dans `valider_nom`,
+`en_megaoctets` remise dans une substitution de commande, `show_help >&2`
+rétabli, conversion `G` amputée de son `× 1024`. Chaque mutation fait rougir de
+deux à cinq assertions ; les scripts sont restaurés ensuite et l'identité
+vérifiée par `git diff`.
+
 ### Le niveau `acceptance`
 
 Un fichier par tâche, nommé `tests/acceptance/TASK-0xx-<sujet>.sh`.

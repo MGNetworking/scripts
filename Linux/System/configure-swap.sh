@@ -54,7 +54,14 @@ AIDE
 
 while [ "${1:-}" != "" ]; do
     case "$1" in
-        --file)     shift; FICHIER_SWAP="${1:?--file attend un chemin}"; shift ;;
+        # Le contrôle est explicite plutôt qu'en « ${1:?…} » : cette expansion
+        # produit un message brut, sans le préfixe [ERROR], et sort en 1 alors
+        # qu'un argument manquant est une erreur d'usage — code 2.
+        --file)
+            shift
+            [ -n "${1:-}" ] || die "--file attend un chemin." 2
+            FICHIER_SWAP="$1"; shift
+            ;;
         --dry-run)  DRY_RUN="true"; shift ;;
         # ASSUME_YES est lue par confirm(), dans lib/common.sh.
         -y|--yes)   export ASSUME_YES="true"; shift ;;
@@ -122,6 +129,12 @@ fi
 # -------------------------------------------------------------------
 # Conversion de la taille en mégaoctets
 # -------------------------------------------------------------------
+# La fonction renseigne TAILLE_MO plutôt que d'écrire sur stdout : appelée dans
+# une substitution de commande, son « die » ne quitterait que le sous-shell, et
+# le code d'erreur remonté au shell principal déclencherait le trap ERR de
+# lib/common.sh — le diagnostic métier se verrait alors doublé d'un « Échec
+# (code 2) à la ligne … » sans intérêt pour l'appelant.
+TAILLE_MO=""
 en_megaoctets() {
     local valeur="$1"
     local nombre unite
@@ -134,13 +147,13 @@ en_megaoctets() {
     fi
 
     case "$unite" in
-        G|GB|GO)   printf '%s' "$(( nombre * 1024 ))" ;;
-        M|MB|MO|"") printf '%s' "$nombre" ;;
-        *)         die "Unité inconnue dans « $valeur » (attendu G ou M)." 2 ;;
+        G|GB|GO)    TAILLE_MO="$(( nombre * 1024 ))" ;;
+        M|MB|MO|"") TAILLE_MO="$nombre" ;;
+        *)          die "Unité inconnue dans « $valeur » (attendu G ou M)." 2 ;;
     esac
 }
 
-TAILLE_MO="$(en_megaoctets "$TAILLE_DEMANDEE")"
+en_megaoctets "$TAILLE_DEMANDEE"
 
 if [ "$TAILLE_MO" -lt 64 ]; then
     die "Taille trop faible : ${TAILLE_MO} Mo (64 Mo au minimum)." 2
