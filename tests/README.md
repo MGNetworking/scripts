@@ -257,6 +257,42 @@ rétabli, conversion `G` amputée de son `× 1024`. Chaque mutation fait rougir 
 deux à cinq assertions ; les scripts sont restaurés ensuite et l'identité
 vérifiée par `git diff`.
 
+#### Ce que `--file` refuse — sections 5 et 6, groupes « 3 bis » et « 3 ter »
+
+TASK-017 puis TASK-019 ont durci `--file`, d'abord sur la **forme** du chemin,
+ensuite sur la **nature** de ce qu'il désigne.
+
+| Ce qui est verrouillé | Tâche |
+|---|---|
+| une valeur commençant par `-` est refusée, et n'est plus consommée comme chemin | 017 |
+| un chemin relatif est refusé — sinon un fichier d'échange naîtrait dans le répertoire courant | 017 |
+| un fichier régulier qui n'est pas un swap est refusé, jamais supprimé | 019 |
+| un répertoire, `/`, un lien symbolique sont refusés proprement, sans message brut de `rm` | 019 |
+| une cible illisible faute de privilège rend 1, pas 2 — la commande était juste | 019 |
+| les deux cas nominaux passent : chemin inexistant (création), fichier d'échange existant (redimensionnement) | 019 |
+
+Trois enseignements de ces deux tâches méritent d'être retenus, parce qu'ils
+reviendront.
+
+**Un décompte de lignes se mesure, il ne se déduit pas.** Le rédacteur de
+TASK-017 en avait annoncé trois pour les deux refus ; il y en a quatre pour le
+refus du tiret et trois pour celui du chemin relatif. Deux vérifications
+indépendantes ont été nécessaires pour l'établir.
+
+**Une assertion peut prouver moins qu'elle n'en a l'air.** Le cas
+`--dry-run` placé derrière une valeur de `--file` passait **déjà** sur `master` :
+c'est une garde de non-régression, pas la démonstration du correctif. De même,
+« aucun fichier créé dans le répertoire courant » ne peut pas rougir — le `trap`
+de nettoyage du script efface le fichier avant que le test ne regarde. Ces
+limites sont écrites à côté des assertions concernées, pour qu'on ne s'y fie pas.
+
+**La mutation utile n'est pas toujours celle qu'on avait prévue.** Aucune des
+trois mutations demandées pour TASK-019 ne touchait les assertions d'intégrité de
+fichier. Le testeur en a ajouté une quatrième — neutraliser le contrôle de nature
+entièrement — qui a réellement détruit `/etc/passwd` dans le conteneur, et fait
+rougir vingt et une assertions. C'est elle qui prouve que ces assertions ne sont
+pas creuses.
+
 ### Le niveau `acceptance`
 
 Un fichier par tâche, nommé `tests/acceptance/TASK-0xx-<sujet>.sh`.

@@ -5,7 +5,9 @@
 # diagnostic sans risque.
 #
 # Avec une taille, il crée ou redimensionne un fichier d'échange et l'inscrit
-# dans /etc/fstab. Aucun swap existant n'est remplacé sans confirmation.
+# dans /etc/fstab. Aucun swap existant n'est remplacé sans confirmation, et la
+# cible visée doit être un fichier d'échange ou n'être rien du tout : le script
+# supprime ce qu'il recrée, il ne le fera pas d'un fichier qu'il ne reconnaît pas.
 
 set -Eeuo pipefail
 
@@ -40,6 +42,11 @@ tiret. Un chemin relatif ferait naître le fichier d'échange dans le répertoir
 courant, quel qu'il soit ; une valeur commençant par un tiret est une option du
 script, pas un chemin. Les deux sont refusés avec le code 2.
 
+Ce chemin doit en outre ne rien désigner — le fichier est alors créé — ou
+désigner un fichier d'échange existant, qui est alors redimensionné. Le script
+supprime sa cible avant de la recréer : toute autre cible (répertoire, fichier
+ordinaire, périphérique) est refusée avec le code 2, avant toute confirmation.
+
 Exemples :
   configure-swap.sh                       # état actuel
   configure-swap.sh 2G
@@ -59,9 +66,64 @@ AIDE
 }
 
 # -------------------------------------------------------------------
+# Reconnaissance d'un fichier d'échange
+# -------------------------------------------------------------------
+# Répond 0 si le chemin donné est un fichier d'échange, actif ou non. Deux
+# preuves, dans cet ordre :
+#
+#   1. /proc/swaps liste les swaps ACTIFS. Il est lisible par tous, aucun
+#      privilège n'est requis, et c'est déjà la source de swap_actif() ;
+#   2. un fichier d'échange INACTIF se reconnaît à sa signature : mkswap écrit
+#      « SWAPSPACE2 » sur les dix derniers octets de la première page du fichier
+#      (union swap_header, linux/swap.h). C'est cette même signature que lit la
+#      commande « file » pour annoncer « Linux swap file » — on la lit
+#      directement plutôt que d'ajouter « file » aux dépendances du script.
+#
+# Le fichier ne porte pas la taille de page qui a servi à l'écrire, et celle-ci
+# dépend de l'architecture : 4 Kio sur x86-64, jusqu'à 64 Kio ailleurs. Les
+# emplacements possibles sont donc essayés l'un après l'autre. Lire l'octet
+# exact plutôt que chercher la chaîne dans tout l'en-tête évite de prendre pour
+# un swap un fichier qui contiendrait ces dix caractères par hasard.
+#
+# La fonction ne dit rien et ne meurt jamais : elle répond, l'appelante décide.
+# Ses commandes sont toutes placées en condition ou neutralisées par « || true »,
+# de sorte qu'aucun échec n'atteigne le trap ERR de lib/common.sh.
+est_fichier_swap() {
+    local chemin="$1"
+    local taille_page signature
+
+    if [ -r /proc/swaps ] && awk -v cible="$chemin" \
+            'NR > 1 && $1 == cible { trouve = 1 } END { exit !trouve }' /proc/swaps; then
+        return 0
+    fi
+
+    # Un fichier d'échange est en mode 600 : hors root, la signature est hors
+    # d'atteinte. L'appelante distingue ce cas, qui n'est pas un refus de même
+    # nature qu'un fichier lu et non reconnu — elle diffère son jugement tant
+    # qu'elle n'a pas les droits de lire.
+    if [ ! -r "$chemin" ]; then
+        return 1
+    fi
+
+    for taille_page in 4096 8192 16384 32768 65536; do
+        # « tr » écarte les octets nuls : sans lui, bash avertirait « ignored
+        # null byte in input » à chaque fichier ordinaire examiné.
+        signature="$(dd if="$chemin" bs=1 skip=$(( taille_page - 10 )) count=10 \
+            2>/dev/null | tr -d '\000' || true)"
+        if [ "$signature" = "SWAPSPACE2" ]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+# -------------------------------------------------------------------
 # Validation de la valeur de --file
 # -------------------------------------------------------------------
-# Deux refus, pour deux dangers distincts :
+# Deux contrôles : la FORME du chemin, puis ce qu'il DÉSIGNE.
+#
+# La forme, d'abord — deux refus, pour deux dangers distincts :
 #
 #   1. une valeur commençant par un tiret est une option du script, avalée comme
 #      chemin. « configure-swap.sh 512M --file --dry-run » donnait un fichier
@@ -72,16 +134,39 @@ AIDE
 #      n'arrête le script. Un fichier d'échange n'a de sens qu'à un emplacement
 #      choisi ; il n'existe aucun usage légitime d'un chemin relatif ici.
 #
+# La nature ensuite, détaillée dans le corps de la fonction : un chemin peut être
+# absolu et parfaitement formé, et désigner /etc/passwd.
+#
 # La fonction renseigne FICHIER_SWAP plutôt que d'écrire sur stdout, et n'est
 # jamais appelée dans une substitution de commande : son « die » quitterait
 # sinon le seul sous-shell, et le code remonté déclencherait le trap ERR de
 # lib/common.sh — le refus se verrait doublé d'un « Échec (code 2) à la
-# ligne … » sans intérêt. Aucune substitution de commande n'a lieu non plus à
-# l'intérieur : le contrôle est un « case » de Bash pur, exécuté avant que
-# dirname ou df ne voient la valeur. C'est le motif de valider_horaire, dans
+# ligne … » sans intérêt. C'est le motif de valider_horaire, dans
 # configure-cron.sh.
+#
+# Aucun « die » ne se trouve non plus dans une substitution de commande à
+# l'intérieur : le contrôle de forme est un « case » de Bash pur, celui de nature
+# n'emploie que des tests de fichier et un appel en condition. La seule
+# substitution de la chaîne est la lecture d'en-tête d'est_fichier_swap, qui ne
+# meurt jamais et dont l'échec est éteint par « || true ». Tout cela s'exécute
+# avant que dirname ou df ne voient la valeur.
+#
+# Le second paramètre dit QUAND l'appel a lieu, et cela change un seul refus :
+#
+#   avant-root  à l'analyse des arguments, sans privilège garanti
+#   apres-root  au préflight, une fois require_root passé
+#
+# Tous les contrôles qui n'exigent aucun privilège — la forme, le lien
+# symbolique, la nature non régulière, le fichier lisible mais non reconnu —
+# valent aux deux moments : les arguments se vérifient avant les privilèges, et
+# une cible fautive doit être reprochée en code 2 même sans « sudo ». Seul le cas
+# « existe et n'est pas lisible » est différé : là, ce n'est pas la cible qui est
+# en cause mais les droits de celui qui regarde. Le juger avant require_root
+# rendait 2 à un appelant sans privilège dont la ligne de commande était juste,
+# là où le manque de privilège doit rendre 1.
 valider_fichier_swap() {
     local chemin="$1"
+    local moment="$2"
 
     case "$chemin" in
         -*)
@@ -99,6 +184,73 @@ valider_fichier_swap() {
             ;;
     esac
 
+    # La forme est bonne ; reste ce que le chemin DÉSIGNE. Le script supprime sa
+    # cible avant de la recréer (« rm -f », plus bas) : trois natures, trois
+    # traitements.
+    #
+    #   absente                    -> création, cas nominal, rien à dire
+    #   fichier d'échange existant -> redimensionnement, cas nominal
+    #   autre chose                -> refus, avant toute confirmation
+    #
+    # Le refus vaut mieux que la confirmation : « configure-swap.sh 64M --file
+    # /etc/passwd » annonçait « créer /etc/passwd » et le fichier disparaissait
+    # sur un simple oui. Rien n'est perdu pour l'appelant, qui n'a qu'à choisir
+    # un autre chemin — ou effacer lui-même ce qu'il veut effacer.
+    #
+    # Contrairement au « case » ci-dessus, ce contrôle interroge le disque. Il le
+    # fait sans aucune substitution de commande autour d'un « die » : les tests
+    # de fichier sont ceux de Bash, et est_fichier_swap est appelée en condition,
+    # où ni errexit ni le trap ERR n'ont prise. Le refus reste donc une seule
+    # série de lignes, sans « Échec (code 2) à la ligne … » derrière.
+    local nature
+    if [ -L "$chemin" ]; then
+        error "Lien symbolique refusé pour --file : « $chemin »."
+        error "Le fichier d'échange remplacerait le lien ; sa cible, elle, resterait"
+        error "en place — l'espace annoncé ne serait pas celui qui est occupé."
+        die "Donner le chemin réel du fichier d'échange." 2
+    fi
+
+    if [ -e "$chemin" ]; then
+        if [ ! -f "$chemin" ]; then
+            nature="un objet spécial"
+            if   [ -d "$chemin" ]; then nature="un répertoire"
+            elif [ -b "$chemin" ]; then nature="un périphérique bloc"
+            elif [ -c "$chemin" ]; then nature="un périphérique caractère"
+            elif [ -p "$chemin" ]; then nature="un tube nommé"
+            elif [ -S "$chemin" ]; then nature="une socket"
+            fi
+            error "Cible refusée pour --file : « $chemin » est $nature."
+            error "Ce script ne gère que les fichiers d'échange ; une partition de swap"
+            error "relève du partitionnement, hors de son champ."
+            die "Donner le chemin d'un fichier d'échange, existant ou à créer." 2
+        fi
+
+        if ! est_fichier_swap "$chemin"; then
+            if [ ! -r "$chemin" ]; then
+                # Illisible ne veut pas dire fautif : un fichier d'échange est en
+                # mode 600, et c'est l'appelant sans privilège qui ne peut pas le
+                # lire. À l'analyse des arguments, le jugement est donc DIFFÉRÉ —
+                # require_root reprochera le privilège manquant, code 1, et le
+                # second appel tranchera la nature avec les droits pour le faire.
+                if [ "$moment" = "avant-root" ]; then
+                    FICHIER_SWAP="$chemin"
+                    return 0
+                fi
+                # Root et illisible : la cause n'est plus le privilège. Le refus
+                # tient — le script supprime sa cible, il ne le fera pas d'un
+                # objet dont il n'a rien pu établir.
+                error "Cible refusée pour --file : « $chemin » n'est pas lisible."
+                error "Sa nature ne peut pas être établie, et le script supprime sa cible"
+                error "avant de recréer le fichier d'échange."
+                die "Vérifier les droits de lecture sur ce chemin, ou en choisir un autre." 2
+            fi
+            error "Cible refusée pour --file : « $chemin » existe et n'est pas un fichier d'échange."
+            error "/proc/swaps ne le liste pas et aucune signature de swap n'y figure."
+            error "Le script supprime sa cible avant de la recréer : ce fichier serait détruit."
+            die "Choisir un autre chemin, ou supprimer soi-même ce fichier s'il est sans valeur." 2
+        fi
+    fi
+
     FICHIER_SWAP="$chemin"
 }
 
@@ -110,7 +262,7 @@ while [ "${1:-}" != "" ]; do
         --file)
             shift
             [ -n "${1:-}" ] || die "--file attend un chemin." 2
-            valider_fichier_swap "$1"
+            valider_fichier_swap "$1" avant-root
             shift
             ;;
         --dry-run)  DRY_RUN="true"; shift ;;
@@ -215,6 +367,22 @@ fi
 # -------------------------------------------------------------------
 require_root
 require_cmd mkswap swapon swapoff
+
+# Le chemin par DÉFAUT n'est jamais passé par valider_fichier_swap, qui ne
+# contrôle que la valeur de --file, à l'analyse des arguments. C'est pourtant la
+# même cible et le même « rm -f » : elle est donc contrôlée ici, une fois root
+# obtenu — un fichier d'échange est en mode 600, lui seul peut en lire la
+# signature. Rejouer le contrôle sur une valeur déjà validée ne coûte que
+# quelques lectures : la fonction est sans effet de bord, et le seul verdict
+# qu'elle peut rendre ici sans l'avoir rendu là-haut est celui d'une cible que
+# l'appelant n'avait pas les droits de lire.
+#
+# Après require_root, et non avant : l'appelant sans privilège doit s'entendre
+# reprocher le privilège manquant — code 1 — plutôt qu'une cible dont le script
+# n'a de toute façon pas les droits de lecture. C'est aussi ici qu'aboutit le
+# jugement différé par le premier appel, quand la valeur de --file désignait un
+# fichier illisible : les droits sont acquis, la nature peut être établie.
+valider_fichier_swap "$FICHIER_SWAP" apres-root
 
 info "Taille demandée : ${TAILLE_MO} Mo ($ORIGINE_TAILLE : $TAILLE_DEMANDEE)"
 info "Fichier d'échange : $FICHIER_SWAP"

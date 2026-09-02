@@ -1,7 +1,7 @@
 ---
 id: TASK-019
 title: "Contrôler la nature de la cible de --file, pas seulement la forme du chemin"
-status: ready
+status: completed
 priority: high
 depends_on:
   - TASK-017

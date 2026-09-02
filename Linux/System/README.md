@@ -126,7 +126,8 @@ Les sept scripts suivent la même convention, détaillée dans
 
 Le 2 reproche quelque chose à l'appelant, qui n'a qu'à corriger sa ligne de
 commande. Une valeur refusée en fait partie : `configure-swap.sh 12X`,
-`configure-swap.sh --file 2G`, `configure-timezone.sh Zone/Inexistante`,
+`configure-swap.sh --file 2G`, `configure-swap.sh 64M --file /etc/passwd`,
+`configure-timezone.sh Zone/Inexistante`,
 `configure-hostname.sh mon_serveur` et `configure-cron.sh --horaire "@weekly"`
 sortent tous en 2, sans avoir rien tenté.
 
@@ -138,6 +139,14 @@ eu besoin de privilège.
 
 Les arguments sont vérifiés avant les privilèges, si bien qu'une commande à la
 fois mal formée et sans `sudo` rend 2 — le reproche le plus utile en premier.
+
+Encore faut-il que le défaut soit constatable sans privilège. `configure-swap.sh
+64M --file <un fichier d'échange en mode 600>` lancé sans `sudo` rend donc **1**,
+et non 2 : la ligne de commande est juste, et si le script ne peut pas établir
+la nature de la cible, c'est faute de droits de lecture — pas parce que la cible
+serait mauvaise. Ce seul verdict est reporté après `require_root` ; tous les
+autres refus de `--file` restent rendus à l'analyse des arguments, en 2, avec ou
+sans `sudo`.
 
 Tout message d'erreur porte le préfixe `[ERROR]` et part sur `stderr`. Un
 argument obligatoire manquant produit un diagnostic de quelques lignes qui
@@ -194,3 +203,45 @@ toute action, avec le code 2 :
 
 Un fichier d'échange n'a de sens qu'à un emplacement choisi ; il n'existe aucun
 usage légitime d'un chemin relatif ici.
+
+**Un chemin bien formé ne dit pas ce qu'il désigne.** Le script supprime sa cible
+avant de la recréer : il ne le fera que d'un fichier qu'il reconnaît. Trois
+natures, trois traitements :
+
+| La cible | Traitement |
+|---|---|
+| n'existe pas | création — cas nominal |
+| est un fichier d'échange existant | redimensionnement — cas nominal |
+| est autre chose | refus en code 2, avant toute confirmation |
+
+`configure-swap.sh 64M --file /etc/passwd` annonçait `créer /etc/passwd`,
+demandait confirmation, et le fichier disparaissait sur un simple oui.
+`--file /tmp/un-répertoire` ou `--file /` mouraient plus loin sur le message brut
+`rm: cannot remove … : Is a directory`. Les deux sont désormais refusés à
+l'analyse des arguments, avec le code 2 et un diagnostic qui nomme la cible et
+dit ce qui aurait été détruit. Un lien symbolique l'est aussi : le fichier
+d'échange remplacerait le lien et laisserait sa cible en place.
+
+Un fichier d'échange est reconnu de deux façons, dans cet ordre : `/proc/swaps`
+le liste s'il est **actif** ; s'il est **inactif**, la signature `SWAPSPACE2` que
+`mkswap` écrit sur les dix derniers octets de la première page l'identifie —
+c'est celle-là même que lit la commande `file`, qui n'est pas pour autant exigée
+comme dépendance. Un fichier d'échange est en mode 600 : sans `sudo`, sa
+signature est hors d'atteinte, et le script ne peut rien conclure. Il ne conclut
+donc rien à ce moment-là — le jugement est reporté après `require_root`, qui
+reproche le privilège manquant en rendant 1. Une fois root, la lecture aboutit :
+la cible est reconnue et redimensionnée, ou refusée en 2 comme n'importe quelle
+autre.
+
+Le contrôle porte sur la cible effective. La valeur de `--file` est vérifiée dès
+sa lecture ; le chemin par défaut `/swapfile` l'est juste après `require_root`,
+avant le résumé et la confirmation — le même `rm -f` l'attend. C'est aussi lui
+qui tranche le cas des cibles restées illisibles au premier.
+
+**Un fichier d'échange incomplet n'est plus recréé automatiquement.** Le script
+supprime ce qu'il ne reconnaît pas comme un swap : un fichier laissé par une
+exécution interrompue avant `mkswap` — `kill -9`, plantage, coupure de courant —
+ne porte pas encore la signature `SWAPSPACE2` et sera donc refusé au lancement
+suivant, à supprimer soi-même. Le cas est étroit : toutes les sorties ordinaires,
+`die` compris, passent par un `trap` qui retire déjà le fichier incomplet ; seul
+un arrêt brutal y échappe.
