@@ -41,6 +41,31 @@
 #      l'assertion qui manquait, et la seule qui prouve que --file ne consomme
 #      plus l'option suivante
 #
+# TASK-019 y ajoute le verrouillage du contrôle de la NATURE de la cible,
+# section 6 du groupe « 1 bis », deux cas nominaux au groupe « 3 » et le groupe
+# « 3 ter » :
+#
+#   h. un fichier ordinaire existant est refusé en 2 et reste INTACT — contenu
+#      et inode relevés avant et après ; c'est le cas qui motive la tâche, le
+#      « rm -f » du script le supprimait sur un simple oui
+#   i. un répertoire et « / » sont refusés en 2, sans message brut de rm ni
+#      ligne de trap, avec un décompte MESURÉ des lignes [ERROR]
+#   j. les deux cibles nominales continuent de passer : le chemin inexistant
+#      (« créer »), et le fichier d'échange inactif reconnu à sa signature
+#      SWAPSPACE2 (« remplacer ») — seule preuve directe de cette lecture
+#   k. le chemin par défaut /swapfile est contrôlé lui aussi, et le contrôle
+#      reste APRÈS require_root : sans privilège, le script rend toujours 1
+#
+# Le second tour de TASK-019 — valider_fichier_swap prend un paramètre de moment,
+# « avant-root » ou « apres-root » — ajoute les cas f et g de cette section 6 :
+#
+#   l. les cinq refus valent AUSSI sans privilège, en 2 et en quatre lignes :
+#      les arguments se jugent avant les privilèges, et l'aiguillage sur le
+#      moment n'a différé aucun d'eux
+#   m. le SEUL verdict différé est celui d'une cible illisible : sans privilège
+#      elle rend 1 et non 2 — la régression que le relecteur avait mesurée —
+#      et en root le refus ordinaire tranche, en 2
+#
 # CE FICHIER MODIFIE LE SYSTÈME. Il n'écrit rien tant qu'il n'a pas reconnu un
 # système jetable (conteneur Docker, ou MGNET_TEST_JETABLE=1) : ailleurs, les
 # groupes modifiants se déclarent NON EXÉCUTÉS plutôt que de réécrire
@@ -262,6 +287,30 @@ assert_aucune_ecriture() {
         ko "$libelle" "$(tr '\n' ' ' < "$REP_TMP/ecritures")"
     else
         ok "$libelle"
+    fi
+}
+
+# empreinte_fichier <chemin> — l'état d'UN fichier, contenu compris.
+#
+# L'empreinte de tout /etc, plus haut, sert à prouver qu'un script n'a rien
+# touché. Celle-ci sert l'inverse : montrer qu'un fichier NOMMÉMENT confié à un
+# script qui s'apprêtait à le supprimer est ressorti intact. Elle relève le
+# contenu (cksum), la taille, l'inode et la date de modification : un fichier
+# supprimé puis recréé à l'identique — ce que ferait « rm -f » suivi d'une
+# création — changerait d'inode même si le contenu revenait par miracle.
+#
+# « cksum < fichier » plutôt que « cksum fichier » : la sortie ne porte alors
+# pas le nom du fichier, et l'empreinte reste comparable telle quelle.
+#
+# ABSENT est une valeur d'empreinte à part entière : comparer deux relevés dont
+# le premier vaut ABSENT est une preuve vide, et les cas qui l'emploient posent
+# une garde explicite avant de comparer.
+empreinte_fichier() {
+    local chemin="$1"
+    if [ -e "$chemin" ]; then
+        printf '%s | %s' "$(cksum < "$chemin")" "$(stat -c '%s %i %Y' "$chemin")"
+    else
+        printf 'ABSENT'
     fi
 }
 
@@ -747,6 +796,278 @@ assert_contient "$(erreur)" "[ERROR] Chemin relatif refusé pour --file : « ess
 # laissé ce contrôle intact — les assertions de la section 1 sont la preuve, et
 # celle-ci n'a donc pas à être dupliquée ici.
 
+# --- 6. La NATURE de la cible de --file est contrôlée — TASK-019 ------------
+# TASK-017 a fermé la question de la FORME du chemin : absolu, sans tiret
+# initial. Celle de sa NATURE restait entière, et c'est elle qui portait le
+# risque réel. « configure-swap.sh 64M --file /etc/passwd » passait la
+# validation de TASK-017, annonçait « créer /etc/passwd », demandait
+# confirmation — et le « rm -f » de la création SUPPRIMAIT le fichier sur un
+# simple oui. Un répertoire, lui, faisait mourir le script sur le message brut
+# « rm: cannot remove … : Is a directory », doublé de la ligne du trap ERR.
+#
+# Ces cas meurent tous à l'analyse des arguments, avant require_root et avant
+# afficher_etat : leur stderr ne porte donc QUE les lignes du refus, ce qui rend
+# un décompte exact possible — et c'est cette forme d'assertion, pas celle de
+# contenu, qui verrait revenir une ligne de trap ou un message de rm. Le
+# rédacteur des tests de TASK-017 avait posé un tel décompte de tête sans jamais
+# l'observer ; ici il est MESURÉ, refus par refus, et les chiffres viennent de
+# l'exécution.
+#
+# Le groupe reste non modifiant : les cibles jetables sont créées dans REP_TMP,
+# hors de l'empreinte de /etc comme du champ d'ecritures_depuis.
+#
+# LE PLACEMENT DE « -y » N'EST PAS LIBRE, et c'est une précaution contre le test
+# lui-même. Un cas qui arme ASSUME_YES ouvre au script la voie de l'exécution
+# réelle : si le contrôle que ce cas éprouve venait à tomber, le script créerait
+# et activerait un fichier d'échange et compléterait /etc/fstab — sur la machine
+# où le test tourne. « -y » n'est donc armé que dans les cas GARDÉS PAR JETABLE.
+# Ailleurs, « lancer » ferme l'entrée standard : confirm() y lit une réponse
+# vide et refuse, et rien ne peut être écrit même si le refus n'a pas lieu.
+
+# refus_de_cible <libellé> <ligne attendue> — le tronc commun des refus.
+#
+# Les cinq assertions d'absence seraient creuses sur un stderr vide ou mal
+# capturé : elles sont donc encadrées par la ligne de diagnostic exigée juste
+# avant et par les deux décomptes qui les suivent. Le flux doit contenir
+# exactement ce qu'on y attend, et rien d'autre.
+#
+# Les DEUX formes de confirmation sont épinglées, parce que confirm() en a deux :
+# « Confirmation automatique : … » quand ASSUME_YES est armée, et l'invite
+# « Appliquer ces opérations ? [o/N] » sinon. Un cas qui n'arme pas « -y » ne
+# prouverait rien de la première ; il prouve la seconde, et c'est la même
+# frontière — le refus tombe avant que la question ne soit seulement posée.
+refus_de_cible() {
+    local libelle="$1" ligne="$2"
+
+    assert_code 2 "$CODE" "$libelle : erreur d'usage"
+    assert_contient "$(erreur)" "$ligne" \
+        "$libelle : nomme la cible et ce qu'elle est"
+    assert_absent "$(erreur)" "rm: cannot remove" \
+        "$libelle : le rm -f n'est jamais atteint"
+    assert_absent "$(erreur)" "Échec (code" \
+        "$libelle : le trap ERR n'ajoute aucune ligne au diagnostic"
+    assert_absent "$(erreur)" "Confirmation automatique" \
+        "$libelle : aucune confirmation automatique n'est prononcée"
+    assert_absent "$(erreur)" "Appliquer ces opérations ?" \
+        "$libelle : le refus tombe avant que la question ne soit posée"
+    assert_absent "$(erreur)" "Opérations prévues" \
+        "$libelle : aucune opération n'est même envisagée"
+    assert_egal "4" "$(nb_lignes_contenant '[ERROR]')" \
+        "$libelle : stderr porte les quatre lignes du refus, pas une de plus"
+    assert_egal "4" "$(nb_lignes_erreur)" \
+        "$libelle : stderr ne porte rien d'autre que ces quatre lignes"
+}
+
+# a. Un fichier ordinaire existant — le cas qui motive la tâche, joué sur une
+#    cible JETABLE pour qu'il puisse tourner partout, y compris hors conteneur.
+#
+#    Sans « -y », délibérément : voir la note ci-dessus. Ce que ce cas prouve de
+#    la confirmation est l'absence de l'INVITE ; le cas b, gardé, prouve celle de
+#    la confirmation automatique.
+FICHIER_ORDINAIRE="$REP_TMP/fichier-ordinaire"
+printf 'contenu qui ne doit pas disparaître\n' > "$FICHIER_ORDINAIRE"
+ORDINAIRE_AVANT="$(empreinte_fichier "$FICHIER_ORDINAIRE")"
+assert_absent "$ORDINAIRE_AVANT" "ABSENT" \
+    "garde : la cible ordinaire existe bien avant l'appel"
+
+lancer bash "$SWAP_SH" 64M --file "$FICHIER_ORDINAIRE"
+refus_de_cible "configure-swap.sh --file <fichier ordinaire>" \
+    "[ERROR] Cible refusée pour --file : « $FICHIER_ORDINAIRE » existe et n'est pas un fichier d'échange."
+assert_egal "$ORDINAIRE_AVANT" "$(empreinte_fichier "$FICHIER_ORDINAIRE")" \
+    "configure-swap.sh --file <fichier ordinaire> : le fichier est intact, au contenu et à l'inode"
+
+# b. /etc/passwd — la cible exacte de l'énoncé de TASK-019, « -y » compris.
+#
+#    Ce cas CONFIE /etc/passwd à un script qu'on soupçonne précisément de le
+#    supprimer : tant que le contrôle tient, il ne se passe rien ; le jour où il
+#    tombe, le système perd son fichier de comptes. Il ne s'exécute donc que sur
+#    un système jetable, et se déclare NON EXÉCUTÉ ailleurs — le cas a, lui,
+#    tourne partout et couvre la même branche du script.
+#
+#    L'ordre des options est celui de l'énoncé, « --file » puis « -y ». Le refus
+#    tombe alors avant même que « -y » ne soit lu, et l'absence de « Confirmation
+#    automatique » est ici doublement acquise. Le cas où elle MORD — ASSUME_YES
+#    réellement armée quand le refus tombe — est celui du groupe 3 ter, où
+#    « -y » n'est suivi d'aucun --file.
+if [ "$JETABLE" != "true" ]; then
+    saute "configure-swap.sh 64M --file /etc/passwd -y" \
+        "ce cas confie /etc/passwd à un script soupçonné de le supprimer — réservé à un système jetable ; le cas a couvre la même branche sur une cible jetable"
+else
+    PASSWD_AVANT="$(empreinte_fichier /etc/passwd)"
+    assert_absent "$PASSWD_AVANT" "ABSENT" \
+        "garde : /etc/passwd existe bien avant l'appel"
+
+    lancer bash "$SWAP_SH" 64M --file /etc/passwd -y
+    refus_de_cible "configure-swap.sh 64M --file /etc/passwd -y" \
+        "[ERROR] Cible refusée pour --file : « /etc/passwd » existe et n'est pas un fichier d'échange."
+    assert_contient "$(erreur)" "[ERROR] Le script supprime sa cible avant de la recréer : ce fichier serait détruit." \
+        "configure-swap.sh --file /etc/passwd : dit ce qui aurait été détruit"
+    assert_absent "$(erreur)" "créer      /etc/passwd" \
+        "configure-swap.sh --file /etc/passwd : la suppression n'est plus annoncée comme une création"
+    assert_egal "$PASSWD_AVANT" "$(empreinte_fichier /etc/passwd)" \
+        "configure-swap.sh 64M --file /etc/passwd -y : /etc/passwd est intact, au contenu et à l'inode"
+fi
+
+# c. Un répertoire — le cas mineur, celui du message brut de rm.
+REP_CIBLE="$REP_TMP/rep-cible"
+mkdir -p "$REP_CIBLE"
+lancer bash "$SWAP_SH" 64M --file "$REP_CIBLE"
+refus_de_cible "configure-swap.sh 64M --file <répertoire>" \
+    "[ERROR] Cible refusée pour --file : « $REP_CIBLE » est un répertoire."
+if [ -d "$REP_CIBLE" ]; then
+    ok "configure-swap.sh --file <répertoire> : le répertoire est toujours là"
+else
+    ko "configure-swap.sh --file <répertoire> : le répertoire est toujours là" "$REP_CIBLE a disparu"
+fi
+
+# d. La racine — même nature, mais aucune erreur de frappe n'est plus proche du
+#    désastre.
+lancer bash "$SWAP_SH" 64M --file /
+refus_de_cible "configure-swap.sh 64M --file /" \
+    "[ERROR] Cible refusée pour --file : « / » est un répertoire."
+
+# e. Un lien symbolique — refusé pour une autre raison, et le diagnostic la
+#    nomme : le fichier d'échange remplacerait le lien, sa cible resterait en
+#    place, et l'espace annoncé ne serait pas celui qui est occupé.
+LIEN_CIBLE="$REP_TMP/lien-vers-fichier"
+ln -sf "$FICHIER_ORDINAIRE" "$LIEN_CIBLE"
+lancer bash "$SWAP_SH" 64M --file "$LIEN_CIBLE"
+refus_de_cible "configure-swap.sh 64M --file <lien symbolique>" \
+    "[ERROR] Lien symbolique refusé pour --file : « $LIEN_CIBLE »."
+assert_egal "$ORDINAIRE_AVANT" "$(empreinte_fichier "$FICHIER_ORDINAIRE")" \
+    "configure-swap.sh --file <lien symbolique> : la cible du lien est intacte"
+
+# f. Les cinq refus valent AUSSI sans privilège — le second tour de TASK-019.
+#
+# La correction a donné un second paramètre à valider_fichier_swap, « avant-root »
+# ou « apres-root », et diffère UN verdict selon le moment. Le risque d'un tel
+# aiguillage est qu'il en diffère d'autres au passage : un refus qui ne tomberait
+# plus qu'en root laisserait l'appelant sans « sudo » recevoir 1 — privilège
+# manquant — pour une ligne de commande fautive, alors que la convention du dépôt
+# réserve le 2 à l'usage et veut que les arguments soient jugés AVANT les
+# privilèges.
+#
+# Les cinq mêmes refus sont donc rejoués sans privilège. Leurs cibles vivent dans
+# un répertoire traversable par tous, et ce n'est pas un détail : sous REP_TMP,
+# créé en mode 700, « nobody » ne pourrait même pas les voir, tous les chemins
+# passeraient pour inexistants, et les cinq cas seraient verts sans rien prouver.
+# Les gardes du cas g mesurent cette visibilité au lieu de la supposer.
+REP_CIBLES="/tmp/mgnet-integration-cibles"
+rm -rf "$REP_CIBLES"
+mkdir -p "$REP_CIBLES/rep-visible"
+chmod 755 "$REP_CIBLES" "$REP_CIBLES/rep-visible"
+CIBLE_ORDINAIRE="$REP_CIBLES/ordinaire"
+CIBLE_LIEN="$REP_CIBLES/lien"
+CIBLE_600="$REP_CIBLES/illisible-600"
+printf 'contenu qui ne doit pas disparaître\n' > "$CIBLE_ORDINAIRE"
+chmod 644 "$CIBLE_ORDINAIRE"
+ln -sf "$CIBLE_ORDINAIRE" "$CIBLE_LIEN"
+printf 'ce fichier n%s est pas un fichier d%s échange\n' "'" "'" > "$CIBLE_600"
+chmod 600 "$CIBLE_600"
+
+if [ "$SANS_ROOT_DISPONIBLE" != "true" ]; then
+    saute "les cinq refus de cible rejoués sans privilège" \
+        "aucun lanceur ne parvient à abaisser l'UID sur cet hôte"
+else
+    sans_root bash "$SWAP_SH" 64M --file "$CIBLE_ORDINAIRE"
+    refus_de_cible "configure-swap.sh --file <fichier ordinaire> sans privilège" \
+        "[ERROR] Cible refusée pour --file : « $CIBLE_ORDINAIRE » existe et n'est pas un fichier d'échange."
+
+    sans_root bash "$SWAP_SH" 64M --file "$REP_CIBLES/rep-visible"
+    refus_de_cible "configure-swap.sh --file <répertoire> sans privilège" \
+        "[ERROR] Cible refusée pour --file : « $REP_CIBLES/rep-visible » est un répertoire."
+
+    sans_root bash "$SWAP_SH" 64M --file /
+    refus_de_cible "configure-swap.sh --file / sans privilège" \
+        "[ERROR] Cible refusée pour --file : « / » est un répertoire."
+
+    sans_root bash "$SWAP_SH" 64M --file "$CIBLE_LIEN"
+    refus_de_cible "configure-swap.sh --file <lien symbolique> sans privilège" \
+        "[ERROR] Lien symbolique refusé pour --file : « $CIBLE_LIEN »."
+
+    # /etc/passwd est en 644 : « nobody » le voit et le lit, le refus tombe donc
+    # au même endroit qu'en root. Le cas est sans danger même si le contrôle
+    # régressait — require_root arrêterait le script bien avant le « rm -f » — et
+    # n'a donc pas besoin de la garde JETABLE du cas b.
+    sans_root bash "$SWAP_SH" 64M --file /etc/passwd
+    refus_de_cible "configure-swap.sh --file /etc/passwd sans privilège" \
+        "[ERROR] Cible refusée pour --file : « /etc/passwd » existe et n'est pas un fichier d'échange."
+fi
+
+# g. Le SEUL verdict différé : la cible qui existe et n'est pas lisible.
+#
+# C'est la régression qu'a mesurée le relecteur. Une cible en mode 600 que
+# l'appelant ne peut pas lire n'est pas une cible fautive : c'est un regard sans
+# les droits. La juger à l'analyse des arguments rendait 2 à un appelant dont la
+# ligne de commande était juste et à qui il ne manquait qu'un « sudo ». Le
+# verdict est donc différé — require_root reproche le privilège, code 1 — et le
+# second appel, « apres-root », tranche une fois les droits acquis.
+#
+# Les deux gardes ne sont pas décoratives. Si « nobody » ne VOYAIT pas la cible,
+# le chemin passerait pour inexistant, le script irait jusqu'à require_root et
+# rendrait 1 : la bonne réponse pour la mauvaise raison, et le cas resterait vert
+# sous n'importe quelle mutation. Visible ET illisible pour l'appelant se mesure
+# donc, et ne se suppose pas.
+if [ "$EST_ROOT" != "true" ] || [ "$SANS_ROOT_DISPONIBLE" != "true" ]; then
+    saute "le verdict différé sur une cible illisible" \
+        "exige root pour poser une cible en 600 que le lanceur non privilégié ne puisse pas lire"
+else
+    # « stat » puis « cat », et non « bash -c "[ -e … ]" » : les deux mesurent la
+    # même chose sans faire voyager d'expression à travers un « -c », forme que
+    # l'analyse statique signale à raison (SC2016) comme une expansion qui n'aura
+    # pas lieu là où on la lit. stat réussit si le chemin est VU — il ne demande
+    # que le droit de traverser le répertoire ; cat échoue s'il n'est pas LISIBLE.
+    lancer "${LANCEUR_SANS_ROOT[@]}" stat "$CIBLE_600"
+    assert_code 0 "$CODE" \
+        "garde : sans privilège, la cible en 600 est bien VUE — le chemin ne passe pas pour inexistant"
+    lancer "${LANCEUR_SANS_ROOT[@]}" cat "$CIBLE_600"
+    assert_code_non_nul "$CODE" \
+        "garde : sans privilège, la cible en 600 n'est pas LISIBLE — le verdict a bien de quoi être différé"
+
+    # Le cas de la régression : sans privilège, c'est 1 et non 2.
+    sans_root bash "$SWAP_SH" 64M --file "$CIBLE_600"
+    assert_code 1 "$CODE" \
+        "configure-swap.sh --file <cible 600 illisible> sans privilège : le privilège manquant prime, code 1"
+    assert_contient "$(erreur)" "[ERROR] Ce script doit être exécuté en root (ou via sudo)." \
+        "configure-swap.sh --file <cible 600> sans privilège : c'est bien le privilège qui est reproché"
+    assert_absent "$(erreur)" "Cible refusée pour --file" \
+        "configure-swap.sh --file <cible 600> sans privilège : la cible n'est pas jugée sans les droits de la lire"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh --file <cible 600> sans privilège : le trap ERR n'ajoute aucune ligne"
+    assert_egal "1" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh --file <cible 600> sans privilège : une seule ligne [ERROR], celle du privilège"
+
+    # La même cible, EN ROOT. Le verdict différé aboutit alors — et il aboutit
+    # sur le refus ORDINAIRE, ce qui est MESURÉ et non déduit : root lit un
+    # fichier en 600, « [ ! -r ] » y est faux, et c'est la branche « existe et
+    # n'est pas un fichier d'échange » qui tranche. Le refus tombe bien, en 2 :
+    # la correction n'a ouvert aucun passage à une cible que le script
+    # détruirait.
+    lancer bash "$SWAP_SH" 64M --file "$CIBLE_600"
+    refus_de_cible "configure-swap.sh --file <cible 600 illisible> en root" \
+        "[ERROR] Cible refusée pour --file : « $CIBLE_600 » existe et n'est pas un fichier d'échange."
+    assert_absent "$(empreinte_fichier "$CIBLE_600")" "ABSENT" \
+        "configure-swap.sh --file <cible 600> en root : la cible est toujours là"
+
+    # Ce que ce fichier NE prouve PAS, et pourquoi il ne le prouvera pas ici.
+    #
+    # La branche « apres-root » du cas illisible — celle qui dit « Vérifier les
+    # droits de lecture sur ce chemin, ou en choisir un autre. » — exige un
+    # fichier régulier que ROOT ne puisse pas lire. Quatre montages ont été
+    # essayés dans ce conteneur, et les quatre ont échoué : mode 600, root passe
+    # outre ; « setpriv --bounding-set=-dac_override,-dac_read_search » ;
+    # « capsh --drop=cap_dac_override,cap_dac_read_search » ; « capsh --caps= ».
+    # Dans les quatre cas « id -u » rend 0 et « [ -r ] » rend 0 — root conserve
+    # le contournement DAC.
+    #
+    # Le message reste donc SANS PREUVE ici. Il n'est pas pour autant du code
+    # mort dans l'absolu : NFS en root_squash, ou un refus MAC (SELinux,
+    # AppArmor), rendent la branche atteignable sur un vrai serveur. Aucun de ces
+    # montages n'est à portée du profil « debian ».
+    saute_par_nature "le refus d'une cible illisible EN ROOT, et sa ligne « Vérifier les droits de lecture sur ce chemin »" \
+        "root contourne les permissions DAC dans ce conteneur — quatre montages mesurés (mode 600, setpriv --bounding-set, capsh --drop, capsh --caps=), tous rendus lisibles"
+fi
+
 titre "1 ter. Privilèges et OS"
 
 # --- Refus sans privilège ---------------------------------------------------
@@ -955,10 +1276,72 @@ else
     # Un chemin absolu AUTRE que le défaut : sans lui, les deux assertions
     # précédentes passeraient encore si --file était purement et simplement
     # ignoré, /swapfile étant la valeur par défaut de FICHIER_SWAP.
+    if [ -e /var/swapfile-essai ]; then
+        ko "garde : /var/swapfile-essai n'existe pas avant l'appel" \
+            "le cas ne prouverait plus que le chemin INEXISTANT reste accepté"
+    else
+        ok "garde : /var/swapfile-essai n'existe pas avant l'appel"
+    fi
     dry_run_inoffensif "configure-swap.sh 512M --file /var/swapfile-essai --dry-run" \
         bash "$SWAP_SH" 512M --file /var/swapfile-essai --dry-run
     assert_contient "$(erreur)" "créer      /var/swapfile-essai (512 Mo)" \
         "configure-swap.sh --file <chemin absolu> vise bien le fichier demandé"
+
+    # --- Les DEUX cas nominaux de TASK-019, et ce qu'ils coûtent s'ils cassent -
+    # Le contrôle de nature ajouté par TASK-019 refuse tout ce qu'il ne
+    # reconnaît pas. Deux cibles doivent continuer de passer, et ce sont les
+    # seules qui aient un usage : le chemin qui ne désigne rien — création — et
+    # le fichier d'échange existant — redimensionnement. Un contrôle trop
+    # sévère rendrait le script inutilisable sans qu'aucun refus ne paraisse
+    # fautif ; c'est la régression la plus chère de cette tâche.
+    #
+    # Le premier cas est celui qui précède : /var/swapfile-essai n'existe pas —
+    # la garde ci-dessus le vérifie plutôt que de le supposer — et le résumé
+    # annonce toujours « créer ». L'assertion d'absence ci-dessous en fixe le
+    # sens du côté de TASK-019 : aucun refus de cible sur ce chemin.
+    assert_absent "$(erreur)" "Cible refusée pour --file" \
+        "configure-swap.sh --file <chemin absolu inexistant> : la création reste acceptée"
+
+    # Le second cas est le seul de tout le dépôt à éprouver la SIGNATURE. Un
+    # fichier d'échange se reconnaît de deux façons, et le groupe swap-fstab de
+    # tests/acceptance/interne/TASK-011-cas-conteneur.sh n'emprunte que la
+    # première : il pose un fichier creux au chemin qu'expose /proc/swaps, sans
+    # aucune signature. La lecture des dix octets « SWAPSPACE2 » écrits par
+    # mkswap n'a donc ici que cette seule preuve directe — d'où le fichier
+    # réellement produit par mkswap, et non imité.
+    #
+    # La signature est relevée AVANT l'appel, à l'offset que le script emploie :
+    # sans cette garde, un mkswap muet ou une page de taille inattendue ferait
+    # rougir le cas sans qu'on sache pourquoi, et la preuve se lirait comme un
+    # défaut du script.
+    SWAP_MKSWAP="$REP_TMP/swapfile-mkswap"
+    dd if=/dev/zero of="$SWAP_MKSWAP" bs=1M count=64 status=none
+    chmod 600 "$SWAP_MKSWAP"
+    if mkswap "$SWAP_MKSWAP" >/dev/null 2>&1; then
+        SIGNATURE_LUE="$(dd if="$SWAP_MKSWAP" bs=1 skip=4086 count=10 2>/dev/null | tr -d '\000')"
+        assert_egal "SWAPSPACE2" "$SIGNATURE_LUE" \
+            "garde : mkswap a écrit SWAPSPACE2 aux dix derniers octets de la première page"
+
+        dry_run_inoffensif "configure-swap.sh 64M --file <fichier mkswap> --dry-run" \
+            bash "$SWAP_SH" 64M --file "$SWAP_MKSWAP" --dry-run
+        assert_contient "$(erreur)" "remplacer  $SWAP_MKSWAP (64 Mo -> 64 Mo)" \
+            "configure-swap.sh reconnaît un fichier d'échange inactif par sa signature et le redimensionne"
+        assert_absent "$(erreur)" "Cible refusée pour --file" \
+            "configure-swap.sh --file <fichier mkswap> : aucun refus de cible"
+        assert_absent "$(erreur)" "Échec (code" \
+            "configure-swap.sh --file <fichier mkswap> : aucune ligne de trap"
+        # Ce fichier est en mode 600, comme tout fichier d'échange, et il
+        # traverse la validation DEUX fois depuis le second tour de TASK-019 :
+        # une fois « avant-root » à la lecture de --file, une fois « apres-root »
+        # au préflight. C'est le chemin nominal que l'aiguillage sur le moment
+        # pouvait casser — un « n'est pas lisible » prononcé à l'un des deux
+        # passages refuserait un fichier d'échange parfaitement valide.
+        assert_absent "$(erreur)" "n'est pas lisible" \
+            "configure-swap.sh --file <fichier mkswap en 600> : les deux passages de validation le laissent passer"
+    else
+        saute_indisponible "reconnaissance d'un fichier d'échange par sa signature" \
+            "mkswap n'a pas pu préparer $SWAP_MKSWAP — la seule preuve directe de la lecture de SWAPSPACE2 est perdue"
+    fi
 
     # Sans taille, configure-swap.sh n'est qu'un diagnostic : il ne doit pas
     # davantage écrire.
@@ -1059,6 +1442,101 @@ else
     empreinte "$REP_TMP/y-apres"
     assert_empreinte_egale "$REP_TMP/y-avant" "$REP_TMP/y-apres" \
         "l'exécution réelle du groupe 3 bis ne laisse rien hors du répertoire jetable"
+fi
+
+# ===================================================================
+# 3 ter. Le chemin par DÉFAUT est contrôlé lui aussi — TASK-019
+# ===================================================================
+# valider_fichier_swap ne voit que la valeur de --file, à l'analyse des
+# arguments : le chemin par défaut /swapfile ne lui était jamais soumis, et
+# c'est pourtant la même cible et le même « rm -f ». TASK-019 a donc ajouté un
+# SECOND appel, après require_root.
+#
+# Les deux moitiés de cette phrase sont éprouvées ici, et elles se tiennent :
+# le second appel doit exister — cas a — et il doit être placé APRÈS
+# require_root — cas b. Un correctif qui remonterait l'appel avant require_root
+# passerait le cas a et ferait rougir le cas b ; un correctif qui retirerait
+# l'appel ferait l'inverse.
+#
+# CE GROUPE ÉCRIT /swapfile — un répertoire, puis un fichier ordinaire — et le
+# retire aussitôt. Il exige donc root et un système jetable, et l'empreinte qui
+# l'encadre vérifie la restitution plutôt que de la supposer : la garde d'état
+# du groupe 4, qui suit, compare l'empreinte à celle du groupe 2 et
+# déclarerait tout le groupe NON EXÉCUTÉ si /swapfile subsistait.
+titre "3 ter. Le chemin par défaut /swapfile"
+
+if [ "$EST_ROOT" != "true" ]; then
+    saute "le contrôle du chemin par défaut /swapfile" \
+        "le second appel a lieu après require_root — l'atteindre exige root"
+elif [ "$JETABLE" != "true" ]; then
+    saute "le contrôle du chemin par défaut /swapfile" \
+        "ce groupe crée puis retire /swapfile — réservé à un système jetable"
+elif [ -e /swapfile ]; then
+    saute "le contrôle du chemin par défaut /swapfile" \
+        "/swapfile existe déjà sur ce système — le remplacer sortirait du cadre de ce fichier"
+else
+    empreinte "$REP_TMP/defaut-avant"
+
+    # a. /swapfile est un répertoire, et aucun --file n'est donné. Sans le
+    #    second appel, le script irait jusqu'au « rm -f », qui refuserait — il
+    #    n'est pas récursif — et mourrait sur le message brut de rm, doublé de
+    #    la ligne du trap. « -y » est armé pour que ce chemin soit réellement
+    #    ouvert : sans lui, le script s'arrêterait sur la confirmation refusée
+    #    et le défaut resterait invisible.
+    mkdir -p /swapfile
+    lancer bash "$SWAP_SH" 2G -y
+    rmdir /swapfile
+
+    assert_code 2 "$CODE" "configure-swap.sh 2G, /swapfile étant un répertoire : erreur d'usage"
+    assert_contient "$(erreur)" "[ERROR] Cible refusée pour --file : « /swapfile » est un répertoire." \
+        "configure-swap.sh 2G : le chemin par défaut est contrôlé comme l'est une valeur de --file"
+    assert_absent "$(erreur)" "rm: cannot remove" \
+        "configure-swap.sh 2G : le rm -f n'est jamais atteint"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh 2G : le trap ERR n'ajoute aucune ligne au diagnostic"
+    assert_absent "$(erreur)" "Confirmation automatique" \
+        "configure-swap.sh 2G : le refus précède toute confirmation"
+    assert_absent "$(erreur)" "Opérations prévues" \
+        "configure-swap.sh 2G : aucune opération n'est même envisagée"
+    # Le DÉCOMPTE, et non les seules absences. Il ne peut pas porter ici sur
+    # tout stderr : le refus a lieu après afficher_etat, qui précède
+    # require_root, et le flux porte donc aussi l'état du swap. Compter les
+    # lignes [ERROR] voit revenir celle du trap même si son libellé change un
+    # jour dans lib/common.sh, là où l'assertion d'absence ci-dessus est liée à
+    # son texte.
+    assert_egal "4" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh 2G : stderr porte les quatre lignes du refus, pas une de plus"
+
+    # b. Le second appel est bien APRÈS require_root. /swapfile est cette fois
+    #    un fichier ordinaire que le script ne reconnaîtrait pas — et qui, en
+    #    mode 600 appartenant à root, n'est même pas lisible par « nobody ».
+    #    Placé avant require_root, le contrôle rendrait 2 ; placé après, c'est
+    #    le privilège manquant qui est reproché, code 1. Sans cette cible
+    #    refusable, les deux placements donneraient le même résultat et le cas
+    #    ne prouverait rien : /swapfile absent est accepté par la validation.
+    if [ "$SANS_ROOT_DISPONIBLE" != "true" ]; then
+        saute "configure-swap.sh 512M sans privilège rend 1 alors que /swapfile est une cible refusable" \
+            "aucun lanceur ne parvient à abaisser l'UID sur cet hôte"
+    else
+        printf 'ceci n%s est pas un fichier d%s échange\n' "'" "'" > /swapfile
+        chmod 600 /swapfile
+        sans_root bash "$SWAP_SH" 512M
+        rm -f /swapfile
+        rm -rf "$LOG_DIR_NOBODY"
+
+        assert_code 1 "$CODE" \
+            "configure-swap.sh 512M sans privilège : le privilège manquant prime, code 1"
+        assert_contient "$(erreur)" "[ERROR] Ce script doit être exécuté en root (ou via sudo)." \
+            "configure-swap.sh 512M sans privilège : c'est bien le privilège qui est reproché"
+        assert_absent "$(erreur)" "Cible refusée pour --file" \
+            "configure-swap.sh 512M sans privilège : la cible n'est pas jugée avant le privilège"
+        assert_absent "$(erreur)" "Échec (code" \
+            "configure-swap.sh 512M sans privilège : le trap ERR n'ajoute aucune ligne"
+    fi
+
+    empreinte "$REP_TMP/defaut-apres"
+    assert_empreinte_egale "$REP_TMP/defaut-avant" "$REP_TMP/defaut-apres" \
+        "le groupe 3 ter laisse /swapfile dans l'état où il l'a trouvé"
 fi
 
 # ===================================================================
@@ -1241,6 +1719,22 @@ if [ -e "$diff_final" ]; then
     ko "le répertoire de travail jetable est supprimé" "$diff_final subsiste"
 else
     ok "le répertoire de travail jetable est supprimé"
+fi
+
+# Les cibles du groupe 1 bis §6 f et g vivent hors de REP_TMP — elles doivent
+# être traversables par un utilisateur non privilégié, ce qu'un « mktemp -d » en
+# mode 700 interdit. Elles sont donc retirées ici, et leur retrait vérifié : un
+# répertoire en 755 laissé dans /tmp est un résidu, fût-il jetable.
+if [ -n "${REP_CIBLES:-}" ]; then
+    rm -rf "$REP_CIBLES"
+    if [ -e "$REP_CIBLES" ]; then
+        ko "le répertoire des cibles de refus est supprimé" "$REP_CIBLES subsiste"
+    else
+        ok "le répertoire des cibles de refus est supprimé"
+    fi
+else
+    saute "le retrait du répertoire des cibles de refus" \
+        "le groupe 1 bis §6 n'a pas été atteint sur cet hôte"
 fi
 
 bilan "TASK-004 / Linux/System"
