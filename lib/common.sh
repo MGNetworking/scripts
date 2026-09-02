@@ -61,6 +61,50 @@ else
 fi
 
 # --- Journalisation --------------------------------------------------------
+
+# Neutralise le journal après un échec d'écriture, et n'avertit qu'une fois.
+#
+# LOG_FILE est vidé : c'est déjà la convention du socle pour « pas de journal »
+# — celle retenue plus haut lorsque mkdir échoue. run_logged et
+# enable_full_logging la respectent, aucun des deux ne tentera donc d'écrire
+# dans un fichier hors service.
+#
+# L'avertissement passe par warn, dont l'écriture fichier est désormais sans
+# objet puisque LOG_FILE vient d'être vidé : aucune récursion possible.
+_journal_hors_service() {
+    local fichier="$LOG_FILE"
+    LOG_FILE=""
+    if [ -n "${_JOURNAL_AVERTI:-}" ]; then
+        return 0
+    fi
+    _JOURNAL_AVERTI=1
+    warn "Journal inaccessible : $fichier — poursuite sans journalisation."
+}
+
+# Ajoute une ligne horodatée au fichier de journal, s'il y en a un.
+#
+# Un journal devenu inécrivable en cours d'exécution — répertoire disparu,
+# disque plein, droits modifiés — n'interrompt pas le script (ADR-0003,
+# décision 8). L'écriture est enveloppée pour deux raisons :
+#
+#   - le « if » place l'écriture dans un contexte de condition, ce qui neutralise
+#     set -e : sans lui, l'échec de la redirection tue le script ;
+#   - la redirection porte sur le groupe, et non sur le printf, afin que la
+#     stderr soit déjà détournée quand bash tente d'ouvrir LOG_FILE. C'est ce qui
+#     étouffe son message brut (« … : No such file or directory »), remplacé par
+#     un avertissement lisible.
+_journaliser() {
+    local niveau="$1"; shift
+    if [ -z "$LOG_FILE" ]; then
+        return 0
+    fi
+    if { printf '%s [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$niveau" "$*" \
+            >> "$LOG_FILE"; } 2>/dev/null; then
+        return 0
+    fi
+    _journal_hors_service
+}
+
 _log() {
     local niveau="$1"; shift
     local couleur
@@ -74,9 +118,7 @@ _log() {
 
     printf '%b[%s]%b %s\n' "$couleur" "$niveau" "$_C_RESET" "$*" >&2
 
-    if [ -n "$LOG_FILE" ]; then
-        printf '%s [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$niveau" "$*" >> "$LOG_FILE"
-    fi
+    _journaliser "$niveau" "$@"
 }
 
 info()    { _log INFO    "$@"; }
@@ -99,6 +141,9 @@ die() {
 # flux distincts se mélangeraient à l'affichage, chacun ayant son propre tampon.
 # stdout reste ainsi réservé aux données que le script produit réellement.
 run_logged() {
+    # L'annonce sert aussi de sonde : si le journal est devenu inécrivable, info
+    # le constate et vide LOG_FILE. Le test qui suit bascule alors de lui-même
+    # sur la branche sans tee, plutôt que de relancer tee sur un fichier mort.
     info "Exécution : $*"
     if [ -n "$LOG_FILE" ]; then
         "$@" 2>&1 | tee -a "$LOG_FILE" >&2
@@ -179,6 +224,10 @@ require_os() {
 #
 # Un fichier demandé mais introuvable arrête le script : poursuivre sans la
 # configuration attendue serait plus dangereux que s'arrêter.
+#
+# Les variables chargées sont exportées, donc visibles des processus fils
+# (ADR-0003, décision 7). Les fichiers .env continuent de s'écrire en
+# affectations nues : c'est set -a qui se charge de l'exportation, pas eux.
 load_config() {
     local nom="${1:?load_config : nom de configuration manquant}"
     local fichier="$SCRIPTS_ROOT/config/$nom.env"
@@ -186,8 +235,34 @@ load_config() {
     if [ ! -f "$fichier" ]; then
         die "Configuration introuvable : config/$nom.env (modèle : config/$nom.env.example)"
     fi
+
+    # État antérieur de allexport : le rétablir tel quel, plutôt que de le forcer
+    # à « off », au cas où l'appelant l'aurait lui-même activé.
+    local allexport_actif="non"
+    case "$-" in *a*) allexport_actif="oui" ;; esac
+
+    # « || code=$? » place le source dans un contexte de condition : son échec ne
+    # tue plus le script sur-le-champ, et set +a est donc toujours atteint. Sans
+    # cette précaution, tout ce que le script déclare ensuite serait exporté à
+    # son insu.
+    #
+    # Contrepartie à connaître : ce contexte de condition suspend errexit
+    # *pendant* l'exécution du fichier. Une commande en échec au milieu du .env
+    # n'interrompt donc plus rien — le source va jusqu'au bout et rend le code de
+    # sa dernière commande, le plus souvent 0. Le die ci-dessous ne se déclenche
+    # que sur une erreur de syntaxe. Le risque reste théorique : config/README.md
+    # prescrit des fichiers faits d'affectations, jamais de commandes.
+    local code=0
+    set -a
     # shellcheck source=/dev/null
-    . "$fichier"
+    . "$fichier" || code=$?
+    if [ "$allexport_actif" = "non" ]; then
+        set +a
+    fi
+
+    if [ "$code" -ne 0 ]; then
+        die "Configuration illisible : config/$nom.env (code $code)"
+    fi
     info "Configuration chargée : config/$nom.env"
 }
 
@@ -210,8 +285,15 @@ confirm() {
 }
 
 # --- Gestion des erreurs ---------------------------------------------------
+
+# Le fichier est transmis par le trap, jamais déduit ici : à l'intérieur de
+# _on_error, BASH_SOURCE désignerait common.sh, où la fonction est définie.
+# Évalué dans la chaîne du trap, ${BASH_SOURCE[0]} désigne au contraire le
+# fichier où l'échec s'est produit — le script appelant, ou common.sh lui-même
+# quand la faute vient du socle. $LINENO y renvoie à la même unité, les deux
+# valeurs sont donc cohérentes entre elles (ADR-0003, décision 9).
 _on_error() {
-    local code="$1" ligne="$2"
-    error "Échec (code $code) à la ligne $ligne de $(basename "$0")."
+    local code="$1" ligne="$2" fichier="${3:-$0}"
+    error "Échec (code $code) à la ligne $ligne de $(basename "$fichier")."
 }
-trap '_on_error "$?" "$LINENO"' ERR
+trap '_on_error "$?" "$LINENO" "${BASH_SOURCE[0]:-$0}"' ERR
