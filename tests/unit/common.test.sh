@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# tests/unit/common.test.sh — tests unitaires de lib/common.sh (TASK-003).
+# tests/unit/common.test.sh — tests unitaires de lib/common.sh
+# (TASK-003, complété par TASK-015).
 #
 # lib/common.sh est le point de défaillance unique du dépôt : chaque script le
 # charge. Ce fichier couvre les onze critères de TASK-003 — load_config,
 # require_cmd, require_root, require_os, detect_os, les quatre fonctions de
-# journalisation, die, confirm, le double chargement et run_logged.
+# journalisation, die, confirm, le double chargement et run_logged — puis les
+# trois corrections du socle tranchées par TASK-015 (§6, §11 et §12).
 #
 # ---------------------------------------------------------------------------
 # Trois difficultés, trois partis pris
@@ -44,20 +46,28 @@
 #    les assertions portent alors sur les seules lignes du cas courant.
 #
 # ---------------------------------------------------------------------------
-# Une divergence relevée, non corrigée
+# Trois divergences relevées ici, tranchées et corrigées par TASK-015
 # ---------------------------------------------------------------------------
 #
-# Le critère de TASK-003 dit « load_config charge un fichier existant et EXPORTE
-# ses variables ». load_config fait « . "$fichier" » : les variables deviennent
-# disponibles dans le shell appelant — ce dont dépendent tous les scripts — mais
-# une affectation nue n'est PAS exportée vers les processus fils. Seule une
-# ligne « export VAR=… » écrite dans le .env l'est, or config/README.md prescrit
-# des affectations nues.
+# Ce fichier épinglait le comportement d'AVANT. ADR-0003 — décisions 7, 8 et 9 —
+# a tranché, TASK-015 a corrigé le socle, et les assertions ont été RETOURNÉES
+# dans le même commit. Elles décrivent désormais le contrat effectif :
 #
-# Les deux comportements sont mesurés et nommés ci-dessous (§6), et un WARN les
-# rend visibles à chaque exécution. lib/common.sh n'est pas modifié : c'est une
-# zone protégée, et l'écart relève d'une tâche distincte — soit un « set -a »
-# dans load_config, soit une reformulation du critère.
+#   décision 7 — load_config encadre son « source » par set -a / set +a. Une
+#                affectation nue d'un .env atteint donc les processus fils (§6).
+#                set +a est rétabli MÊME SI le source échoue, sans quoi tout ce
+#                que le script déclare ensuite serait exporté à son insu (§6) ;
+#   décision 8 — un journal devenu inécrivable en cours d'exécution n'interrompt
+#                plus le script : un seul avertissement sur stderr, puis
+#                l'exécution se poursuit sans journal (§11) ;
+#   décision 9 — le message du trap ERR nomme le fichier RÉELLEMENT fautif,
+#                common.sh compris, et non plus systématiquement le script
+#                appelant (§12).
+#
+# Les sections 6, 9, 11 et 12 sont écrites pour rougir si l'une de ces trois
+# corrections était défaite : les mutations correspondantes ont été jouées, une
+# à une, et chacune fait tomber au moins une assertion. La seule exception est
+# consignée à l'endroit du cas concerné (§11, « le drapeau _JOURNAL_AVERTI »).
 
 set -Eeuo pipefail
 
@@ -157,6 +167,18 @@ executer() {
     if [ -f "$JOURNAL_ATTENDU" ]; then
         JOURNAL="$(cat "$JOURNAL_ATTENDU")"
     fi
+}
+
+# compter <texte> <motif> — nombre de lignes contenant le motif, LITTÉRALEMENT.
+#
+# Ni « grep -c » ni « grep | wc » : grep sort en 1 quand il ne trouve rien, ce
+# qui armerait le trap ERR du harnais pour un décompte légitimement nul — et un
+# « || true » pour l'éteindre reviendrait à neutraliser une assertion. awk rend
+# toujours 0, et « index » y cherche une sous-chaîne littérale, comme
+# « contient » le fait pour les assertions.
+compter() {
+    local texte="$1" motif="$2"
+    printf '%s\n' "$texte" | awk -v m="$motif" 'index($0, m) { n++ } END { print n + 0 }'
 }
 
 # -------------------------------------------------------------------
@@ -472,7 +494,32 @@ cat > "$DEPOT/config/unitaire-export.env" <<'FIN'
 export VALEUR_EXPORTEE="valeur-exportee"
 FIN
 
-chmod 0644 "$DEPOT/config/unitaire.env" "$DEPOT/config/unitaire-export.env"
+# Fichier dont le « source » ÉCHOUE : un guillemet jamais refermé. L'erreur est
+# de syntaxe, donc constatée à l'analyse — le fichier n'est pas exécuté du tout
+# et « . » rend un code non nul de façon déterministe. Une commande en échec au
+# milieu du fichier ne conviendrait pas : le source rendrait le code de sa
+# DERNIÈRE commande, souvent 0.
+cat > "$DEPOT/config/bancale.env" <<'FIN'
+# Configuration jetable écrite par tests/unit/common.test.sh.
+VALEUR_AVANT="avant"
+VALEUR_BANCALE="guillemet jamais refermé
+FIN
+
+# Fichier dont le source RÉUSSIT malgré une commande en échec au milieu. C'est
+# la contrepartie du « || code=$? » de load_config, mesurée et assumée : le
+# contexte de condition suspend errexit PENDANT l'exécution du fichier, le
+# source va jusqu'au bout et rend le code de sa dernière commande — ici une
+# affectation, donc 0. La garde « Configuration illisible » ne se déclenche
+# jamais sur ce cas.
+cat > "$DEPOT/config/tolerante.env" <<'FIN'
+# Configuration jetable écrite par tests/unit/common.test.sh.
+VALEUR_TOLERANTE_AVANT="avant"
+commande-absente-dans-un-env-xyz
+VALEUR_TOLERANTE_APRES="apres"
+FIN
+
+chmod 0644 "$DEPOT/config/unitaire.env" "$DEPOT/config/unitaire-export.env" \
+    "$DEPOT/config/bancale.env" "$DEPOT/config/tolerante.env"
 
 executer "$(cat <<'FIN'
 load_config unitaire
@@ -492,14 +539,12 @@ assert_contient "$ERREUR" "[INFO] Configuration chargée : config/unitaire.env" 
 assert_contient "$JOURNAL" "Configuration chargée : config/unitaire.env" \
     "load_config consigne le chargement dans le journal"
 
-# Frontière exacte de l'exportation — voir la note en tête de fichier. Les deux
-# assertions qui suivent constatent le comportement réel de load_config ; elles
-# ne le corrigent pas et ne le masquent pas.
-warn "load_config : une affectation nue d'un .env n'est PAS exportée vers les processus fils."
-warn "Le critère de TASK-003 dit « exporte ses variables » ; l'écart est consigné, lib/common.sh n'est pas modifié."
-
-assert_contient "$SORTIE" "FILS_NUE=absente" \
-    "une affectation nue n'est pas propagée aux processus fils"
+# ASSERTION RETOURNÉE (TASK-015, ADR-0003 décision 7). Elle affirmait
+# « FILS_NUE=absente » : c'était le comportement d'avant le set -a. Le contrat
+# dit maintenant l'inverse, et c'est ce que ce cas prouve. Une mutation qui
+# retirerait le « set -a » de load_config fait rougir ici, et ici seulement.
+assert_contient "$SORTIE" "FILS_NUE=valeur-attendue" \
+    "une affectation nue d'un .env est propagée aux processus fils"
 
 executer "$(cat <<'FIN'
 load_config unitaire-export
@@ -512,6 +557,117 @@ assert_contient "$SORTIE" "VALEUR_EXPORTEE=valeur-exportee" \
     "une variable exportée par le fichier est disponible dans le shell appelant"
 assert_contient "$SORTIE" "FILS_EXPORT=valeur-exportee" \
     "load_config propage aux processus fils ce que le fichier exporte lui-même"
+
+# --- Portée du set -a : elle s'arrête à load_config ------------------------
+#
+# L'exportation vaut pour la CONFIGURATION, pas pour tout ce que le script
+# déclare ensuite. Sans le « set +a », chaque variable de travail du script
+# partirait dans l'environnement de la moindre commande externe appelée après.
+executer "$(cat <<'FIN'
+load_config unitaire
+etat="non"
+case "$-" in *a*) etat="oui" ;; esac
+printf 'ALLEXPORT_APRES=%s\n' "$etat"
+DECLAREE_APRES="valeur-declaree-apres"
+bash -c 'printf "FILS_DECLAREE_APRES=%s\n" "${DECLAREE_APRES:-absente}"'
+FIN
+)"
+assert_code 0 "$CODE" "le script se poursuit après load_config"
+assert_contient "$SORTIE" "ALLEXPORT_APRES=non" \
+    "load_config éteint allexport en sortant — « a » n'est plus dans \$-"
+assert_contient "$SORTIE" "FILS_DECLAREE_APRES=absente" \
+    "une variable déclarée après load_config n'est pas exportée à son insu"
+
+# L'appelant qui avait lui-même armé allexport le retrouve armé : load_config
+# rétablit l'état ANTÉRIEUR, il ne force pas « off ».
+executer "$(cat <<'FIN'
+set -a
+load_config unitaire
+etat="non"
+case "$-" in *a*) etat="oui" ;; esac
+set +a
+printf 'ALLEXPORT_PREALABLE=%s\n' "$etat"
+FIN
+)"
+assert_code 0 "$CODE" "load_config s'exécute sous un allexport déjà armé"
+assert_contient "$SORTIE" "ALLEXPORT_PREALABLE=oui" \
+    "load_config rétablit l'état antérieur de allexport plutôt que de le forcer à « off »"
+
+# --- Le cas silencieux : le source échoue ----------------------------------
+#
+# C'est le piège que la décision 7 nomme explicitement. Si « set +a » n'était
+# pas atteint quand le source échoue, allexport resterait armé pour tout le
+# reste de l'exécution — sans le moindre signe visible.
+#
+# load_config appelle « die » sur cet échec : l'état de allexport ne peut donc
+# s'observer que depuis un piège EXIT, exécuté dans le MÊME shell juste avant la
+# sortie. Un sous-shell ne conviendrait pas, son « $- » n'étant pas celui du
+# script.
+executer "$(cat <<'FIN'
+etat_final() {
+    local etat="non"
+    case "$-" in *a*) etat="oui" ;; esac
+    printf 'ALLEXPORT_APRES_ECHEC=%s\n' "$etat"
+    MARQUEUR_APRES_ECHEC="declaree-dans-le-piege"
+    bash -c 'printf "FILS_APRES_ECHEC=%s\n" "${MARQUEUR_APRES_ECHEC:-absente}"'
+}
+trap etat_final EXIT
+load_config bancale
+printf 'JAMAIS_ATTEINT\n'
+FIN
+)"
+assert_code 1 "$CODE" "load_config sur un fichier illisible arrête le script"
+assert_contient "$ERREUR" "Configuration illisible : config/bancale.env" \
+    "load_config nomme le fichier dont le chargement a échoué"
+assert_absent "$SORTIE" "JAMAIS_ATTEINT" "load_config n'exécute pas la suite du script"
+assert_contient "$SORTIE" "ALLEXPORT_APRES_ECHEC=non" \
+    "set +a est rétabli même lorsque le source du fichier échoue"
+assert_contient "$SORTIE" "FILS_APRES_ECHEC=absente" \
+    "aucune variable n'est exportée à son insu après un source en échec"
+
+# --- L'autre face du « || code=$? » : la sévérité qu'il abandonne -----------
+#
+# Le contexte de condition qui garantit le « set +a » suspend AUSSI errexit
+# pendant l'exécution du fichier sourcé. Une commande en échec au milieu d'un
+# .env n'interrompt donc plus rien : le source va jusqu'au bout, rend le code de
+# sa dernière commande — une affectation, donc 0 — et load_config annonce un
+# chargement réussi. Le socle de « master » tuait le script sur le champ, en 127.
+#
+# C'est une contrepartie ASSUMÉE, inscrite dans docs/architecture-technique.md
+# et en commentaire de load_config. Le risque reste théorique : config/README.md
+# prescrit des fichiers faits d'affectations, jamais de commandes.
+#
+# Ce cas est le seul filet sous cette contrepartie. Qui « rétablirait » un jour
+# la sévérité en retirant le « || code=$? » casserait du même geste la garantie
+# du set +a rétabli quoi qu'il arrive — et sans ce cas, rien ne rougirait.
+executer "$(cat <<'FIN'
+load_config tolerante
+printf 'AVANT=%s\n' "${VALEUR_TOLERANTE_AVANT:-absente}"
+printf 'APRES=%s\n' "${VALEUR_TOLERANTE_APRES:-absente}"
+etat="non"
+case "$-" in *a*) etat="oui" ;; esac
+printf 'ALLEXPORT=%s\n' "$etat"
+bash -c 'printf "FILS_TOLERANTE=%s\n" "${VALEUR_TOLERANTE_APRES:-absente}"'
+printf 'TERMINE\n'
+FIN
+)"
+assert_code 0 "$CODE" \
+    "une commande en échec au milieu d'un .env n'interrompt pas le script"
+assert_contient "$ERREUR" "commande-absente-dans-un-env-xyz" \
+    "la commande du .env a bien été tentée, et a bien échoué"
+assert_contient "$SORTIE" "AVANT=avant" \
+    "l'affectation qui précède la commande en échec est prise en compte"
+assert_contient "$SORTIE" "APRES=apres" \
+    "celle qui la SUIT l'est aussi : le source est allé jusqu'au bout"
+assert_contient "$ERREUR" "[INFO] Configuration chargée : config/tolerante.env" \
+    "load_config annonce un chargement réussi malgré la commande en échec"
+assert_absent "$ERREUR" "Configuration illisible" \
+    "la garde « Configuration illisible » ne se déclenche pas sur une commande en échec"
+assert_contient "$SORTIE" "TERMINE" "le script se poursuit après le chargement"
+assert_contient "$SORTIE" "ALLEXPORT=non" \
+    "set +a est rétabli sur ce chemin aussi"
+assert_contient "$SORTIE" "FILS_TOLERANTE=apres" \
+    "l'exportation reste effective malgré la commande en échec"
 
 executer "$(cat <<'FIN'
 load_config configuration-inexistante-xyz
@@ -689,34 +845,111 @@ FIN
 )"
 assert_contient "$SORTIE" "CODE=0" "run_logged retourne 0 sur une commande qui réussit"
 
-# Les deux cas discriminants. Ce sont les seuls à prouver que run_logged rend
-# PIPESTATUS[0] et non le code du tube : partout ailleurs, tee réussit et les
-# deux valeurs coïncident. LOG_FILE désigne ici un répertoire inexistant, tee
-# échoue donc à l'ouverture.
+# --- Les deux cas discriminants -------------------------------------------
 #
+# Ce sont les seuls à prouver que run_logged rend PIPESTATUS[0] et non le code
+# du tube : partout ailleurs tee réussit, et les deux valeurs coïncident. Il
+# faut donc un tee qui ÉCHOUE pendant que la branche à tee reste empruntée.
+#
+# La façon de faire a dû changer avec TASK-015, et c'est le point le plus
+# fragile de ce fichier. Ces deux cas pointaient auparavant LOG_FILE vers un
+# répertoire inexistant. Depuis la décision 8, le « info » d'ouverture de
+# run_logged constate le journal mort, avertit et VIDE LOG_FILE : le test qui
+# suit bascule sur la branche sans tee, tee n'est plus atteint, et les deux
+# assertions resteraient vertes sans plus rien prouver. Une régression de
+# couverture silencieuse — le onzième critère de TASK-003 aurait disparu sans
+# qu'aucun voyant ne s'allume.
+#
+# Le journal reste donc parfaitement écrivable, et c'est TEE SEUL qui échoue :
+# un faux tee, placé en tête de PATH, relaie fidèlement son entrée puis sort en
+# 1. Les deux gardes qui suivent chaque cas — journal non vide, aucun
+# avertissement de journal mort — vérifient que la branche à tee a bien été
+# empruntée. Sans elles, ce cas pourrait redevenir creux sans se voir.
+mkdir -p "$DEPOT/bin"
+cat > "$DEPOT/bin/tee" <<'FIN'
+#!/usr/bin/env bash
+# Faux tee, écrit par tests/unit/common.test.sh. Relaie l'entrée sur sa sortie
+# standard comme le ferait le vrai — run_logged la redirige vers stderr — puis
+# échoue, sans rien écrire dans le fichier qu'on lui demande.
+cat
+exit 1
+FIN
+chmod 0755 "$DEPOT/bin" "$DEPOT/bin/tee"
+
+executer "$(cat <<'FIN'
+PATH="$DEPOT_TEST/bin:$PATH"
+printf 'TEE=%s\n' "$(command -v tee)"
+FIN
+)"
+assert_contient "$SORTIE" "TEE=$DEPOT/bin/tee" \
+    "le faux tee est bien celui que le PATH du cas résout"
+
 # 1. commande à 0, tee à 1 : « pipefail » donnerait 1 au tube, run_logged doit
 #    rendre 0 ;
 executer "$(cat <<'FIN'
-LOG_FILE="$LOG_DIR/repertoire-inexistant/journal.log"
+PATH="$DEPOT_TEST/bin:$PATH"
 code=0
 run_logged true || code=$?
 printf 'CODE=%s\n' "$code"
+printf 'LOG_FILE_VIDE=%s\n' "$([ -z "$LOG_FILE" ] && printf oui || printf non)"
 FIN
 )"
 assert_contient "$SORTIE" "CODE=0" \
     "run_logged rend le code de la commande, pas celui de tee"
+assert_contient "$SORTIE" "LOG_FILE_VIDE=non" \
+    "le journal est resté vivant : c'est bien la branche à tee qui a été empruntée"
+assert_contient "$JOURNAL" "Exécution : true" \
+    "run_logged a bien écrit dans le journal avant d'appeler tee"
+assert_absent "$ERREUR" "Journal inaccessible" \
+    "aucune bascule vers la branche sans tee n'a eu lieu"
 
 # 2. commande à 42, tee à 1 : le seul code qui distingue PIPESTATUS[0] à la
 #    fois du code du tube ET de celui de tee — les deux valant 1 ici.
+# Le marqueur est ASSEMBLÉ À L'EXÉCUTION — « relayee-par-le-faux-%s » et « tee »
+# sont deux arguments distincts. Sans cette précaution, le marqueur figurerait
+# tel quel dans la ligne de commande, que run_logged annonce et journalise :
+# le chercher dans le journal ne prouverait alors rien de ce que tee y a écrit.
 executer "$(cat <<'FIN'
-LOG_FILE="$LOG_DIR/repertoire-inexistant/journal.log"
+PATH="$DEPOT_TEST/bin:$PATH"
 code=0
-run_logged bash -c 'exit 42' || code=$?
+run_logged bash -c "printf 'relayee-par-le-faux-%s\n' tee; exit 42" || code=$?
 printf 'CODE=%s\n' "$code"
 FIN
 )"
 assert_contient "$SORTIE" "CODE=42" \
     "run_logged rend le code de la commande en échec alors que tee échoue aussi"
+assert_contient "$ERREUR" "relayee-par-le-faux-tee" \
+    "la sortie de la commande traverse tee jusqu'à stderr"
+assert_absent "$ERREUR" "Journal inaccessible" \
+    "un tee en échec ne fait pas passer le journal pour mort"
+
+# Le journal, lui, ne reçoit rien de la commande : le faux tee n'y écrit pas.
+# La ligne d'annonce, elle, y est — c'est info qui l'a écrite, pas tee.
+assert_contient "$JOURNAL" "Exécution : bash -c" \
+    "l'annonce de run_logged est consignée alors même que tee échoue"
+assert_absent "$JOURNAL" "relayee-par-le-faux-tee" \
+    "rien n'a été consigné par le tee en échec"
+
+# Bascule automatique : LOG_FILE pointe vers un chemin mort AVANT l'appel. Le
+# « info » d'ouverture le constate, vide LOG_FILE, et run_logged prend de
+# lui-même la branche sans tee. C'est le comportement voulu par la décision 8 —
+# et c'est aussi la raison pour laquelle les deux cas ci-dessus ne peuvent plus
+# s'écrire ainsi.
+executer "$(cat <<'FIN'
+LOG_FILE="$LOG_DIR/repertoire-inexistant/journal.log"
+code=0
+run_logged bash -c 'printf "sortie-apres-bascule\n"; exit 42' || code=$?
+printf 'CODE=%s\n' "$code"
+printf 'LOG_FILE_VIDE=%s\n' "$([ -z "$LOG_FILE" ] && printf oui || printf non)"
+FIN
+)"
+assert_code 0 "$CODE" "un journal mort n'interrompt pas run_logged"
+assert_contient "$SORTIE" "LOG_FILE_VIDE=oui" \
+    "run_logged bascule sur la branche sans tee quand le journal est mort"
+assert_contient "$SORTIE" "CODE=42" \
+    "run_logged rend le code de la commande après la bascule"
+assert_contient "$ERREUR" "sortie-apres-bascule" \
+    "la sortie de la commande parvient à stderr après la bascule"
 
 # ===================================================================
 # 10. Journalisation impossible — LOG_DIR non créable
@@ -764,6 +997,158 @@ else
     ko "l'obstacle n'est plus un fichier ordinaire" \
        "common.sh aurait alors écrit là où mkdir avait échoué"
 fi
+
+# ===================================================================
+# 11. Journal devenu inécrivable EN COURS D'EXÉCUTION
+# ===================================================================
+# À ne pas confondre avec le §10, qui traite d'un LOG_DIR impossible à créer AU
+# CHARGEMENT — LOG_FILE y reste vide et rien n'est jamais tenté. Ici, le journal
+# a été ouvert normalement puis disparaît : répertoire supprimé, disque plein,
+# droits modifiés. Avant TASK-015, le premier « info » qui suivait tuait le
+# script sous set -e. ADR-0003 décision 8 : un avertissement, UNE SEULE FOIS,
+# puis on continue sans journal.
+titre "11. Journal inécrivable en cours d'exécution"
+
+JOURNAL_MORT_1="$REP_LOGS/repertoire-inexistant/journal.log"
+
+executer "$(cat <<'FIN'
+LOG_FILE="$LOG_DIR/repertoire-inexistant/journal.log"
+i=0
+while [ "$i" -lt 50 ]; do
+    info "pulsation-$i"
+    i=$((i + 1))
+done
+warn    "apres-warn"
+error   "apres-error"
+success "apres-success"
+code=0
+run_logged bash -c 'printf "sortie-journal-mort\n"; exit 7' || code=$?
+printf 'CODE_RUN_LOGGED=%s\n' "$code"
+printf 'LOG_FILE=[%s]\n' "$LOG_FILE"
+printf 'TERMINE\n'
+FIN
+)"
+
+assert_code 0 "$CODE" "un journal devenu inécrivable n'interrompt pas le script"
+assert_contient "$SORTIE" "TERMINE" "le script va jusqu'à sa dernière instruction"
+
+# « Une seule fois » : cinquante info, puis warn, error, success et run_logged.
+assert_egal "1" "$(compter "$ERREUR" "Journal inaccessible")" \
+    "un seul avertissement de journal inaccessible pour 54 messages"
+assert_egal "50" "$(compter "$ERREUR" "[INFO] pulsation-")" \
+    "les cinquante messages sont tous affichés malgré le journal mort"
+assert_contient "$ERREUR" "[WARN] apres-warn"       "warn continue de fonctionner après la mort du journal"
+assert_contient "$ERREUR" "[ERROR] apres-error"     "error continue de fonctionner après la mort du journal"
+assert_contient "$ERREUR" "[SUCCESS] apres-success" "success continue de fonctionner après la mort du journal"
+assert_contient "$ERREUR" "$JOURNAL_MORT_1" "l'avertissement nomme le journal devenu inaccessible"
+
+# AUCUN message brut de bash. C'est ce qui valide que la redirection porte sur
+# le GROUPE et non sur le seul printf : appliquée au printf, elle serait établie
+# après l'ouverture de LOG_FILE, et bash aurait déjà écrit son « … : No such
+# file or directory » sur la stderr du script.
+#
+# Le décompte du chemin est l'assertion qui porte : le chemin n'a le droit
+# d'apparaître qu'une fois, dans l'avertissement du socle. Elle tient quelle que
+# soit la langue de bash, là où le libellé anglais ci-dessous ne dirait plus
+# rien sous une autre locale — les deux sont gardées, la seconde pour ce
+# qu'elle nomme.
+assert_egal "1" "$(compter "$ERREUR" "$JOURNAL_MORT_1")" \
+    "le chemin du journal mort n'apparaît qu'une fois : aucun message brut de bash"
+assert_absent "$ERREUR" "No such file or directory" \
+    "le message brut de bash est étouffé, remplacé par un avertissement lisible"
+
+# Le socle vide LOG_FILE : c'est sa convention pour « pas de journal », déjà
+# celle du §10. run_logged s'y conforme et prend la branche sans tee.
+assert_contient "$SORTIE" "LOG_FILE=[]" "le socle neutralise le journal hors service"
+assert_contient "$SORTIE" "CODE_RUN_LOGGED=7" "run_logged rend son code après la mort du journal"
+assert_contient "$ERREUR" "sortie-journal-mort" "run_logged fonctionne encore sans journal"
+assert_egal "" "$JOURNAL" "rien n'est écrit dans le journal d'origine"
+
+if [ -e "$REP_LOGS/repertoire-inexistant" ]; then
+    ko "le répertoire du journal mort a été créé" \
+       "le socle ne doit rien créer là où l'écriture a échoué"
+else
+    ok "aucun répertoire n'est créé pour un journal hors service"
+fi
+
+# Le drapeau _JOURNAL_AVERTI, épinglé pour lui-même.
+#
+# Sur le chemin ordinaire, « une seule fois » tient DEUX FOIS : par le drapeau,
+# et parce que LOG_FILE est vidé — _journaliser sort alors avant même de tenter
+# quoi que ce soit. Retirer le drapeau ne se verrait donc pas ci-dessus. Le seul
+# scénario qui le distingue est celui d'un script qui REARME LOG_FILE après
+# coup, vers un chemin lui aussi mort. C'est ce cas, et lui seul, qui fait
+# rougir la mutation « drapeau retiré ».
+JOURNAL_MORT_2="$REP_LOGS/autre-repertoire-inexistant/journal.log"
+
+executer "$(cat <<'FIN'
+LOG_FILE="$LOG_DIR/repertoire-inexistant/journal.log"
+info "premiere-mort"
+LOG_FILE="$LOG_DIR/autre-repertoire-inexistant/journal.log"
+info "seconde-mort"
+printf 'TERMINE\n'
+FIN
+)"
+assert_code 0 "$CODE" "un journal réarmé puis mort à nouveau n'interrompt pas le script"
+assert_contient "$SORTIE" "TERMINE" "le script se poursuit après la seconde mort"
+assert_egal "1" "$(compter "$ERREUR" "Journal inaccessible")" \
+    "le drapeau _JOURNAL_AVERTI empêche un second avertissement, journal réarmé compris"
+assert_absent "$ERREUR" "$JOURNAL_MORT_2" \
+    "le second journal mort n'est pas annoncé — l'avertissement a déjà eu lieu"
+assert_contient "$ERREUR" "[INFO] seconde-mort" \
+    "les messages continuent d'être affichés après la seconde mort"
+
+# ===================================================================
+# 12. trap ERR — le message nomme le fichier RÉELLEMENT fautif
+# ===================================================================
+# Avant TASK-015, le trap employait « basename "$0" » : il nommait toujours le
+# script appelant, y compris quand la faute venait du socle — « à la ligne 273
+# de extrait.sh » alors que la ligne 273 est celle de common.sh. $LINENO et le
+# nom du fichier désignaient deux unités différentes, et le diagnostic était
+# trompeur. ADR-0003 décision 9 : « ${BASH_SOURCE[0]} », évalué DANS la chaîne
+# du trap.
+#
+# Les deux sens sont éprouvés. Un seul ne suffirait pas : une correction qui se
+# contenterait d'inverser le défaut — nommer toujours common.sh — passerait un
+# test unilatéral.
+titre "12. trap ERR — fichier fautif"
+
+# Sens 1 : la faute vient de lib/common.sh. « read » y échoue sur une fin de
+# fichier, à l'intérieur de confirm, l'entrée standard étant /dev/null. C'est un
+# échec RÉEL du socle, pas une simulation.
+executer "$(cat <<'FIN'
+confirm "Question sans réponse possible ?"
+printf 'JAMAIS_ATTEINT\n'
+FIN
+)"
+assert_code_non_nul "$CODE" "un échec survenu dans common.sh interrompt le script"
+assert_contient "$ERREUR" "de common.sh." \
+    "le trap ERR nomme common.sh quand la faute vient du socle"
+assert_absent "$ERREUR" "de extrait.sh." \
+    "le trap ERR ne met pas la faute du socle sur le compte du script appelant"
+assert_absent "$SORTIE" "JAMAIS_ATTEINT" "le script ne poursuit pas après l'échec"
+
+# Le nom est réduit par basename : un chemin absolu dans le message trahirait
+# une régression de forme. Contrôlé sur ce cas-ci, le seul dont le message
+# désigne un fichier situé ailleurs que dans le répertoire de l'extrait.
+assert_absent "$ERREUR" "de $DEPOT/lib/common.sh" \
+    "le message porte le nom du fichier fautif, pas son chemin complet"
+
+# Sens 2 : la faute vient du script appelant. Le message doit alors le nommer,
+# lui, et non le socle.
+executer "$(cat <<'FIN'
+false
+printf 'JAMAIS_ATTEINT\n'
+FIN
+)"
+assert_code_non_nul "$CODE" "un échec survenu dans le script appelant l'interrompt"
+assert_contient "$ERREUR" "de extrait.sh." \
+    "le trap ERR nomme le script appelant quand la faute vient de lui"
+assert_absent "$ERREUR" "de common.sh." \
+    "le trap ERR n'impute pas au socle une faute du script appelant"
+assert_contient "$ERREUR" "[ERROR] Échec (code 1) à la ligne " \
+    "le message conserve son code et son numéro de ligne"
+assert_absent "$SORTIE" "JAMAIS_ATTEINT" "le script ne poursuit pas après l'échec"
 
 # ===================================================================
 # Bilan

@@ -32,7 +32,7 @@ de ce que cet ADR a tranché.
 | [TASK-013](completed/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | `completed` | moyenne | 012 | hôte | non |
 | [TASK-003](completed/TASK-003.md) | Écrire les tests unitaires de `lib/common.sh` | `completed` | haute | 001, 002 | conteneur | non |
 | [TASK-014](completed/TASK-014.md) | Affranchir la suite d'acceptation de l'état d'implémentation du dépôt | `completed` | haute | 003 | hôte | non |
-| [TASK-015](pending/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `ready` | moyenne | 003 | conteneur | **oui** |
+| [TASK-015](completed/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | `completed` | moyenne | 003 | conteneur | **oui** |
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | `completed` | moyenne | 002, 003 | conteneur | non |
 | [TASK-016](pending/TASK-016.md) | Uniformiser les codes de retour et les messages d'erreur d'usage | `ready` | moyenne | 004 | conteneur | non |
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
@@ -183,6 +183,8 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
 | `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 10 : le 1 est conservé — un privilège insuffisant est un échec d'exécution, pas une erreur d'usage. Aucun script modifié |
 | Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
+| Asymétrie `server.env` / `load_config` : deux chemins de chargement, deux contrats | [TASK-015](reports/TASK-015-report.md) | `lib/common.sh` charge `config/server.env` par un `source` nu, quand `load_config` exporte depuis ADR-0003 décision 7. Une variable de `server.env` n'atteint pas les processus fils, une de `docker.env` si — alors que `config/README.md` prescrit la même forme d'écriture aux deux. Sans conséquence aujourd'hui (tous les `SRV_*` sont lus par le script lui-même), mais c'est un piège pour la suite |
+| `set +a` n'est pas rétabli quand le `source` avorte le shell | [TASK-015](reports/TASK-015-report.md) | un `.env` référençant une variable non définie sous `set -u` tue le shell avant `set +a` : le piège `EXIT` s'exécute alors avec `allexport` armé. Le critère « rétabli même si le `source` échoue » tient pour les échecs qui rendent un code, pas pour ceux qui tuent le shell. Exposition limitée aux variables déclarées dans un handler de nettoyage |
 | Les liens entre tâches cassent à chaque changement de statut | reprise de TASK-002 | le répertoire fait partie du chemin : six liens rompus au seul passage de `blocked/` à `completed/`. À traiter par une convention de lien, ou par un contrôle automatique dans `tests/` |
 | `run-in-container.sh` : message de démon injoignable tronqué, et `--profil --dry-run` mal analysé | [TASK-002](reports/TASK-002-report.md) | deux défauts mineurs, relevés et non corrigés |
 
@@ -202,6 +204,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-004](completed/TASK-004.md) | Éprouver l'idempotence des scripts `Linux/System` | [rapport](reports/TASK-004-report.md) |
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | [rapport](reports/TASK-009-report.md) |
 | [TASK-013](completed/TASK-013.md) | Distinguer un cas non applicable d'un environnement indisponible | [rapport](reports/TASK-013-report.md) |
+| [TASK-015](completed/TASK-015.md) | Trancher deux défauts de `lib/common.sh` révélés par les tests unitaires | [rapport](reports/TASK-015-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

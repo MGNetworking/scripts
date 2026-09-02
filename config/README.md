@@ -59,3 +59,29 @@ cp config/docker.env.example config/docker.env
 
 Ces fichiers sont chargés par `source` : uniquement des affectations, jamais de
 commandes. Aucun secret ne doit y figurer en clair sur un dépôt public.
+
+## Écriture : des affectations nues, exportées par le socle
+
+La convention d'écriture ne change pas — une affectation par ligne, sans
+`export` :
+
+```bash
+DOCKER_ROOT="/var/lib/docker"
+```
+
+`load_config` encadre son `source` par `set -a` / `set +a` : ces variables sont
+donc **exportées**, et restent visibles des commandes que le script lance
+ensuite, y compris `docker`, `kubectl` ou un script appelé. Écrire `export` dans
+le fichier est inutile ; le faire n'est pas une erreur, simplement une
+redondance.
+
+Deux conséquences pratiques :
+
+- une variable de contexte est visible de tout processus fils, même de ceux qui
+  ne la demandent pas. Raison de plus pour n'y mettre **aucun secret** ;
+- choisir des noms qui n'entrent pas en collision avec l'environnement — d'où le
+  préfixe `SRV_` de `server.env`, `HOSTNAME` existant déjà dans Bash.
+
+`config/server.env`, chargé directement par `lib/common.sh` et non par
+`load_config`, ne bénéficie pas de cette exportation : ses variables alimentent
+le script lui-même, pas ses processus fils.

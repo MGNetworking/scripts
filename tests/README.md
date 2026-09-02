@@ -45,7 +45,8 @@ découvre — **en `maxdepth 1`**, comme l'acceptance — et agrège leurs verdi
 ```text
 tests/unit/
 ├── run-unit.sh          le dispatcher
-└── common.test.sh       les onze critères de TASK-003
+└── common.test.sh       les onze critères de TASK-003, plus les trois
+                         corrections de TASK-015
 ```
 
 `lib/common.sh` est le point de défaillance unique du dépôt : chaque script le
@@ -68,9 +69,11 @@ charge. Le tester impose trois précautions, toutes visibles en tête de
 - **les journaux.** `common.sh` crée `LOG_DIR` et calcule `LOG_FILE` dès le
   `source`. `LOG_DIR` est redirigé vers un répertoire temporaire, remis à zéro
   avant chaque cas et supprimé à la fin.
-  Un cas le détourne au contraire vers un chemin **non créable** : `LOG_FILE`
-  reste alors vide, et c'est la seule façon d'exécuter la seconde branche de
-  `run_logged` — celle qui n'emploie pas `tee`.
+  Deux situations distinctes sont éprouvées, et ne se confondent pas : un
+  `LOG_DIR` **non créable au chargement** — `LOG_FILE` reste vide, rien n'est
+  jamais tenté (§10) — et un journal **devenu inécrivable en cours
+  d'exécution**, ouvert normalement puis disparu (§11). L'une comme l'autre
+  mènent à la seconde branche de `run_logged`, celle qui n'emploie pas `tee`.
 
 `require_root` demande en plus un utilisateur non privilégié, alors que le
 conteneur tourne en `root`. Trois lanceurs sont **éprouvés** dans cet ordre —
@@ -82,23 +85,64 @@ Le `set -Eeuo pipefail` du harnais reste en place de bout en bout. Le retirer
 pour faire passer un cas vaudrait échec de la tâche — [AGENTS.md](../AGENTS.md)
 §12.
 
-Un écart entre l'énoncé et le socle est relevé au passage, non corrigé :
-`load_config` fait `. "$fichier"`, ce qui rend les variables disponibles dans le
-shell appelant mais **n'exporte pas** une affectation nue vers les processus
-fils. `common.test.sh` mesure les deux frontières, les nomme, et affiche un
-`[WARN]` à chaque exécution. `lib/common.sh` est en zone protégée : la décision
-— `set -a` dans `load_config`, ou reformulation du critère — relève d'une tâche
-distincte.
+#### Trois écarts relevés ici, tranchés et corrigés
 
-Un second écart est mesuré et consigné de la même façon : sous `set -e`, un
-appel à `info`, `warn`, `error`, `success` ou `run_logged` **interrompt le
-script** si `LOG_FILE` est renseignée mais non inscriptible — le `printf >>`
-de `_log` échoue et arme le `trap ERR`. Le cas ne se présente que si le
-répertoire de journaux disparaît en cours d'exécution, `LOG_FILE` restant vide
-lorsqu'il était déjà impossible à créer au chargement. Aucun cas de
-`common.test.sh` n'échoue à ce titre : les onze critères portent sur la valeur
-rendue par `run_logged`, observable seulement dans un contexte où `set -e` est
-neutralisé (`|| code=$?`, `if …`). L'écart relève d'une tâche distincte.
+Ces trois écarts entre l'énoncé et le socle avaient été **mesurés sans être
+corrigés** : `lib/common.sh` est en zone protégée. [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+les a tranchés — décisions 7, 8 et 9 — et TASK-015 a corrigé le socle. Les
+assertions qui épinglaient l'ancien comportement ont été **retournées dans le
+même commit** ; `common.test.sh` décrit désormais le contrat effectif.
+
+| Écart | Décision | Prouvé par |
+|---|---|---|
+| `load_config` faisait `. "$fichier"` : une affectation nue n'atteignait pas les processus fils | `set -a` / `set +a` autour du `source` (7) | §6 |
+| un `LOG_FILE` devenu non inscriptible tuait le script sous `set -e` | un avertissement, **une seule fois**, puis on continue sans journal (8) | §11 |
+| le `trap ERR` nommait toujours `$0`, même quand la faute venait du socle | `${BASH_SOURCE[0]}`, évalué dans la chaîne du trap (9) | §12 |
+
+Le §6 ne se contente pas du cas nominal : il vérifie que `set +a` est rétabli
+**même lorsque le `source` échoue** — sinon tout ce que le script déclare
+ensuite serait exporté à son insu — et que l'appelant qui avait lui-même armé
+`allexport` le retrouve armé. Le §11 exige **exactement un** avertissement pour
+cinquante-quatre messages, un code de sortie 0, et **aucun message brut de
+bash** sur `stderr` : c'est ce dernier point qui prouve que la redirection porte
+sur le groupe et non sur le seul `printf`. Le §12 éprouve **les deux sens** —
+faute du socle, faute du script appelant : une correction qui se contenterait
+d'inverser le défaut passerait un test unilatéral.
+
+Le §6 fige aussi la **contrepartie** de ce `|| code=$?` : le contexte de
+condition suspend `errexit` *pendant* l'exécution du fichier sourcé. Une
+commande en échec au milieu d'un `.env` n'interrompt donc plus rien — le source
+va jusqu'au bout, les affectations qui la suivent sont prises en compte, et
+`load_config` annonce un chargement réussi. Le socle de `master` tuait le script
+en 127. C'est assumé — voir [docs/architecture-technique.md](../docs/architecture-technique.md) —
+et c'est le seul filet : qui « rétablirait » la sévérité en retirant le
+`|| code=$?` casserait du même geste la garantie du `set +a`, sans qu'aucune
+autre assertion ne s'en aperçoive.
+
+Chaque correction a été éprouvée par mutation de `lib/common.sh` — `set -a`
+retiré, `set +a` retiré, drapeau `_JOURNAL_AVERTI` retiré, `$0` rétabli dans le
+trap, redirection déplacée sur le `printf`, garde `if` retirée,
+`PIPESTATUS[0]` remplacé par `$?`, `|| code=$?` retiré de `load_config`. Les
+huit font rougir au moins une assertion — la dernière en fait rougir onze.
+
+#### La régression de couverture de `run_logged`, et comment elle est fermée
+
+Deux cas du §9 sont les **seuls** à prouver que `run_logged` rend
+`PIPESTATUS[0]` et non le code du tube : partout ailleurs `tee` réussit et les
+deux valeurs coïncident. Ils faisaient échouer `tee` en pointant `LOG_FILE` vers
+un répertoire inexistant.
+
+La décision 8 a rendu ce montage **creux** : `run_logged` appelle `info` en
+premier, `info` constate le journal mort et vide `LOG_FILE`, et la fonction
+bascule sur la branche *sans* `tee`. Les deux assertions restaient vertes sans
+plus rien prouver — vérifié : sous une mutation remplaçant `PIPESTATUS[0]` par
+`$?`, l'ancienne formulation rend encore `0` et `42`, les valeurs attendues.
+
+Le journal reste donc désormais parfaitement écrivable, et c'est **`tee` seul**
+qui échoue : un faux `tee` placé en tête de `PATH` relaie fidèlement son entrée
+puis sort en 1. Deux gardes accompagnent chaque cas — journal non vide, aucun
+avertissement de journal mort — pour que la branche à `tee` ne puisse plus être
+désertée en silence. Sous la même mutation, la nouvelle formulation rougit.
 
 ### Le niveau `integration`
 

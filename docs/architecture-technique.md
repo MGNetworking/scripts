@@ -109,7 +109,53 @@ load_config docker      # -> config/docker.env
 `load_config` résout le chemin depuis `SCRIPTS_ROOT`, ce qui évite de réécrire
 la résolution dans chaque script. Un fichier demandé mais introuvable **arrête
 le script** : poursuivre sans la configuration attendue serait plus dangereux
-que s'arrêter.
+que s'arrêter. Un fichier présent mais **syntaxiquement invalide** arrête le
+script de la même façon : `source` rend alors un code non nul, que `load_config`
+transforme en `die`.
+
+En revanche, une **commande en échec au milieu du fichier n'arrête plus le
+script**. Le `source` poursuit jusqu'au bout et rend le code de sa dernière
+commande — le plus souvent 0 —, si bien que la garde de `load_config` ne se
+déclenche pas. C'est la contrepartie assumée du `set +a` rétabli quoi qu'il
+arrive (voir plus bas) : placer le `source` dans un contexte de condition
+suspend `errexit` pendant son exécution. Le risque reste théorique, parce que
+[`config/README.md`](../config/README.md) prescrit des fichiers faits
+d'affectations et **jamais de commandes**.
+
+### Les variables chargées atteignent les processus fils
+
+`load_config` encadre son `source` par `set -a` / `set +a`. Toute variable
+affectée par le fichier est donc exportée, et reste visible des commandes que le
+script lance ensuite :
+
+```bash
+# config/docker.env — affectation nue, aucun « export »
+DOCKER_ROOT="/var/lib/docker"
+```
+
+```bash
+load_config docker
+printenv DOCKER_ROOT      # la valeur est visible : le processus fils l'a reçue
+```
+
+Sans cette exportation, un `.env` écrit en affectations nues — la forme que
+`config/README.md` prescrit — n'aurait alimenté que le shell du script lui-même.
+Les fichiers de configuration n'ont donc **pas** à écrire `export` : c'est le
+socle qui s'en charge.
+
+Deux conséquences à connaître :
+
+- des variables sont exposées à des commandes qui ne les demandent pas. C'est la
+  contrepartie assumée du choix ; elle est acceptable parce qu'un fichier de
+  contexte ne contient **aucun secret** ;
+- `set +a` est rétabli quoi qu'il arrive, y compris si le `source` échoue. Sans
+  cela, tout ce que le script déclarerait ensuite se retrouverait exporté à son
+  insu. Si l'appelant avait lui-même activé `allexport`, son état est préservé.
+
+`config/server.env`, chargé directement par `common.sh` et non par
+`load_config`, n'est pas concerné : ses variables alimentent le script courant,
+pas ses processus fils. `SCRIPTS_ROOT` et les `OS_*` de `detect_os` sont, eux,
+exportés explicitement.
 
 ### Nommer autrement selon la machine
 
@@ -234,6 +280,31 @@ enable_full_logging
 
 La sortie n'étant alors plus un terminal, les couleurs sont désactivées.
 
+### Un journal inaccessible n'interrompt pas le script
+
+Deux moments distincts, deux comportements — aucun des deux n'est fatal.
+
+| Moment | Situation | Comportement |
+|---|---|---|
+| au chargement | `LOG_DIR` non créable | `LOG_FILE` reste vide, aucun message |
+| en cours d'exécution | le fichier devient inécrivable | **un** avertissement sur `stderr`, puis poursuite sans journal |
+
+Le second cas survient quand le répertoire de journaux disparaît, que le disque
+est plein ou que les droits ont changé pendant que le script tourne :
+
+```text
+[WARN] Journal inaccessible : /var/log/mgnetworking/update-system.log — poursuite sans journalisation.
+```
+
+L'avertissement est émis **une seule fois par exécution**, quel que soit le
+nombre d'appels à `info` qui suivent : le socle vide `LOG_FILE`, ce qui est déjà
+sa convention pour « pas de journal ». `run_logged` bascule alors de lui-même
+sur sa branche sans `tee`, plutôt que de relancer `tee` sur un fichier mort.
+
+Un script d'administration qui meurt parce qu'il n'a pas pu écrire sa trace est
+un mauvais comportement — a fortiori lancé par `cron` à quatre heures du matin.
+Le message d'écran, lui, part sur `stderr` et n'est jamais perdu.
+
 ---
 
 ## 5. Rotation des logs
@@ -300,7 +371,51 @@ ci-dessus.
 
 ---
 
-## 6. Pièges Bash rencontrés
+## 6. Codes de retour et diagnostic des échecs
+
+### Deux codes, deux natures d'échec
+
+```text
+2  erreur d'usage      option inconnue, argument manquant, valeur invalide
+1  échec d'exécution   privilège insuffisant, dépendance absente, opération échouée
+0  succès
+```
+
+La distinction se lit ainsi : le **2 reproche quelque chose à l'appelant**, qui
+n'a qu'à corriger sa ligne de commande ; le **1 constate que le travail n'a pas
+pu être fait**, alors que la demande était recevable.
+
+```bash
+die "Option inconnue : $1" 2       # erreur d'usage
+die "Configuration introuvable…"   # échec d'exécution, code 1 par défaut
+```
+
+`require_root` sort en **1**, délibérément : un privilège insuffisant n'est pas
+une faute d'invocation, la commande était juste. Il en va de même de
+`require_cmd` et de `require_os`.
+
+Un script vérifie donc ses arguments **avant** ses privilèges : lancée sans
+`sudo` et avec une option inconnue, la commande sort en 2, parce que c'est le
+reproche le plus utile à celui qui l'a tapée.
+
+### Le message d'échec nomme le fichier fautif
+
+`lib/common.sh` installe un `trap ERR` qui annonce le code, la ligne et le
+fichier :
+
+```text
+[ERROR] Échec (code 1) à la ligne 78 de common.sh.
+```
+
+Le fichier vient de `BASH_SOURCE`, évalué dans la chaîne du `trap`, et non de
+`$0` : les deux repères désignent ainsi la même unité que `$LINENO`. Avec `$0`,
+un échec survenu dans le socle était attribué au script appelant — « à la ligne
+78 de mon-script.sh » alors que la ligne 78 était celle de `common.sh`,
+diagnostic trompeur au pire moment.
+
+---
+
+## 7. Pièges Bash rencontrés
 
 **`set -e` et les listes `&&`** — un fichier terminé par une ligne du type :
 
@@ -314,3 +429,21 @@ instruction d'un fichier chargé par `source`, le script appelant s'arrête sous
 
 **Double chargement** — `lib/common.sh` commence par une garde
 (`_COMMON_SH_CHARGE`) afin qu'un chargement répété reste sans effet.
+
+**Une redirection qui échoue est fatale sous `set -e`** — `printf … >> "$FIC"`
+sort en erreur si le fichier ne peut pas être ouvert, et le script s'arrête. Un
+contexte de condition neutralise `set -e` :
+
+```bash
+if { printf '%s\n' "$ligne" >> "$FIC"; } 2>/dev/null; then
+```
+
+La redirection `2>/dev/null` porte sur le **groupe**, pas sur le `printf` :
+c'est ce qui étouffe le message brut de bash, celui-ci étant émis au moment où
+l'ouverture du fichier échoue — donc avant qu'une redirection propre à la
+commande ait pu s'appliquer.
+
+**`set -a` et le retour à l'état antérieur** — une option de shell activée
+autour d'un `source` doit être rétablie même quand le `source` échoue. Placer
+celui-ci dans un `|| code=$?` garantit que la ligne de rétablissement est bien
+atteinte.
