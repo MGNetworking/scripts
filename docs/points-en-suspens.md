@@ -509,6 +509,39 @@ question se reposera entière, et la mesure qui la tranche n'aura pas été fait
 **Concerne** `tests/env/run-in-container.sh`, mode `systemd` uniquement. Le
 profil `debian` ne demande aucun privilège particulier.
 
+---
+
+## 10. `df` se fige sur un montage réseau injoignable
+
+**Soulevé le** 2026-09-03, pendant TASK-021, qui l'excluait nommément de son
+périmètre.
+
+`Linux/System/check-disk.sh` appelle `df` sans précaution contre le montage
+réseau tombé. Un partage NFS ou CIFS dont le serveur ne répond plus fige l'appel
+à `statfs` : `df` n'échoue pas, il **attend**, et le script attend avec lui — sans
+message, sans borne de temps, et sans que la garde en contexte de condition n'y
+change quoi que ce soit, puisque rien n'a échoué.
+
+Le script ne modifie rien et n'a pas encore écrit sa première section : la
+conséquence est un terminal bloqué, pas un système abîmé. Elle devient sérieuse
+le jour où `check-disk.sh` tourne en tâche planifiée.
+
+**Pourquoi ce n'est pas traité dans TASK-021.** Le sujet mérite un traitement
+propre, pas une demi-mesure glissée dans un script de diagnostic. Deux remèdes
+connus, aux effets très différents :
+
+- **`df -l`** — ne montrer que les systèmes de fichiers locaux. Sûr, mais il
+  supprime l'information au lieu de la borner : un partage réseau plein ne serait
+  plus jamais vu, alors que c'est un incident réel ;
+- **une borne de temps** — `timeout 5 df …`. Elle conserve l'information quand le
+  montage répond et rend la main quand il ne répond pas, au prix d'une dépendance
+  à `timeout` (coreutils, présent sur les cibles) et d'un choix de valeur qui,
+  comme toutes les bornes de ce dépôt, devra être mesuré plutôt que jugé.
+
+**Concerne** `check-disk.sh` en premier, et tout futur script appelant `df`,
+`du` ou `stat` sur une arborescence susceptible de contenir un montage réseau —
+`check-services.sh`, `backup-resources.sh`.
+
 ### Une seconde valeur non mesurée, dans le même fichier
 
 Le même travail a posé des bornes de temps sur les appels Docker du mode

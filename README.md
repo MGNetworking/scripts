@@ -33,6 +33,7 @@ cluster quelle que soit son origine.
 | [`Linux/System/configure-timezone.sh`](Linux/System/configure-timezone.sh) | fuseau horaire, avec validation |
 | [`Linux/System/configure-swap.sh`](Linux/System/configure-swap.sh) | fichier d'échange : état, création, redimensionnement |
 | [`Linux/System/configure-cron.sh`](Linux/System/configure-cron.sh) | planification des scripts automatiques dans /etc/cron.d |
+| [`Linux/System/check-disk.sh`](Linux/System/check-disk.sh) | diagnostic de stockage : systèmes de fichiers, inodes, périphériques, répertoires consommateurs |
 | [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
 | [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |
 

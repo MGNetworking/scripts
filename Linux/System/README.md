@@ -23,16 +23,19 @@ prime toujours sur la valeur du fichier.
 | `configure-timezone.sh` | définit le fuseau horaire, en validant son existence | root | oui |
 | `configure-swap.sh` | affiche le swap, crée ou redimensionne un fichier d'échange | root | oui |
 | `configure-cron.sh` | dépose `/etc/cron.d/mgnetworking` : planification des scripts automatiques | root | oui |
+| `check-disk.sh` | diagnostic de stockage : systèmes de fichiers, inodes, périphériques, répertoires consommateurs | aucun | non |
 
-Les autres scripts prévus (`manage-users.sh`, `check-disk.sh`, `check-memory.sh`, `check-services.sh`,
+Les autres scripts prévus (`manage-users.sh`, `check-memory.sh`, `check-services.sh`,
 `reboot-system.sh`) restent à écrire — voir
 [le plan](../../docs/refactorisation-plan.md).
 
 Relevé technique du domaine :
 [recensement-substitutions.md](recensement-substitutions.md) — toutes les
-affectations `var="$(…)"` des sept scripts, une par une, avec leur verdict et sa
-raison. À lire avant toute affirmation sur le doublement du `trap ERR`, décrit
-plus bas sous « Codes de retour ».
+affectations `var="$(…)"` des sept scripts qu'il couvre, une par une, avec leur
+verdict et sa raison. À lire avant toute affirmation sur le doublement du
+`trap ERR`, décrit plus bas sous « Codes de retour ». `check-disk.sh`, écrit
+après ce relevé, n'y figure pas encore : toutes ses affectations sont en
+contexte de condition, aucune n'est en forme nue.
 
 ## Utilisation
 
@@ -61,7 +64,49 @@ sudo ./Linux/System/configure-swap.sh 2G --file /var/swapfile   # chemin absolu
 sudo ./Linux/System/configure-cron.sh --dry-run          # afficher le fichier
 sudo ./Linux/System/configure-cron.sh                    # une fois par serveur
 sudo ./Linux/System/configure-cron.sh --horaire "30 5 * * 7"
+
+./Linux/System/check-disk.sh                          # diagnostic complet
+./Linux/System/check-disk.sh --seuil 90               # alerter à partir de 90 %
+./Linux/System/check-disk.sh --repertoire /var --top 5
+./Linux/System/check-disk.sh --sans-repertoires       # sauter l'analyse « du »
+./Linux/System/check-disk.sh --tous                   # sans filtrer les pseudo-FS
 ```
+
+### Seuils de `check-disk.sh`
+
+**Le seuil par défaut est 85 %**, appliqué à l'occupation des blocs comme à
+celle des inodes. Un système de fichiers qui l'**atteint** — comparaison en
+« supérieur ou égal », pas en « strictement supérieur » — est signalé par un
+`[WARN]` nommant le point de montage, le périphérique et le pourcentage.
+
+Trois raisons à cette valeur :
+
+- **elle laisse de quoi travailler.** 15 % d'une racine de 40 Go font 6 Go : de
+  quoi absorber une mise à jour de paquets, une image de conteneur ou une rafale
+  de journaux avant que le disque soit réellement plein ;
+- **la dégradation commence avant le 100 % de `df`.** ext4 réserve 5 % des blocs
+  à root — que `df` ne compte pas comme disponibles pour les autres — et son
+  allocateur se fragmente nettement au-delà de ~85 % d'occupation ;
+- **plus bas, le signal devient du bruit.** Un serveur sain vit couramment entre
+  70 et 80 % — un disque vide est un disque payé pour rien —, et une alerte qui
+  se déclenche à chaque passage n'est plus lue au bout de trois fois.
+
+**Le même seuil vaut pour les inodes**, faute d'une raison de les traiter
+autrement : un système de fichiers dont 85 % des inodes sont consommés est aussi
+près de la panne que celui dont 85 % des blocs le sont — et la panne y est plus
+déroutante, `No space left on device` s'affichant alors qu'il reste 60 %
+d'espace libre. Il n'existe donc **qu'un seuil**, global, et non un par système
+de fichiers ni un par métrique.
+
+Il se surcharge par `SRV_DISK_SEUIL` dans `config/server.env`, puis par
+`--seuil`, qui l'emporte. Le répertoire analysé suit la même règle :
+`SRV_DISK_REPERTOIRE` puis `--repertoire`, défaut `/`. L'origine effective de
+chaque valeur est rappelée en tête de la sortie, pour qu'un seuil surprenant se
+retrouve sans chercher.
+
+Un `SRV_DISK_SEUIL` mal saisi n'interrompt pas le diagnostic : il vaut un `[WARN]`
+et le repli sur 85 %, la ligne de commande restant seule à pouvoir rendre 2 —
+voir « Codes de retour » plus bas.
 
 ### Planification par cron
 
@@ -125,7 +170,7 @@ dès que son contenu change.
 
 ## Codes de retour
 
-Les sept scripts suivent la même convention, détaillée dans
+Les huit scripts suivent la même convention, détaillée dans
 [docs/architecture-technique.md §6](../../docs/architecture-technique.md) :
 
 ```text
@@ -144,8 +189,42 @@ sortent tous en 2, sans avoir rien tenté.
 Le 1 constate que le travail n'a pas pu être fait alors que la demande était
 recevable. **Un manque de privilège en relève** : lancer sans `sudo` l'un des
 scripts qui modifient le système rend 1, la commande tapée étant juste.
-`system-info.sh` fait exception et rend 0 — il ne fait que lire, il n'a jamais
-eu besoin de privilège.
+`system-info.sh` et `check-disk.sh` font exception et rendent 0 — ils ne font
+que lire, ils n'ont jamais eu besoin de privilège.
+
+Ces deux-là rendent **0 même lorsqu'une information manque**, et `check-disk.sh`
+rend 0 même lorsqu'un seuil est dépassé : un diagnostic est une lecture, pas un
+verdict. Faire rendre 1 à un disque plein transformerait chaque passage en tâche
+planifiée en échec, et la production de statuts `PASS` / `WARNING` / `FAIL` est
+le rôle du futur `security-check.sh`.
+
+`check-disk.sh` rend 2 sur une option inconnue et sur une valeur invalide **tapée
+sur la ligne de commande** : `--seuil` ou `--top` qui n'est pas un entier de 1 à
+100, `--repertoire` qui commence par un tiret ou qui ne désigne pas un répertoire
+accessible.
+
+**Une valeur fautive venue de `config/server.env` ne rend jamais 2.** La règle ne
+dépend que de l'origine de la valeur, et elle vaut pour toutes : la ligne de
+commande vaut un refus — l'appelant s'est trompé en tapant, le reproche lui est
+utile —, la configuration vaut un `[WARN]` nommant la variable, la valeur refusée
+et ce qui est retenu à la place. Un diagnostic en lecture seule doit
+diagnostiquer : priver l'appelant de tout son tableau de disques parce qu'une
+variable qu'il n'a peut-être pas écrite lui-même est mal saisie serait
+disproportionné.
+
+| Valeur fautive de `config/server.env` | Ce que fait le script |
+|---|---|
+| `SRV_DISK_SEUIL=abc` | `[WARN]`, repli sur le seuil par défaut de 85 %, code 0 |
+| `SRV_DISK_REPERTOIRE=/pas/la` | `[WARN]`, section des répertoires sautée, code 0 |
+
+Le repli diffère parce que la valeur de repli diffère, et c'est le seul écart
+entre les deux lignes : 85 % reste une comparaison utile, tandis que retomber sur
+`/` ferait parcourir pendant des minutes une arborescence que personne n'a
+demandée et afficherait le classement d'un autre répertoire que celui configuré.
+Un `SRV_DISK_REPERTOIRE` pointant sur `/var/lib/docker`, non traversable par un
+compte ordinaire, ne doit pas non plus priver ce compte de tout le reste du
+diagnostic. L'origine rappelée en tête de sortie porte la trace du repli —
+`85 % (valeur par défaut, SRV_DISK_SEUIL refusé)`.
 
 Les arguments sont vérifiés avant les privilèges, si bien qu'une commande à la
 fois mal formée et sans `sudo` rend 2 — le reproche le plus utile en premier.
@@ -253,6 +332,46 @@ déjà de la garde, et son `return 1` est justement le cas que l'appelante trait
 ## Risques
 
 `system-info.sh` est en lecture seule : il n'écrit rien et ne modifie rien.
+
+`check-disk.sh` est en lecture seule lui aussi : hors du journal ouvert par
+`lib/common.sh`, il ne crée, ne modifie ni ne supprime aucun fichier. Deux
+réserves d'usage tout de même :
+
+- **son analyse des répertoires coûte du temps.** `du` parcourt l'arborescence ;
+  sur un répertoire de plusieurs téraoctets, la section prend des minutes.
+  Trois bornes la contiennent — le répertoire de départ, l'absence de
+  franchissement des points de montage (`-x`) et la profondeur 1 — et
+  `--sans-repertoires` la supprime entièrement ;
+- **`df` peut se figer sur un montage réseau injoignable.** Le script ne prend
+  aujourd'hui aucune précaution contre ce cas : ni `df -l`, ni borne de temps.
+  Sur une machine montant du NFS ou du CIFS, un partage tombé suspend la
+  première section, sans que rien n'ait été écrit ni modifié — voir
+  [points-en-suspens.md](../../docs/points-en-suspens.md) § 10.
+
+**Ce que `check-disk.sh` ne fait pas** — et ce n'est pas un oubli :
+
+| Il ne fait pas | Où cela se traite |
+|---|---|
+| aucune action corrective : suppression de fichier, purge de journaux, `apt-get clean`, nettoyage Docker | `Docker/Cleanup/`, et à la main |
+| aucun contrôle de santé matérielle : `smartctl`, `badblocks`, températures | hors du domaine |
+| aucun diagnostic mémoire | `check-memory.sh`, à écrire |
+| aucune notification d'un seuil dépassé | la remontée des échecs, [points-en-suspens.md](../../docs/points-en-suspens.md) § 2 |
+| aucun seuil distinct par système de fichiers ni par métrique | un seuil global, surchargeable |
+
+Il ne masque pas non plus ce qu'il n'a pas pu lire : une commande absente ou en
+échec produit un avertissement qui la nomme, et « non disponible » à
+l'affichage. **« non disponible » dit une ignorance, « aucun » un constat**, et
+les deux ne se confondent pas : dans la section des périphériques, un `awk` en
+échec sur `/proc/partitions` donne « non disponible » — la table n'a pas pu être
+lue —, tandis qu'une table lue et vide donne « aucun périphérique bloc visible ».
+Les faire aboutir au même message revenait à affirmer une absence qui n'avait pas
+été établie. `df` et `du` rendent un code non nul dès qu'un seul point de
+montage ou sous-répertoire leur résiste — le cas ordinaire d'une exécution sans
+privilège sur `/` — après avoir écrit tout ce qu'ils ont pu : cette sortie
+partielle est affichée, assortie d'un avertissement qui dit qu'elle l'est. Les
+pseudo-systèmes de fichiers sont écartés du tableau, `overlay` excepté : c'est
+le seul système de fichiers de la racine d'un conteneur, et l'écarter rendrait
+le script muet là où il sert le plus.
 
 `update-system.sh` installe des paquets. Il ne redémarre jamais le serveur : un
 redémarrage nécessaire est signalé en fin d'exécution, jamais déclenché.
