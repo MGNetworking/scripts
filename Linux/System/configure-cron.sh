@@ -19,8 +19,11 @@
 #
 # La ligne déposée invoque « /bin/bash <chemin> » et non le chemin seul : Git ne
 # conserve le bit d'exécution que si l'index le porte, et les fichiers de ce
-# dépôt sont enregistrés en 100644. Sur un serveur issu d'un « git clone », un
-# appel direct rendrait 126 à chaque passage, en silence.
+# dépôt étaient enregistrés en 100644 quand ce script a été écrit. Sur un serveur
+# issu d'un « git clone », un appel direct rendait alors 126 à chaque passage, en
+# silence. Ils sont en 100755 depuis le 2026-09-02 (ADR-0003, décision 11), mais
+# la forme est conservée : elle vaut aussi pour un dépôt déployé par copie ou par
+# archive, où le bit se perd.
 #
 # Idempotent : relançable sans effet de bord.
 
@@ -219,10 +222,11 @@ if [ ! -f "$SCRIPT_PLANIFIE" ]; then
     die "Script à planifier introuvable : $SCRIPT_PLANIFIE"
 fi
 
-# Le bit d'exécution manque sur un dépôt cloné : Git enregistre les fichiers de
-# ce dépôt en 100644. La ligne déposée s'en accommode — elle invoque
-# « /bin/bash <chemin> » — mais l'information reste utile : sans ce bit, le
-# script ne se lance pas à la main par « ./update-system.sh ».
+# Le bit d'exécution est posé dans Git depuis le 2026-09-02 : un dépôt cloné le
+# porte désormais. Le contrôle reste utile — il attrape un déploiement par copie
+# ou par archive, où le bit se perd. La ligne déposée s'en accommode de toute
+# façon, elle invoque « /bin/bash <chemin> » ; mais sans ce bit, le script ne se
+# lance pas à la main par « ./update-system.sh ».
 if [ ! -x "$SCRIPT_PLANIFIE" ]; then
     warn "$SCRIPT_PLANIFIE n'est pas exécutable."
     warn "La tâche planifiée fonctionnera : la ligne déposée passe par /bin/bash."
@@ -366,10 +370,26 @@ info "Commande    : /bin/bash $SCRIPT_PLANIFIE --yes"
 # Cron rejette un fichier de /etc/cron.d qui n'appartient pas à root ou qui
 # porte le bit d'exécution. L'état est lu et comparé avant d'être appliqué :
 # une seconde exécution ne touche donc à rien.
+#
+# Les deux lectures sont en CONTEXTE DE CONDITION. Sous la forme nue
+# « proprietaire="$(stat …)" », un stat en échec — fichier disparu entre le test
+# d'existence et la lecture, stat absent du PATH — fait parler le trap ERR de
+# lib/common.sh deux fois : une fois dans le sous-shell de la substitution, une
+# fois dans le shell principal pour l'affectation. Deux lignes « Échec (code …)
+# à la ligne … », et pas un mot sur la cause.
+#
+# Le « [ -f "$FICHIER_CRON" ] » qui précède l'appel n'y change rien : il établit
+# que le fichier existait à l'instant du test, pas que stat aboutira. C'est la
+# garde exacte que lire_taille_actuelle, dans configure-swap.sh, portait déjà
+# quand un faux stat en tête de PATH l'a mise en défaut. Même motif, même
+# traitement (TASK-018).
 appliquer_permissions() {
     local proprietaire mode
 
-    proprietaire="$(stat -c '%U:%G' "$FICHIER_CRON")"
+    if ! proprietaire="$(stat -c '%U:%G' "$FICHIER_CRON" 2>/dev/null)"; then
+        error "Propriétaire de $FICHIER_CRON illisible : « stat » a échoué."
+        die "Vérifier que ce fichier est toujours en place, puis relancer."
+    fi
     if [ "$proprietaire" != "root:root" ]; then
         if [ "$DRY_RUN" = "true" ]; then
             info "[dry-run] Rendrait $FICHIER_CRON à root:root (actuellement $proprietaire)."
@@ -379,7 +399,10 @@ appliquer_permissions() {
         fi
     fi
 
-    mode="$(stat -c '%a' "$FICHIER_CRON")"
+    if ! mode="$(stat -c '%a' "$FICHIER_CRON" 2>/dev/null)"; then
+        error "Mode de $FICHIER_CRON illisible : « stat » a échoué."
+        die "Vérifier que ce fichier est toujours en place, puis relancer."
+    fi
     if [ "$mode" != "644" ]; then
         if [ "$DRY_RUN" = "true" ]; then
             info "[dry-run] Appliquerait le mode 0644 sur $FICHIER_CRON (actuellement $mode)."
@@ -395,14 +418,41 @@ appliquer_permissions() {
 # comporte des points, ce qui le rend invisible pour cron le temps de sa vie.
 #
 # La fonction n'est pas morte : elle est appelée par le « trap … EXIT » posé
-# juste en dessous. shellcheck ne suit pas les trap et la croit inatteignable.
+# juste en dessous. shellcheck ne suit pas les trap et la croit inatteignable —
+# d'où la directive, placée au plus près de la fonction pour qu'elle s'y
+# rattache.
+#
+# ELLE REND TOUJOURS 0, et ce n'est pas une négligence. Un trap EXIT qui rend un
+# code non nul est, pour bash, une commande en échec de plus : errexit s'en
+# saisit et le « trap ERR » de lib/common.sh écrit une ligne supplémentaire.
+# Tout « die » postérieur à ce trap s'en trouvait doublé — les quatre lectures de
+# stat comme les die préexistants de verifier() :
+#
+#   [ERROR] Propriétaire de /etc/cron.d/mgnetworking illisible : « stat » a échoué.
+#   [ERROR] Vérifier que ce fichier est toujours en place, puis relancer.
+#   [ERROR] Échec (code 1) à la ligne 1 de common.sh.
+#
+# La troisième ligne ne désigne rien : « ligne 1 de common.sh » est l'endroit où
+# le trap est défini, pas celui où quoi que ce soit a échoué.
+#
+# Le code de sortie du script n'en souffre pas. Bash rend le code passé à
+# « exit » — celui de die — indépendamment de ce que rend le trap EXIT ; seul un
+# « exit » exécuté DANS le trap le remplacerait. L'ancien « return "$code" »
+# n'était donc pas ce qui préservait le code de sortie : il ne faisait qu'armer
+# le trap ERR.
+#
+# Le « rm » est pour la même raison placé en condition : son échec, sinon,
+# rejouerait la scène. Un temporaire laissé en place est sans danger — son nom
+# comporte des points, cron l'ignore — mais il doit être nommé.
 # shellcheck disable=SC2317
 nettoyer_temporaire() {
-    local code="$?"
     if [ -n "$FICHIER_TEMPORAIRE" ] && [ -e "$FICHIER_TEMPORAIRE" ]; then
-        rm -f "$FICHIER_TEMPORAIRE"
+        if ! rm -f "$FICHIER_TEMPORAIRE"; then
+            warn "Fichier temporaire non supprimé : $FICHIER_TEMPORAIRE"
+            warn "Son nom comporte des points, cron l'ignore. Le retirer à la main."
+        fi
     fi
-    return "$code"
+    return 0
 }
 trap nettoyer_temporaire EXIT
 
@@ -430,12 +480,22 @@ verifier() {
         die "Le contenu de $FICHIER_CRON ne correspond pas à ce qui était attendu."
     fi
 
-    proprietaire="$(stat -c '%U:%G' "$FICHIER_CRON")"
+    # Mêmes lectures qu'au-dessus, en condition pour la même raison : le
+    # « [ -f ] » posé à l'entrée de cette fonction ne garantit pas davantage que
+    # stat aboutira, et une vérification qui échoue doit dire pourquoi plutôt que
+    # de rendre deux lignes de trap.
+    if ! proprietaire="$(stat -c '%U:%G' "$FICHIER_CRON" 2>/dev/null)"; then
+        error "Propriétaire de $FICHIER_CRON illisible après écriture : « stat » a échoué."
+        die "Vérifier l'état de ce fichier : cron rejette ce qui n'appartient pas à root."
+    fi
     if [ "$proprietaire" != "root:root" ]; then
         die "cron rejette un fichier qui n'appartient pas à root (propriétaire : $proprietaire)."
     fi
 
-    mode="$(stat -c '%a' "$FICHIER_CRON")"
+    if ! mode="$(stat -c '%a' "$FICHIER_CRON" 2>/dev/null)"; then
+        error "Mode de $FICHIER_CRON illisible après écriture : « stat » a échoué."
+        die "Vérifier l'état de ce fichier : cron rejette un fichier exécutable."
+    fi
     if [ "$mode" != "644" ]; then
         die "Mode inattendu sur $FICHIER_CRON : $mode (attendu 644)."
     fi

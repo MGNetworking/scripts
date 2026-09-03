@@ -153,6 +153,7 @@ l'acceptance — et agrège leurs verdicts.
 ```text
 tests/integration/
 ├── run-integration.sh        le dispatcher
+├── configure-cron.test.sh    configure-cron.sh
 └── linux-system.test.sh      les six scripts de Linux/System
 ```
 
@@ -292,6 +293,220 @@ fichier. Le testeur en a ajouté une quatrième — neutraliser le contrôle de 
 entièrement — qui a réellement détruit `/etc/passwd` dans le conteneur, et fait
 rougir vingt et une assertions. C'est elle qui prouve que ces assertions ne sont
 pas creuses.
+
+#### Le non-doublement du `trap ERR` — groupes « 3 quater » à « 4 quinquies », et « 8 bis »
+
+TASK-018 a repris les substitutions de commande de `Linux/System` dont l'échec
+faisait parler le `trap ERR` de `lib/common.sh` deux fois : dans le sous-shell de
+la substitution, puis dans le shell principal pour l'affectation. Deux lignes
+identiques, aucune ne nommant la cause.
+
+**Cinq tours** ont été nécessaires, parce que le recensement a manqué quelque
+chose à chaque fois : `configure-cron.sh` et `configure-timezone.sh` au deuxième,
+`system-info.sh` en entier au quatrième, et sept sites laissés en forme nue au
+cinquième. Le relevé exhaustif existe désormais —
+[`Linux/System/recensement-substitutions.md`](../Linux/System/recensement-substitutions.md),
+54 sites, un verdict et une raison pour chacun, **y compris ceux qui ne sont pas
+traités**. Les cas de `configure-cron.sh` vivent dans son propre fichier, groupe
+« 8 bis ».
+
+##### Ce qu'un décompte de lignes vaut vraiment
+
+**Le nombre de lignes que le `trap ERR` produit n'est pas un invariant du
+motif.** C'est la mesure qui explique pourquoi trois chiffres annoncés se sont
+révélés faux dans ce chantier. Sondes en conteneur :
+
+| Forme | Lignes de trap | Suite |
+|---|---|---|
+| `f "$(false)"` — position d'argument | **aucune** | le script poursuit, code 0 |
+| `v="$(false)"` — affectation directe | deux | code 1 |
+| `v="$(g)"` où `g` échoue — affectation appelant une fonction | **trois** : une au numéro du corps de `g`, deux à celui de l'affectation | code 1 |
+
+Et le flux compte autant que la profondeur : avec un `trap` écrivant sur
+`stdout`, la même affectation n'en montre qu'**une** — les autres sont produites
+dans le sous-shell, donc **capturées par la substitution** et rangées dans la
+variable. Celui de `lib/common.sh` écrit sur `stderr`, rien n'est capturé, tout
+se voit.
+
+Conséquence de méthode : chaque décompte des fichiers de cas est **mesuré sur son
+site**, jamais repris d'un autre, et chacun porte à côté de lui ce qu'il
+discrimine et ce qu'il ne discrimine pas. Conséquence de périmètre : seules les
+**affectations** doublent, ce qui borne la recherche à `var="$(…)"` — les vingt
+substitutions en position d'argument de `system-info.sh` n'en relèvent pas.
+
+Ces groupes **ne verrouillent pas tous les sites**, et c'est le point important.
+Le compte a été établi en remettant chaque site en forme nue et en relançant le
+niveau — jamais par lecture du code :
+
+| Site corrigé | Cause d'échec atteignable | En forme nue, le fichier de cas… |
+|---|---|---|
+| `stat` — `lire_taille_actuelle`, swap | oui, faux `stat` en tête de `PATH` | rougit (3 assertions) |
+| `mktemp` — hostname | oui, `TMPDIR` sur un chemin absent | rougit (5 assertions) |
+| `stat` ×4 — cron, `appliquer_permissions` et `verifier` | oui, deux stubs : l'un total, l'autre refusant le seul `-c %a` | rougit (2 assertions par site) |
+| `tr` — timezone, mise en cohérence | oui, faux `tr` | rougit (2 assertions) |
+| `fuseau_actuel` — timezone, les deux appels | oui : `/etc/timezone` vide, puis les trois sources en échec | rougit (3 assertions sur la garde de valeur vide, 7 sur la propagation d'échec) |
+| `hostname` — configure-hostname, préflight | oui, faux `hostname` | rougit (14 assertions — le script mourait au premier site) |
+| `hostname` — configure-hostname, vérification | oui, le même stub | rougit (7 assertions) |
+| `nproc` — system-info | oui, faux `nproc` | rougit (11 assertions) |
+| `awk` MemTotal — system-info | oui, `free` masqué + faux `awk` sélectif | rougit (9 assertions) |
+| `awk` MemAvailable — system-info | oui, le même montage | rougit (9 assertions) |
+| `wc \| tr` — update-system | oui, faux `wc` + faux `apt-get` pour atteindre le site | rougit (8 assertions) |
+| `dirname` — swap, répertoire d'accueil | oui, faux `dirname` sélectif sur « `--` » | rougit (3 assertions) |
+| `sed` — `en_megaoctets`, le nombre | oui, faux `sed` sélectif sur l'expression du site | rougit (2 assertions) |
+| `tr` — `en_megaoctets`, l'unité | oui, faux `tr` sélectif sur `[:lower:]` | rougit (2 assertions) |
+| `basename` — configure-logging | oui, faux `basename` sélectif sur `LOG_DIR` | rougit (6 assertions) |
+| `date` — hostname, nom de la sauvegarde | oui, faux `date` | rougit (4 assertions) |
+| `date` — swap, phase fstab | oui, faux `date` + faux `swapon` pour atteindre le site | rougit (5 assertions) |
+| boucle de suffixe — swap (substitution **supprimée**) | oui, faux `date` qui numérote ses appels | rougit (3 assertions) |
+| `df -T` — répertoire d'accueil, swap | seulement le répertoire absent, que TASK-018 intercepte par un contrôle explicite | reste **vert** ; c'est le contrôle, retiré, qui fait rougir 5 assertions |
+| `df -BM` — espace libre, swap | non | reste vert |
+| `awk` sur `/proc/swaps` et `/proc/meminfo` — swap | non — exige un swap actif | non muté, hors d'atteinte |
+| `tr` — timezone, vérification | non — le stub tue le script à la première lecture | non muté |
+
+`dirname` est allé et venu **trois fois**, et c'est le site le plus instructif du
+chantier : corrigé au premier tour, remis en forme nue au second — sa branche
+`if !` ayant été jugée du code mort —, remis en condition au cinquième.
+L'argument de code mort couvrait l'**absence** de la commande, jamais son
+**échec**. Il ne couvrait d'ailleurs pas l'absence de façon sûre : les lignes de
+résolution s'exécutent avant que `lib/common.sh` ne charge `config/server.env`,
+lequel peut redéfinir `PATH`.
+
+Les sites sans cause atteignable sont déclarés `NON EXÉCUTÉ` au groupe 5, un par
+un. Une correction qu'aucune exécution ne touche reste une correction non
+vérifiée ; la compter comme prouvée serait le faux vert le plus coûteux de cette
+tâche. Le saut y est **neutre** et non `saute_par_nature` pour `df -T` et
+`df -BM` : leur raison — « le contrôle de répertoire les précède » — est une
+propriété du code que la même tâche vient d'ajouter, pas une limite de
+l'environnement. Une correction rendue invérifiable par une autre correction du
+même diff ne peut pas s'auto-certifier hors d'atteinte.
+
+**Plus aucune affectation ne reste en forme nue.** Le quatrième tour en laissait
+six, plus le `dirname`, chacune avec une raison écrite. Le relecteur a qualifié
+cela d'**abandon déguisé** : la raison invoquée était toujours la même — « aucune
+cause n'atteint ce site » — et elle avait été démentie quatre fois de suite par
+la même mutation d'une ligne. Les sept sont fermés, éprouvés, et chacun rougit
+sous mutation. Il ne subsiste au groupe 5 qu'une réserve d'une autre nature :
+`update-system.sh:133`, dont le `|| true` empêche le doublement mais laisse une
+chaîne vide au test arithmétique qui suit.
+
+Une des sept n'a pas été mise en condition mais **supprimée** : la boucle de
+désambiguïsation de `configure-swap.sh` rappelait `date`, si bien qu'une
+collision de nom produisait `…-<nouvel horodatage>-1` alors que
+`…-<nouvel horodatage>` était libre. L'horodatage est désormais lu une fois et
+réutilisé — la meilleure façon de fermer une substitution reste de s'en passer.
+
+##### Les échecs qui ne sont pas fatals
+
+Les six sites du quatrième tour ont une propriété que les précédents n'avaient
+pas : **leur échec ne doit pas arrêter le script**, et l'assertion décisive de
+chaque cas est donc « code 0 », suivie de la valeur affichée.
+
+`system-info.sh` est un script de diagnostic en lecture seule : sa nature est de
+dégrader — « non disponible » — pas de mourir parce qu'un `nproc` manque. Le
+décompte de paquets d'`update-system.sh` ne sert qu'à l'affichage : il dégrade en
+`?`, jamais en chaîne vide. Et les deux lectures de `hostname` rendent `inconnu`,
+le script réécrivant `/etc/hosts` malgré tout.
+
+Trois montages ont été nécessaires, et chacun porte ses gardes :
+
+- un **binaire homonyme en tête de `PATH`** met en échec n'importe quelle
+  commande externe. C'est la mutation la moins coûteuse du dépôt, et celle qui a
+  démenti trois arbitrages de non-traitement : `require_cmd hostname` prouve que
+  la commande existe, **pas qu'elle réussit** ;
+- un **stub sélectif** — qui ne refuse que `-c %a`, ou que les lectures de
+  `MemTotal` — atteint le second site d'une fonction quand un stub total
+  s'arrêterait au premier. Sans lui, quatre corrections resteraient sans preuve ;
+- un **bac à sable de liens symboliques** reproduit le `PATH` sans `free`. Le
+  mettre en échec ne suffirait pas : `command -v free` réussirait encore et la
+  branche `/proc/meminfo` resterait fermée.
+
+Chaque cas est encadré d'une **garde de contraste** : le même appel sans le stub
+doit rendre une vraie valeur. Sans elle, un cas serait vert sur une machine où la
+valeur vaudrait déjà « non disponible » pour une tout autre raison.
+
+##### Deux défauts que ces groupes ont trouvés, et qui sont corrigés
+
+Ces assertions ont été laissées **rouges le temps d'un tour**, jamais
+neutralisées. C'est ce qui a fait corriger les scripts ; leur passage au vert est
+la preuve.
+
+**`configure-cron.sh` doublait tout diagnostic postérieur à son `trap EXIT`.**
+`nettoyer_temporaire` faisait `return "$code"`, et un `trap EXIT` qui rend un
+code non nul **arme le `trap ERR`** : le socle écrivait une ligne
+`Échec (code 1) à la ligne 1 de common.sh`, qui ne désignait rien — c'est
+l'endroit où le trap est défini. Cela valait pour les quatre lectures de `stat`
+comme pour les `die` préexistants de `verifier()`. La fonction rend désormais `0`
+en toute circonstance, et son `rm` est en condition pour que son propre échec ne
+rejoue pas la scène.
+
+Le **code de sortie n'a pas bougé** : les quatre cas rendent toujours `1`.
+Mesuré, y compris sous la mutation qui rétablit `return "$code"`. Bash rend le
+code passé à `exit` ; un `trap EXIT` terminé normalement ne le remplace pas, seul
+un `exit` exécuté *dans* le trap le ferait. L'ancien `return "$code"` ne
+préservait donc rien, il ne faisait qu'armer le trap — aucun `exit "$code"`
+n'était nécessaire.
+
+**`configure-timezone.sh` gardait une substitution nue en amont des deux
+corrigées.** `FUSEAU_ACTUEL="$(fuseau_actuel)"` appelait une fonction qui lit
+`/etc/timezone` par le même `tr`, et dont le `return 0` **effaçait le code** de
+la lecture : sous un `tr` en échec, `FUSEAU_ACTUEL` valait la **chaîne vide** et
+le script comparait le fuseau demandé à rien avant de l'appliquer. Pas un message
+en trop : une décision prise sur rien.
+
+`fuseau_actuel` renseigne désormais la globale, lit chaque source en condition,
+annonce l'échec de chacune et **propage** celui de la dernière. Les deux appels
+n'en font pas la même chose, et c'est éprouvé : avant l'application l'échec est
+**non fatal** — `FUSEAU_ACTUEL` vaut `inconnu`, jamais une chaîne vide — à la
+vérification il est **fatal**, une vérification qui ne peut pas lire l'état
+courant ne prouve rien.
+
+##### Cinq enseignements
+
+**Un décompte de lignes peut rester vert sous la mutation qu'il vise.** Mesuré
+trois fois. Ce qui discrimine, ce sont les assertions de contenu et l'absence de
+`Échec (code`. Le décompte borde, il ne prouve pas — mais c'est lui, et lui seul,
+qui a vu partir le résidu de `trap EXIT` de `configure-cron.sh`. Chaque cas le dit
+à l'endroit où il est écrit.
+
+**Une justification de placement se mesure.** Le premier tour plaçait le contrôle
+de répertoire après `require_root`, au motif qu'il aurait exigé des droits.
+Faux : l'absence d'un répertoire se constate sans privilège. Le contrôle est
+passé au moment `avant-root`, et le cas éprouve désormais **les deux moitiés** —
+root et non-root rendent le même 2. Ce que le script a encore raison de différer
+est autre chose, et se distingue : un **ancêtre non traversable** rend `[ -d ]`
+faux sans que le répertoire soit absent. Trois moitiés le prouvent — refus
+différé, témoin qui tranche quand même sans privilège, chemin nominal en root —
+et retirer `ancetres_traversables` ne fait rougir que la première.
+
+**Une condition mal formée ne dit rien.** Le vrai risque des affectations mises
+en contexte de condition n'est pas un message en trop, c'est une **valeur fausse**
+rendue en silence. Le groupe 3 quater confronte donc `espace_libre_mo` et
+`repertoire_swap` à une mesure que le harnais fait lui-même, à **64 Mo près** — de
+quoi absorber le bruit d'un conteneur qui écrit ses journaux, bien trop peu pour
+laisser passer une erreur d'un gigaoctet — et le chemin nominal `512M --dry-run`
+exige **zéro** ligne `[ERROR]`.
+
+**Le motif n'était pas « les substitutions », c'était « la valeur perdue ».**
+`fuseau_actuel` ne contenait aucun `die` et n'était donc pas dans le périmètre
+initial ; elle rendait pourtant sa valeur sur `stdout`, était appelée en
+substitution nue, et son `return 0` final effaçait le code de la lecture qui
+venait d'échouer. **Toute fonction qui rend sa valeur sur `stdout` en relève**,
+qu'elle appelle `die` ou non.
+
+**Un site n'est pas inatteignable, il est « pas encore atteint ».** C'est
+l'enseignement le plus cher de ce chantier : cinq tours, quatre arbitrages de
+non-traitement démentis, et chaque fois par la même mutation d'une ligne — un
+binaire homonyme en tête de `PATH`. « `require_cmd` protège », « `[ -f ]`
+protège », « `command -v` protège », « cette branche est du code mort » : aucun
+des quatre ne protégeait. Le dernier tour a fermé les sept derniers sites, et les
+sept rougissent sous mutation — il n'en restait donc aucun de réellement hors
+d'atteinte.
+
+Deux conséquences de méthode. La conclusion tenable n'est jamais « ce site est
+inatteignable », c'est « je n'ai pas trouvé comment l'atteindre », et elle
+s'écrit alors comme telle — dans le recensement, et en `NON EXÉCUTÉ` dans le
+fichier de cas. Et un site laissé nu avec une raison écrite reste un site laissé
+nu : la raison ne remplace pas la mutation qui l'aurait éprouvée.
 
 ### Le niveau `acceptance`
 

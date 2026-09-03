@@ -23,10 +23,11 @@
 #   +. le fichier est root:root 0644 et non exécutable — cron rejette les deux
 #      autres cas, là encore sans rien dire ;
 #   +. la commande passe par « /bin/bash <chemin> » et non par le chemin seul.
-#      Les fichiers du dépôt sont enregistrés dans Git en 100644 : sur un
-#      serveur issu d'un « git clone », un appel direct rendrait 126 à chaque
-#      passage, sans rien écrire que cron puisse expédier. L'interpréteur est
-#      donc éprouvé comme un champ à part entière de la ligne ;
+#      Les scripts du dépôt sont enregistrés en 100755 depuis TASK-018, mais un
+#      déploiement par copie, par archive ou par montage perd le bit — et un
+#      appel direct rendrait alors 126 à chaque passage, sans rien écrire que
+#      cron puisse expédier. L'interpréteur est donc éprouvé comme un champ à
+#      part entière de la ligne ;
 #   +. la garde de dépendance porte sur le DÉMON et non sur /etc/cron.d, lequel
 #      vient d'e2fsprogs et existe même sans cron. Son contrat est
 #      dissymétrique : --dry-run avertit et produit l'aperçu (code 0), une
@@ -273,6 +274,41 @@ assert_fichier_absent() {
     else
         ok "$libelle"
     fi
+}
+
+# --- Mesure du VOLUME de stderr --------------------------------------------
+# Ce que ces deux fonctions permettent d'exiger n'est pas dans le contenu d'un
+# message mais dans sa QUANTITÉ. C'est la seule forme d'assertion qui empêche un
+# second diagnostic — une ligne de trap, par exemple — de revenir s'ajouter à un
+# refus : une assertion de contenu reste verte pendant qu'on ajoute des lignes
+# autour d'elle. Mêmes fonctions, mêmes noms qu'en tête de
+# tests/integration/linux-system.test.sh.
+#
+# Le « || [ -n "$ligne" ] » compte la dernière ligne même si le fichier ne se
+# termine pas par un saut de ligne : sans lui, un diagnostic sans « \n » final
+# serait décompté à zéro et l'assertion passerait pour de mauvaises raisons.
+
+# nb_lignes_erreur — nombre de lignes de stderr du dernier « lancer ».
+nb_lignes_erreur() {
+    local ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        n=$(( n + 1 ))
+    done < "$F_ERR"
+    printf '%s' "$n"
+}
+
+# nb_lignes_contenant <motif> — lignes de stderr portant ce motif LITTÉRAL.
+# « contient » vient de tests/lib/assert.sh : les crochets de [ERROR] y sont
+# littéraux, là où un grep les prendrait pour une classe de caractères.
+nb_lignes_contenant() {
+    local motif="$1"
+    local ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        if contient "$ligne" "$motif"; then
+            n=$(( n + 1 ))
+        fi
+    done < "$F_ERR"
+    printf '%s' "$n"
 }
 
 # lignes_de_tache <fichier> — les lignes utiles du fichier de cron.
@@ -579,10 +615,11 @@ fi
 titre "3. --dry-run"
 
 # La ligne attendue invoque « /bin/bash <chemin> » et non le chemin seul. Ce
-# n'est pas un détail de forme : les fichiers du dépôt sont enregistrés dans Git
-# en 100644, et un appel direct rendrait 126 à chaque passage sur un serveur
-# issu d'un « git clone ». L'interpréteur est donc un champ à part entière de la
-# ligne, éprouvé comme tel au groupe 6.
+# n'est pas un détail de forme : les scripts du dépôt portent bien 100755 depuis
+# TASK-018, mais le bit d'exécution ne survit ni à une copie, ni à une archive,
+# ni à un montage qui l'aplatit. Un appel direct rendrait alors 126 à chaque
+# passage. L'interpréteur est donc un champ à part entière de la ligne, éprouvé
+# comme tel au groupe 6.
 INTERPRETEUR_ATTENDU="/bin/bash"
 LIGNE_ATTENDUE="$HORAIRE_DEFAUT root $INTERPRETEUR_ATTENDU $PLANIFIE --yes >/dev/null"
 
@@ -948,11 +985,12 @@ else
     fi
     assert_egal "root" "$utilisateur" "l'utilisateur « root » suit les cinq champs de l'horaire"
 
-    # Les fichiers du dépôt sont enregistrés dans Git en 100644. Sans cet
-    # interpréteur, la tâche rendrait 126 à chaque passage sur un serveur issu
-    # d'un « git clone » — en silence, puisque cron n'expédie que ce que le
-    # travail écrit, et qu'un 126 n'écrit rien sur la sortie d'erreur du shell
-    # de cron.
+    # Le bit d'exécution ne survit ni à une copie, ni à une archive, ni à un
+    # montage qui l'aplatit — les scripts du dépôt le portent pourtant depuis
+    # TASK-018. Sans cet interpréteur, la tâche rendrait 126 à chaque passage sur
+    # un serveur déployé autrement que par « git clone » — en silence, puisque
+    # cron n'expédie que ce que le travail écrit, et qu'un 126 n'écrit rien sur la
+    # sortie d'erreur du shell de cron.
     assert_egal "$INTERPRETEUR_ATTENDU" "$interpreteur" \
         "le script est invoqué par bash et non par son chemin seul"
     assert_egal "$PLANIFIE" "$commande" "la commande est le chemin réel du script planifié"
@@ -1126,6 +1164,208 @@ else
 
     rm -f "$doublon"
     assert_fichier_absent "$doublon" "le fichier de doublon jetable est supprimé"
+fi
+
+# ===================================================================
+# 8 bis. Les quatre lectures de « stat » — TASK-018
+# ===================================================================
+# Le recensement du premier tour de TASK-018 avait manqué ce script. Quatre
+# substitutions « var="$(stat …)" » y portaient le motif visé par la tâche : une
+# commande qui échoue à l'intérieur d'une substitution fait parler le trap ERR
+# de lib/common.sh dans le sous-shell PUIS dans le shell principal, deux lignes
+# identiques et pas un mot sur la cause. Les quatre sont passées en contexte de
+# condition.
+#
+# Deux fonctions, deux lectures chacune, et les quatre sont atteignables — c'est
+# ce qui rend ce fichier plus concluant que celui de configure-swap.sh, où la
+# plupart des sites n'ont aucune cause d'échec accessible :
+#
+#   appliquer_permissions   %U:%G puis %a, sur un fichier DÉJÀ CONFORME
+#   verifier                %U:%G puis %a, APRÈS écriture
+#
+# Deux stubs les séparent. Le premier échoue toujours : il atteint la PREMIÈRE
+# lecture de la fonction où il tombe. Le second ne refuse que « -c %a » et
+# délègue le reste au vrai stat : la première lecture réussit, la seconde échoue,
+# et c'est le seul moyen d'atteindre les deux sites de mode. Sans lui, deux des
+# quatre corrections resteraient sans preuve.
+#
+# CE QUE CE GROUPE A TROUVÉ, et qui a été corrigé depuis. Au premier passage, le
+# diagnostic restait doublé d'une ligne de trap, pour une raison qui n'était pas
+# celle que TASK-018 visait : « nettoyer_temporaire », posé sur EXIT, faisait
+# « return "$code" », et un trap EXIT qui rend un code non nul arme le trap ERR.
+# lib/common.sh écrivait alors une troisième ligne :
+#
+#   [ERROR] Échec (code 1) à la ligne 1 de common.sh.
+#
+# Elle ne désignait rien — « ligne 1 de common.sh » est l'endroit où le trap est
+# défini, pas celui où quoi que ce soit a échoué — et elle valait pour TOUT die
+# postérieur au trap, les quatre lectures de stat comme les die préexistants de
+# verifier().
+#
+# Les quatre assertions « le trap ERR n'ajoute aucune ligne » ont été laissées
+# ROUGES le temps d'un tour, jamais neutralisées : c'est ce qui a fait corriger
+# le script. « nettoyer_temporaire » rend désormais 0 en toute circonstance, et
+# son « rm » est passé en condition pour que son propre échec ne rejoue pas la
+# même scène.
+#
+# CONSÉQUENCE MESURÉE, et c'est le point que ce groupe fige : le CODE DE SORTIE
+# n'a pas bougé. Les quatre cas rendent toujours 1. Bash rend le code passé à
+# « exit » — celui de die — et un trap EXIT terminé normalement ne le remplace
+# pas ; seul un « exit » exécuté DANS le trap le ferait. L'ancien
+# « return "$code" » ne préservait donc rien, il ne faisait qu'armer le trap ERR.
+# L'assertion de code de ce groupe est le juge de cette lecture : le jour où elle
+# rendrait 0, il faudrait un « exit "$code" » explicite dans le trap.
+#
+# Ce groupe suit le groupe 8, qui laisse $FICHIER_CRON conforme, et rend l'état
+# où il l'a trouvé.
+titre "8 bis. Les quatre lectures de « stat »"
+
+RAISON_STAT="$MODIFIANT"
+if [ "$RAISON_STAT" = "oui" ] && [ ! -f "$FICHIER_CRON" ]; then
+    RAISON_STAT="$FICHIER_CRON n'a pas été déposé — voir les groupes précédents"
+fi
+
+if [ "$RAISON_STAT" != "oui" ]; then
+    saute "appliquer_permissions : « stat » en échec sur le propriétaire" "$RAISON_STAT"
+    saute "appliquer_permissions : « stat » en échec sur le mode" "$RAISON_STAT"
+    saute "verifier : « stat » en échec sur le propriétaire" "$RAISON_STAT"
+    saute "verifier : « stat » en échec sur le mode" "$RAISON_STAT"
+else
+    STUB_TOTAL="$REP_TMP/stub-stat-total"
+    STUB_MODE="$REP_TMP/stub-stat-mode"
+    mkdir -p "$STUB_TOTAL" "$STUB_MODE"
+
+    printf '#!/bin/sh\nexit 1\n' > "$STUB_TOTAL/stat"
+    # Le stub sélectif délègue au vrai stat par son chemin absolu : le PATH est
+    # détourné, « exec stat » se rappellerait lui-même à l'infini.
+    #
+    # Les guillemets simples sont VOULUS : ce printf écrit le CORPS d'un script,
+    # et « $1 », « $2 » et « $@ » doivent y arriver littéralement pour être
+    # développés par le stub à son exécution, pas ici. C'est exactement ce que
+    # SC2016 signale, et c'est exactement ce qu'on veut.
+    # shellcheck disable=SC2016
+    {
+        printf '#!/bin/sh\n'
+        printf 'if [ "$1" = "-c" ] && [ "$2" = "%%a" ]; then exit 1; fi\n'
+        printf 'exec %s "$@"\n' "$(command -v stat)"
+    } > "$STUB_MODE/stat"
+    chmod +x "$STUB_TOTAL/stat" "$STUB_MODE/stat"
+
+    # Trois gardes sur les stubs eux-mêmes. Un stub muet, ou un stub sélectif qui
+    # refuserait tout, rendrait les quatre cas verts pour de mauvaises raisons.
+    if "$STUB_TOTAL/stat" -c '%U:%G' "$FICHIER_CRON" >/dev/null 2>&1; then
+        ko "garde : le faux « stat » total échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « stat » total échoue bien"
+    fi
+    if "$STUB_MODE/stat" -c '%U:%G' "$FICHIER_CRON" >/dev/null 2>&1; then
+        ok "garde : le faux « stat » sélectif laisse passer -c %U:%G"
+    else
+        ko "garde : le faux « stat » sélectif laisse passer -c %U:%G" "le stub a refusé une lecture qu'il devait déléguer"
+    fi
+    if "$STUB_MODE/stat" -c '%a' "$FICHIER_CRON" >/dev/null 2>&1; then
+        ko "garde : le faux « stat » sélectif refuse -c %a" "le stub a rendu 0"
+    else
+        ok "garde : le faux « stat » sélectif refuse -c %a"
+    fi
+
+    # cas_stat <libellé> <message attendu>
+    # Les six assertions communes aux quatre cas. Le décompte des lignes [ERROR]
+    # est MESURÉ, et il vaut DEUX depuis que « nettoyer_temporaire » rend 0 : les
+    # deux lignes du diagnostic, et rien d'autre. Il valait trois au passage
+    # précédent, résidu de trap compris — c'est ce décompte, et lui seul, qui a vu
+    # le résidu partir.
+    #
+    # IL NE DISCRIMINE PAS À LUI SEUL les deux formes de la lecture, et il faut le
+    # savoir pour ne pas s'y fier : remise en forme nue, la lecture produit elle
+    # aussi deux lignes [ERROR] — celles du trap, dans le sous-shell puis dans le
+    # shell principal. Mesuré par mutation. Ce qui rougit alors, ce sont
+    # « le diagnostic nomme la cause » et « le trap ERR n'ajoute aucune ligne ».
+    # Le décompte borde ce cas, il ne le prouve pas.
+    #
+    # Le décompte des [WARN] est à ZÉRO. « nettoyer_temporaire » n'avertit que si
+    # son « rm » échoue — chemin ouvert par la correction, et qu'aucun de ces
+    # quatre cas ne doit emprunter. Sans cette assertion, il pourrait s'ouvrir à
+    # tort sans que rien ne le voie.
+    cas_stat() {
+        local libelle="$1" attendu="$2"
+
+        assert_code 1 "$CODE" "$libelle : échec d'exécution, code 1"
+        assert_contient "$(erreur)" "$attendu" "$libelle : le diagnostic nomme la cause"
+        assert_absent "$(erreur)" "configure-cron.sh: line" \
+            "$libelle : aucun message brut de bash sur stderr"
+        assert_absent "$(erreur)" "Échec (code" \
+            "$libelle : le trap ERR n'ajoute aucune ligne au diagnostic"
+        assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+            "$libelle : deux lignes [ERROR] mesurées — celles du diagnostic, et rien d'autre"
+        assert_egal "0" "$(nb_lignes_contenant '[WARN]')" \
+            "$libelle : aucun avertissement — le nettoyage du temporaire s'est fait sans bruit"
+    }
+
+    # --- 1 et 2. appliquer_permissions, sur un fichier déjà conforme --------
+    # Ce chemin n'est ouvert que si le contenu est déjà celui attendu : c'est
+    # l'état que le groupe 8 a laissé. La garde ci-dessous le vérifie plutôt que
+    # de le supposer — sans elle, le script partirait sur ecrire_fichier et ce
+    # serait verifier(), et non appliquer_permissions, qui parlerait.
+    lancer bash "$CRON_SH" -y
+    if [ "$CODE" = "0" ] && contient "$(erreur)" "est déjà celui attendu"; then
+        ok "garde : $FICHIER_CRON est déjà conforme — appliquer_permissions est bien le chemin ouvert"
+    else
+        ko "garde : $FICHIER_CRON est déjà conforme" "code $CODE, le script n'annonce pas un contenu conforme"
+    fi
+
+    cksum_avant_stat="$(cksum < "$FICHIER_CRON")"
+
+    lancer env "PATH=$STUB_TOTAL:$PATH" bash "$CRON_SH" -y
+    cas_stat "appliquer_permissions, « stat » en échec sur le propriétaire" \
+        "[ERROR] Propriétaire de $FICHIER_CRON illisible : « stat » a échoué."
+    assert_absent "$(erreur)" "après écriture" \
+        "appliquer_permissions, « stat » en échec sur le propriétaire : c'est bien appliquer_permissions qui parle, pas verifier"
+
+    lancer env "PATH=$STUB_MODE:$PATH" bash "$CRON_SH" -y
+    cas_stat "appliquer_permissions, « stat » en échec sur le mode" \
+        "[ERROR] Mode de $FICHIER_CRON illisible : « stat » a échoué."
+    assert_absent "$(erreur)" "après écriture" \
+        "appliquer_permissions, « stat » en échec sur le mode : c'est bien appliquer_permissions qui parle, pas verifier"
+
+    assert_egal "$cksum_avant_stat" "$(cksum < "$FICHIER_CRON")" \
+        "les deux échecs d'appliquer_permissions n'ont pas touché au contenu du fichier"
+
+    # --- 3 et 4. verifier, après écriture -----------------------------------
+    # Le fichier est retiré avant chaque appel : le script passe alors par
+    # ecrire_fichier, qui n'appelle aucun stat, puis par verifier, qui en appelle
+    # deux. C'est le seul agencement qui ouvre ce chemin-là.
+    rm -f "$FICHIER_CRON"
+    lancer env "PATH=$STUB_TOTAL:$PATH" bash "$CRON_SH" -y
+    cas_stat "verifier, « stat » en échec sur le propriétaire" \
+        "[ERROR] Propriétaire de $FICHIER_CRON illisible après écriture : « stat » a échoué."
+    assert_contient "$(erreur)" "Fichier écrit : $FICHIER_CRON" \
+        "verifier, « stat » en échec sur le propriétaire : l'écriture a bien eu lieu — c'est verifier qui parle"
+
+    rm -f "$FICHIER_CRON"
+    lancer env "PATH=$STUB_MODE:$PATH" bash "$CRON_SH" -y
+    cas_stat "verifier, « stat » en échec sur le mode" \
+        "[ERROR] Mode de $FICHIER_CRON illisible après écriture : « stat » a échoué."
+    assert_contient "$(erreur)" "Fichier écrit : $FICHIER_CRON" \
+        "verifier, « stat » en échec sur le mode : l'écriture a bien eu lieu — c'est verifier qui parle"
+
+    # Aucun fichier temporaire ne doit subsister : le trap EXIT du script les
+    # retire, et c'est justement lui qui produit le résidu de trap décrit plus
+    # haut. S'il cessait de faire son travail, ce cas le verrait.
+    temporaires="$(find "$REPERTOIRE_CRON" -maxdepth 1 -name 'mgnetworking.tmp.*' | wc -l | tr -d ' ')"
+    assert_egal "0" "$temporaires" \
+        "aucun fichier temporaire ne subsiste dans $REPERTOIRE_CRON après les quatre échecs"
+
+    # --- Restitution --------------------------------------------------------
+    # Le dernier appel a écrit le fichier avant de mourir : une exécution
+    # nominale le remet dans l'état où le groupe 8 l'avait laissé.
+    rm -f "$FICHIER_CRON"
+    lancer bash "$CRON_SH" -y
+    assert_code 0 "$CODE" "restitution : configure-cron.sh sort en 0 sans stub"
+    assert_egal "$cksum_avant_stat" "$(cksum < "$FICHIER_CRON")" \
+        "restitution : le fichier déposé est identique à celui d'avant le groupe"
+
+    rm -rf "$STUB_TOTAL" "$STUB_MODE"
 fi
 
 # ===================================================================

@@ -97,8 +97,23 @@ section_processeur() {
     if [ -r /proc/cpuinfo ]; then
         modele="$(grep -m1 -E '^(model name|Model)[[:space:]]*:' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^[[:space:]]*//' || true)"
     fi
+
+    # Affectation en CONTEXTE DE CONDITION. « command -v nproc » établit que la
+    # commande existe, pas qu'elle réussit : un faux nproc en tête de PATH la met
+    # en échec, et sous la forme nue « coeurs="$(nproc)" » le trap ERR de
+    # lib/common.sh parle deux fois — une fois dans le sous-shell de la
+    # substitution, une fois dans le shell principal pour l'affectation — sans
+    # qu'aucune des deux lignes ne dise ce qui a flanché. En condition, ni
+    # errexit ni le trap n'ont prise.
+    #
+    # L'échec n'est pas fatal : ce script ne fait que lire, et il dégrade déjà en
+    # « non disponible » ailleurs. Une valeur vide suffit à ce que « ligne »
+    # l'affiche ainsi ; l'avertissement, lui, nomme la cause.
     if command -v nproc >/dev/null 2>&1; then
-        coeurs="$(nproc)"
+        if ! coeurs="$(nproc)"; then
+            warn "« nproc » a échoué : le nombre de cœurs logiques reste indéterminé."
+            coeurs=""
+        fi
     elif [ -r /proc/cpuinfo ]; then
         coeurs="$(grep -c '^processor' /proc/cpuinfo || true)"
     fi
@@ -123,9 +138,20 @@ section_memoire() {
             /^Swap:/ { printf "  %-22s %s utilisés sur %s\n", "Swap", $3, $2 }
         '
     elif [ -r /proc/meminfo ]; then
-        local total dispo
-        total="$(awk '/^MemTotal:/  {printf "%.1f Go", $2/1024/1024}' /proc/meminfo)"
-        dispo="$(awk '/^MemAvailable:/ {printf "%.1f Go", $2/1024/1024}' /proc/meminfo)"
+        # Mêmes gardes que pour nproc, et pour la même raison : « [ -r ] » établit
+        # que le fichier était lisible à l'instant du test, et rien du tout sur
+        # awk — qu'un faux awk en tête de PATH suffit à mettre en échec. Chaque
+        # lecture est donc en contexte de condition, et chacune dit ce qu'elle
+        # n'a pas pu établir plutôt que de laisser deux lignes de trap le taire.
+        local total="" dispo=""
+        if ! total="$(awk '/^MemTotal:/  {printf "%.1f Go", $2/1024/1024}' /proc/meminfo)"; then
+            warn "MemTotal illisible dans /proc/meminfo : « awk » a échoué."
+            total=""
+        fi
+        if ! dispo="$(awk '/^MemAvailable:/ {printf "%.1f Go", $2/1024/1024}' /proc/meminfo)"; then
+            warn "MemAvailable illisible dans /proc/meminfo : « awk » a échoué."
+            dispo=""
+        fi
         ligne "RAM totale" "$total"
         ligne "RAM disponible" "$dispo"
     else

@@ -66,6 +66,85 @@
 #      elle rend 1 et non 2 — la régression que le relecteur avait mesurée —
 #      et en root le refus ordinaire tranche, en 2
 #
+# TASK-018 y ajoute le verrouillage du NON-DOUBLEMENT du trap ERR sur les
+# substitutions de commande, groupes « 3 quater », « 4 bis » et « 4 ter » :
+#
+#   n. le répertoire d'accueil absent — « --file /pas/de/dossier/swapfile » —
+#      est refusé en 2 sur TROIS lignes mesurées, sans ligne de trap, AVEC ET
+#      SANS privilège : les arguments se jugent avant les privilèges, et
+#      l'absence d'un répertoire se constate sans le moindre droit
+#   n bis. le SEUL verdict que le script ait encore raison de différer : un
+#      ancêtre du chemin non traversable rend 1 sans privilège — jamais
+#      « Répertoire introuvable » — et le chemin nominal passe en root. Un
+#      témoin, chemin absent sous des ancêtres traversables, interdit de
+#      conclure que « sans privilège » vaudrait « toujours différé »
+#   o. « stat » en échec, provoqué par un stub en tête de PATH, ne produit que
+#      le diagnostic métier — aucune ligne de trap, aucun message brut de bash
+#   p. « mktemp » en échec, provoqué par un TMPDIR pointant sur un chemin
+#      absent, rend 1 sur TROIS lignes, laisse /etc/hosts strictement intact et
+#      la sauvegarde en place
+#   p bis. la lecture du fuseau courant : le chemin nominal sans une seule ligne
+#      [ERROR] deux fois de suite, /etc/timezone vide qui part au repli, le faux
+#      « tr », et les trois sources en échec — non fatal avant l'application,
+#      fatal à la vérification
+#   q. la VALEUR rendue par dirname et par df -BM est confrontée à une mesure du
+#      harnais, à 64 Mo près — la seule assertion qui verrait une condition
+#      rendant une valeur fausse sans rien dire
+#   r. le chemin nominal « 512M --dry-run » ne porte AUCUNE ligne [ERROR] et va
+#      jusqu'au résumé des opérations, deux exécutions de suite
+#
+# Le quatrième tour ajoute les groupes « 3 quinquies » et « 4 quater », pour six
+# affectations que le recensement avait manquées — system-info.sh en entier, deux
+# « hostname » et un « wc | tr ». Elles ont une propriété que les précédentes
+# n'avaient pas : LEUR ÉCHEC N'EST PAS FATAL, et c'est ce qui est verrouillé :
+#
+#   s. « nproc » en échec : system-info.sh sort en 0 et affiche « non
+#      disponible » — un script de diagnostic dégrade, il ne meurt pas
+#   t. « awk » en échec sur /proc/meminfo, « free » masqué par un bac à sable de
+#      liens : les deux valeurs dégradent, code 0, deux avertissements mesurés
+#   u. « wc » en échec : « ? paquet(s) », code 0, la liste des paquets produite
+#      malgré tout — avec un faux apt-get pour que le site soit atteint
+#   v. « hostname » en échec, ses DEUX sites en un seul appel : code 0,
+#      « inconnu » plutôt qu'une chaîne vide, /etc/hosts réécrit malgré tout.
+#      « require_cmd hostname » n'y protégeait de rien — il prouve que la
+#      commande existe, pas qu'elle réussit
+#
+# COMMENT LIRE LES DÉCOMPTES DE CE FICHIER. Le nombre de lignes que le trap ERR
+# produit n'est pas un invariant du motif : il dépend de la profondeur d'appel et
+# du flux. Mesuré — trois lignes quand la substitution appelle une fonction, deux
+# pour une affectation directe, AUCUNE en position d'argument, et une seule si le
+# trap écrivait sur stdout, le sous-shell capturant alors les autres. Voir
+# Linux/System/recensement-substitutions.md §1. Chaque décompte est mesuré sur
+# son site.
+#
+# Les quatre sites corrigés de configure-cron.sh ont leur propre fichier :
+# tests/integration/configure-cron.test.sh, groupe « 8 bis ».
+#
+# Le cinquième et dernier tour ferme les sept sites que le quatrième laissait en
+# forme nue — six affectations plus le « dirname » —, groupes « 3 sexies » et
+# « 4 quinquies ». Le relecteur avait qualifié ces réserves d'ABANDON DÉGUISÉ :
+# la raison invoquée était toujours « aucune cause n'atteint ce site », et elle
+# avait été démentie quatre fois par la même mutation d'une ligne.
+#
+#   w. « dirname » en échec : code 1, DEUX lignes [ERROR] mesurées, dirname
+#      nommé. Sa branche n'avait jamais été empruntée — le site est allé et venu
+#      trois fois avant d'être tranché
+#   x. « sed » puis « tr » dans en_megaoctets : code 1 et NON 2, et surtout PAS
+#      de « Taille invalide ». Un outil en échec ne fait pas d'une taille juste
+#      une faute de l'appelant. La non-régression du refus métier borde le cas
+#   y. « basename » dans configure-logging.sh : code 1, trois lignes, LOG_DIR et
+#      son origine cités, et le socle intact — le stub est sélectif
+#   z. « date » dans configure-hostname.sh : fatal, /etc/hosts strictement
+#      intact, AUCUNE sauvegarde déposée
+#   aa. « date » dans la phase fstab de configure-swap.sh : fatal APRÈS
+#      l'activation. Le fichier d'échange SUBSISTE — « trap - EXIT » a été
+#      désarmé — et la ligne à inscrire à la main est donnée
+#   bb. la boucle de suffixe ne rappelle plus « date » : le nom suffixé réutilise
+#      l'horodatage déjà lu, et le compteur d'appels du faux date le mesure
+#
+# Il ne reste au groupe 5 qu'une seule réserve de forme nue, d'une autre nature
+# que le doublement.
+#
 # CE FICHIER MODIFIE LE SYSTÈME. Il n'écrit rien tant qu'il n'a pas reconnu un
 # système jetable (conteneur Docker, ou MGNET_TEST_JETABLE=1) : ailleurs, les
 # groupes modifiants se déclarent NON EXÉCUTÉS plutôt que de réécrire
@@ -722,6 +801,15 @@ fi
 # — « dirname: » et « Échec (code » — et le DÉCOMPTE des lignes [ERROR] voit
 # revenir celle du trap même si son libellé change un jour dans lib/common.sh.
 # Ce refus en produit QUATRE : trois « error » puis le « die ».
+#
+# L'assertion « dirname: » garde tout son sens depuis que dirname est passé en
+# contexte de condition (TASK-018, cinquième tour). Elle ne surveille pas le
+# doublement, qui est traité ailleurs : elle prouve que la valeur n'ATTEINT JAMAIS
+# dirname. Le diagnostic de la condition — « Répertoire d'accueil … indéterminable »
+# — se produirait plus loin dans le script, et le message brut de dirname, lui,
+# n'est éteint par aucune redirection : la condition suspend errexit et le trap,
+# elle ne muselle pas la commande. Les deux se verraient donc si le refus de
+# TASK-017 tombait.
 lancer bash "$SWAP_SH" 512M --file --dry-run
 assert_code 2 "$CODE" "configure-swap.sh --file --dry-run : erreur d'usage"
 assert_contient "$(erreur)" "[ERROR] Valeur refusée pour --file : « --dry-run »." \
@@ -1540,6 +1628,941 @@ else
 fi
 
 # ===================================================================
+# 3 quater. Le trap ERR ne double plus les SUBSTITUTIONS — TASK-018
+# ===================================================================
+# TASK-016 avait corrigé un CAS — en_megaoctets — là où il y avait un MOTIF :
+# toute substitution de commande dont le contenu peut échouer s'exécute dans un
+# sous-shell qui hérite du « trap ERR » de lib/common.sh. Le trap parle une
+# première fois dans le sous-shell, une seconde dans le shell principal pour
+# l'affectation en échec, et aucune des deux lignes ne dit la cause :
+#
+#   [ERROR] Échec (code 1) à la ligne 195 de configure-swap.sh.
+#   [ERROR] Échec (code 1) à la ligne 195 de configure-swap.sh.
+#
+# TASK-018, second tour, a repris onze sites dans quatre scripts :
+# configure-swap.sh, configure-hostname.sh, configure-cron.sh et
+# configure-timezone.sh — les deux derniers ayant échappé au recensement du
+# premier tour. Deux formes : l'affectation placée en contexte de condition, et
+# la fonction qui renseigne une globale au lieu d'écrire sur stdout.
+#
+# CE GROUPE NE LES PROUVE PAS TOUS, et il faut le savoir pour ne pas s'y fier à
+# tort. Ce qui suit vaut pour configure-swap.sh ; les sites de configure-cron.sh
+# vivent dans tests/integration/configure-cron.test.sh, celui de
+# configure-hostname.sh au groupe 4 bis, ceux de configure-timezone.sh au groupe
+# 4 ter. Le compte est établi par MUTATION — chaque site remis en forme nue, le
+# fichier de cas relancé — et non par lecture :
+#
+#   UN site a une cause d'échec atteignable, et sa correction est prouvée ici :
+#   « stat » en échec, cas d, par un stub en tête de PATH. Remis en forme nue, il
+#   fait rougir ce fichier ;
+#
+#   UN deuxième — le df -T du répertoire d'accueil — n'avait qu'une cause
+#   atteignable, le répertoire absent, et TASK-018 l'a interceptée par un
+#   contrôle explicite déplacé dans valider_fichier_swap. C'est ce contrôle que
+#   les cas a, b et b bis éprouvent, et rien d'autre : le df -T remis seul en
+#   forme nue laisse ce fichier ENTIÈREMENT VERT, la garde le précédant
+#   toujours ;
+#
+#   TROIS ne s'atteignent pas du tout — df -BM et les deux awk sur /proc. Remis
+#   en forme nue, aucun ne fait rougir quoi que ce soit. Leur correction reste
+#   NON VÉRIFIÉE PAR L'EXÉCUTION, et le groupe 5 la déclare telle, un site à la
+#   fois ;
+#
+#   dirname a fait TROIS allers-retours, et c'est le site le plus instructif du
+#   chantier. Corrigé au premier tour ; REMIS en forme nue au second, sa branche
+#   « if ! » ayant été jugée du code mort ; remis en condition au cinquième,
+#   l'argument de code mort ne couvrant que l'ABSENCE de la commande et jamais
+#   son ÉCHEC — un binaire homonyme en tête de PATH l'atteint, comme il a atteint
+#   « hostname » derrière son require_cmd. Le cas e ci-dessous l'éprouve, et sa
+#   valeur reste éprouvée au cas c.
+#
+# Ce que ce groupe éprouve à la place des sites hors d'atteinte, c'est la VALEUR
+# que ces substitutions rendent — cas c. Une condition mal formée qui renverrait
+# la mauvaise valeur ne produirait aucun message : c'est la régression la plus
+# discrète de TASK-018, et la seule assertion qui la verrait est celle qui
+# compare un nombre mesuré.
+#
+# Aucun cas de ce groupe n'écrit : chacun meurt avant le résumé des opérations,
+# ou tourne en --dry-run. Il est donc placé après le groupe 3 ter et avant la
+# garde d'état du groupe 4, qu'il ne trouble pas.
+titre "3 quater. Le non-doublement du trap ERR sur les substitutions"
+
+# Le répertoire de stubs et le fichier d'échange témoin vivent dans le
+# répertoire jetable du test : rien n'en sort.
+REP_STUB="$REP_TMP/stub"
+SWAP_TEMOIN="$REP_TMP/swapfile-temoin"
+
+# --- a. Le répertoire d'accueil n'existe pas -------------------------------
+# C'est la seule cause d'échec de df qui s'atteigne depuis la ligne de commande,
+# donc le seul endroit où la correction de ce site se PROUVE au lieu de se
+# garder.
+#
+# « --file /pas/de/dossier/swapfile » franchissait toute la validation — une
+# cible absente est le cas nominal d'une création — puis df n'avait rien à
+# mesurer sur un chemin inexistant : le script sortait en 1 sur deux lignes de
+# trap muettes. Le refus est désormais explicite, en 2, et prononcé par
+# valider_fichier_swap dès l'ANALYSE DES ARGUMENTS.
+#
+# Le second tour de TASK-018 a déplacé ce contrôle : il était après
+# require_root, il est maintenant au moment « avant-root ». La justification du
+# placement initial était fausse, et le relecteur l'a mesuré — l'absence d'un
+# répertoire se constate sans le moindre privilège. Les deux moitiés du cas
+# disent donc la même chose : root ou non, la réponse est 2.
+#
+# Le DÉCOMPTE est ce qui verrouille le non-doublement : il voit revenir la ligne
+# du trap même si son libellé change un jour dans lib/common.sh, là où
+# l'assertion d'absence est liée à son texte. Le refus précédant désormais
+# afficher_etat, stderr ne porte plus RIEN d'autre : le décompte porte donc
+# aussi sur TOUT stderr, et pas seulement sur les lignes [ERROR]. Trois lignes,
+# MESURÉES dans le conteneur et non reprises d'un compte rendu.
+REP_ABSENT="/pas/de/dossier"
+SWAP_SANS_DOSSIER="$REP_ABSENT/swapfile"
+
+# refus_repertoire_absent <libellé> — les neuf assertions du refus, jouées à
+# l'identique avec et sans privilège. La duplication serait ici une faiblesse :
+# c'est l'IDENTITÉ des deux verdicts qui est l'objet du cas.
+refus_repertoire_absent() {
+    local libelle="$1"
+
+    assert_code 2 "$CODE" \
+        "$libelle : erreur d'usage"
+    assert_contient "$(erreur)" "[ERROR] Répertoire introuvable : « $REP_ABSENT »." \
+        "$libelle : nomme le répertoire manquant"
+    assert_contient "$(erreur)" "[ERROR] Le fichier d'échange « $SWAP_SANS_DOSSIER » ne peut pas y être créé." \
+        "$libelle : nomme la cible impossible"
+    assert_absent "$(erreur)" "Échec (code" \
+        "$libelle : le trap ERR n'ajoute aucune ligne au diagnostic"
+    assert_absent "$(erreur)" "df:" \
+        "$libelle : df ne voit jamais ce chemin"
+    assert_absent "$(erreur)" "configure-swap.sh: line" \
+        "$libelle : aucun message brut de bash sur stderr"
+    assert_egal "3" "$(nb_lignes_contenant '[ERROR]')" \
+        "$libelle : trois lignes [ERROR], pas une de plus"
+    assert_egal "3" "$(nb_lignes_erreur)" \
+        "$libelle : stderr ne porte QUE ces trois lignes — le refus précède l'affichage d'état"
+    assert_absent "$(erreur)" "Opérations prévues" \
+        "$libelle : aucune opération n'est même envisagée"
+}
+
+if [ -e "$REP_ABSENT" ]; then
+    saute "configure-swap.sh --file <répertoire absent> : refus en 2, sans ligne de trap" \
+        "$REP_ABSENT existe sur cet hôte — le cas ne porterait plus sur un répertoire absent"
+    saute "configure-swap.sh --file <répertoire absent> sans privilège : le même refus, en 2" \
+        "$REP_ABSENT existe sur cet hôte — le cas ne porterait plus sur un répertoire absent"
+else
+    lancer bash "$SWAP_SH" 64M --file "$SWAP_SANS_DOSSIER"
+    refus_repertoire_absent "configure-swap.sh --file <répertoire absent>"
+
+    if [ -e "$REP_ABSENT" ]; then
+        ko "configure-swap.sh --file <répertoire absent> ne crée rien" "$REP_ABSENT est apparu"
+    else
+        ok "configure-swap.sh --file <répertoire absent> ne crée rien"
+    fi
+
+    # --- b. Le MÊME refus, sans privilège ----------------------------------
+    # Les arguments se jugent avant les privilèges : une ligne de commande
+    # fautive se reproche en 2 avec ou sans « sudo ». C'est la contrepartie
+    # exacte du cas b bis ci-dessous, qui montre le seul verdict que le script
+    # ait encore raison de différer.
+    if [ "$SANS_ROOT_DISPONIBLE" != "true" ]; then
+        saute "configure-swap.sh --file <répertoire absent> sans privilège : le même refus, en 2" \
+            "aucun lanceur ne parvient à abaisser l'UID sur cet hôte"
+    else
+        sans_root bash "$SWAP_SH" 64M --file "$SWAP_SANS_DOSSIER"
+        rm -rf "$LOG_DIR_NOBODY"
+        refus_repertoire_absent "configure-swap.sh --file <répertoire absent> sans privilège"
+        assert_absent "$(erreur)" "doit être exécuté en root" \
+            "configure-swap.sh --file <répertoire absent> sans privilège : l'argument fautif prime sur le privilège manquant"
+    fi
+fi
+
+# --- b bis. Un ANCÊTRE non traversable : le seul verdict différé -----------
+# « [ -d /a/b ] » est faux dans deux cas qui n'ont rien à voir : « b » n'existe
+# pas, ou « a » existe et n'est pas traversable par celui qui regarde. Le second
+# tour de TASK-018 les sépare par ancetres_traversables, et diffère le refus à
+# « apres-root » quand la conclusion d'absence ne serait pas fiable.
+#
+# Sans cette fonction, un appelant sans privilège s'entendrait reprocher en 2 un
+# répertoire qui existe parfaitement. C'est la régression que ce cas ferme, et
+# elle n'est visible qu'ici : le cas b, dont tous les ancêtres sont traversables,
+# reste vert avec ou sans ancetres_traversables.
+#
+# TROIS moitiés, et c'est leur mise en regard qui prouve quelque chose :
+#
+#   1. ancêtre opaque, sans privilège -> 1, le privilège manquant, JAMAIS
+#      « Répertoire introuvable » ;
+#   2. ancêtres traversables et répertoire réellement absent, sans privilège
+#      -> 2, le refus ordinaire. C'est le témoin qui interdit de conclure que
+#      « sans privilège » vaudrait « toujours différé » ;
+#   3. le même chemin qu'en 1, mais en root -> le cas NOMINAL passe, code 0.
+#
+# Le répertoire opaque vit hors du répertoire jetable du test : « mktemp -d »
+# crée en 700, ce qui rendrait tout chemin qu'il contient opaque à « nobody » et
+# ferait passer la moitié 2 pour de mauvaises raisons.
+REP_OPAQUE="/tmp/mgnet-test-opaque"
+SWAP_SOUS_OPAQUE="$REP_OPAQUE/sous/swapfile"
+REP_TRAVERSABLE_ABSENT="/tmp/mgnet-test-absent"
+
+if [ "$EST_ROOT" != "true" ]; then
+    saute "configure-swap.sh --file <sous un ancêtre opaque> : le verdict est différé" \
+        "poser un répertoire en 700 appartenant à root exige root"
+elif [ "$SANS_ROOT_DISPONIBLE" != "true" ]; then
+    saute "configure-swap.sh --file <sous un ancêtre opaque> : le verdict est différé" \
+        "aucun lanceur ne parvient à abaisser l'UID sur cet hôte"
+elif [ -e "$REP_OPAQUE" ] || [ -e "$REP_TRAVERSABLE_ABSENT" ]; then
+    saute "configure-swap.sh --file <sous un ancêtre opaque> : le verdict est différé" \
+        "$REP_OPAQUE ou $REP_TRAVERSABLE_ABSENT existe déjà sur cet hôte"
+else
+    mkdir -p "$REP_OPAQUE/sous"
+    chown root:root "$REP_OPAQUE"
+    chmod 700 "$REP_OPAQUE"
+
+    # Deux gardes. Sans elles, la moitié 1 passerait aussi bien sur un chemin
+    # simplement absent, et ne prouverait rien de ce qu'elle annonce.
+    if "${LANCEUR_SANS_ROOT[@]}" test -x "$REP_OPAQUE" 2>/dev/null; then
+        ko "garde : $REP_OPAQUE est opaque à l'utilisateur non privilégié" \
+            "il reste traversable — le cas ne porterait pas sur ce qu'il annonce"
+    else
+        ok "garde : $REP_OPAQUE est opaque à l'utilisateur non privilégié"
+    fi
+    if [ -d "$REP_OPAQUE/sous" ]; then
+        ok "garde : $REP_OPAQUE/sous existe réellement — son absence n'est qu'apparente"
+    else
+        ko "garde : $REP_OPAQUE/sous existe réellement" "le répertoire n'a pas pu être créé"
+    fi
+
+    # 1. Le verdict est différé : c'est le privilège qui est reproché, en 1.
+    sans_root bash "$SWAP_SH" 64M --file "$SWAP_SOUS_OPAQUE"
+    rm -rf "$LOG_DIR_NOBODY"
+    assert_code 1 "$CODE" \
+        "configure-swap.sh --file <sous un ancêtre opaque> sans privilège : échec d'exécution, code 1"
+    assert_contient "$(erreur)" "[ERROR] Ce script doit être exécuté en root (ou via sudo)." \
+        "configure-swap.sh --file <sous un ancêtre opaque> sans privilège : c'est le privilège qui est reproché"
+    assert_absent "$(erreur)" "Répertoire introuvable" \
+        "configure-swap.sh --file <sous un ancêtre opaque> sans privilège : un répertoire qui EXISTE n'est jamais déclaré introuvable"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh --file <sous un ancêtre opaque> sans privilège : le trap ERR n'ajoute aucune ligne"
+    assert_egal "1" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh --file <sous un ancêtre opaque> sans privilège : une seule ligne [ERROR]"
+
+    # 2. Le témoin. Ancêtres traversables — /tmp est en 1777 — et répertoire
+    #    réellement absent : le refus ordinaire tranche, sans privilège.
+    sans_root bash "$SWAP_SH" 64M --file "$REP_TRAVERSABLE_ABSENT/swapfile"
+    rm -rf "$LOG_DIR_NOBODY"
+    assert_code 2 "$CODE" \
+        "témoin : <répertoire absent sous des ancêtres traversables>, sans privilège : erreur d'usage"
+    assert_contient "$(erreur)" "[ERROR] Répertoire introuvable : « $REP_TRAVERSABLE_ABSENT »." \
+        "témoin : le refus ordinaire tranche sans privilège — le différé n'est pas la règle générale"
+
+    # 3. Le chemin NOMINAL, en root. Un ancetres_traversables trop gourmand
+    #    refuserait ici un chemin parfaitement valide.
+    lancer bash "$SWAP_SH" 64M --file "$SWAP_SOUS_OPAQUE" --dry-run
+    assert_code 0 "$CODE" \
+        "configure-swap.sh --file <sous un ancêtre opaque> en root : le chemin nominal passe"
+    assert_contient "$(erreur)" "créer      $SWAP_SOUS_OPAQUE (64 Mo)" \
+        "configure-swap.sh --file <sous un ancêtre opaque> en root : la création est annoncée"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh --file <sous un ancêtre opaque> en root : aucune ligne [ERROR]"
+
+    rm -rf "$REP_OPAQUE"
+    if [ -e "$REP_OPAQUE" ]; then
+        ko "le répertoire opaque jetable est supprimé" "$REP_OPAQUE subsiste"
+    else
+        ok "le répertoire opaque jetable est supprimé"
+    fi
+fi
+# --- c. La VALEUR rendue par dirname et par df -BM -------------------------
+# Les affectations corrigées de configure-swap.sh sont en contexte de condition.
+# Une condition mal formée qui rendrait la MAUVAISE VALEUR ne produirait aucun
+# message : le script continuerait sur un nombre faux. Aucune assertion
+# d'absence, aucun décompte de lignes ne le verrait.
+#
+# Ce cas vaut aussi pour dirname, désormais en condition lui aussi (cinquième
+# tour). Son non-doublement est éprouvé au cas e ; ce qu'aucune assertion de ce
+# cas-là ne verrait, c'est une condition bien formée qui rendrait la MAUVAISE
+# valeur — le script continuerait sans un mot. C'est ici que cela se voit.
+#
+# Deux valeurs sont donc mesurées, par le seul chemin qui les fasse apparaître à
+# l'écran :
+#
+#   repertoire_swap   « Espace insuffisant sur / » — dirname /swapfile vaut « / »
+#   espace_libre_mo   le nombre de mégaoctets annoncé, confronté à celui que le
+#                     harnais mesure lui-même par le même df
+#
+# La taille demandée est calculée à partir de l'espace réellement libre : le cas
+# ne dépend d'aucune constante et reste vrai sur un disque de n'importe quelle
+# taille. Le script meurt avant le résumé des opérations — rien n'est écrit.
+#
+# La comparaison admet un écart : l'espace libre du conteneur bouge de quelques
+# mégaoctets pendant l'exécution — journaux, index apt. La tolérance est de
+# 64 Mo, assez pour absorber ce bruit et bien trop peu pour laisser passer une
+# erreur d'un gigaoctet. Ce qui est prouvé n'est pas l'égalité au mégaoctet
+# près, mais que la substitution rend une MESURE, et non zéro, ni une chaîne
+# vide, ni la ligne d'en-tête de df.
+if [ "$EST_ROOT" != "true" ]; then
+    saute "configure-swap.sh : les substitutions rendent la bonne valeur" \
+        "le calcul d'espace a lieu après require_root — l'atteindre exige root"
+elif [ -e /swapfile ]; then
+    saute "configure-swap.sh : les substitutions rendent la bonne valeur" \
+        "/swapfile existe sur cet hôte — sa taille entrerait dans le besoin net et fausserait la mesure"
+else
+    ESPACE_MESURE="$(df -P -BM / | awk 'NR == 2 { gsub(/M/, "", $4); print $4 }')"
+    if ! [ "${ESPACE_MESURE:-0}" -gt 0 ] 2>/dev/null; then
+        saute_indisponible "configure-swap.sh : les substitutions rendent la bonne valeur" \
+            "le harnais n'a pas pu mesurer lui-même l'espace libre de / — la comparaison n'aurait pas de référence"
+    else
+        TAILLE_EXCESSIVE=$(( ESPACE_MESURE + 1024 ))
+        lancer bash "$SWAP_SH" "${TAILLE_EXCESSIVE}M" --dry-run
+
+        assert_code 1 "$CODE" \
+            "configure-swap.sh <taille supérieure à l'espace libre> : échec d'exécution"
+        assert_contient "$(erreur)" "[ERROR] Espace insuffisant sur / :" \
+            "configure-swap.sh : dirname rend bien « / » comme répertoire d'accueil de /swapfile"
+        assert_contient "$(erreur)" "Mo nécessaires." \
+            "configure-swap.sh : le besoin net est calculé et annoncé"
+        assert_absent "$(erreur)" "Échec (code" \
+            "configure-swap.sh <taille supérieure à l'espace libre> : le trap ERR n'ajoute aucune ligne"
+        assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+            "configure-swap.sh <taille supérieure à l'espace libre> : stderr porte les deux lignes du refus, pas une de plus"
+        assert_absent "$(erreur)" "Opérations prévues" \
+            "configure-swap.sh <taille supérieure à l'espace libre> : aucune opération n'est même envisagée"
+
+        # La valeur elle-même, extraite du diagnostic et confrontée à la mesure
+        # du harnais. C'est la seule assertion de ce fichier qui verrait une
+        # condition rendant une valeur fausse sans rien dire.
+        ESPACE_ANNONCE="$(sed -n 's/^.*Espace insuffisant sur \/ : \([0-9][0-9]*\) Mo libres.*$/\1/p' "$F_ERR" | tail -n 1)"
+        if [ -z "$ESPACE_ANNONCE" ]; then
+            ko "configure-swap.sh : df -BM rend une mesure d'espace libre" \
+                "aucun nombre n'a pu être extrait du diagnostic"
+        elif ! [ "$ESPACE_ANNONCE" -gt 0 ] 2>/dev/null; then
+            ko "configure-swap.sh : df -BM rend une mesure d'espace libre" \
+                "espace annoncé « $ESPACE_ANNONCE », mesuré $ESPACE_MESURE Mo"
+        else
+            if [ "$ESPACE_ANNONCE" -ge "$ESPACE_MESURE" ]; then
+                ECART=$(( ESPACE_ANNONCE - ESPACE_MESURE ))
+            else
+                ECART=$(( ESPACE_MESURE - ESPACE_ANNONCE ))
+            fi
+            if [ "$ECART" -le 64 ]; then
+                ok "configure-swap.sh : df -BM rend une mesure d'espace libre — $ESPACE_ANNONCE Mo annoncés, $ESPACE_MESURE Mo mesurés par le harnais"
+            else
+                ko "configure-swap.sh : df -BM rend une mesure d'espace libre" \
+                    "espace annoncé $ESPACE_ANNONCE Mo, mesuré $ESPACE_MESURE Mo — écart de $ECART Mo"
+            fi
+        fi
+    fi
+fi
+
+# --- d. « stat » en échec : lire_taille_actuelle ---------------------------
+# Sous l'ancienne forme — « TAILLE_ACTUELLE_MO="$(taille_actuelle_mo)" », la
+# fonction rendant sa valeur par printf autour de « $(stat …) » — un stat en
+# échec faisait parler le trap plusieurs fois. La fonction renseigne désormais
+# une globale et la lecture est en condition : un seul diagnostic, qui nomme la
+# cause.
+#
+# CE QUE LA MUTATION A RÉELLEMENT MESURÉ, et qui corrige le commentaire du
+# script lui-même — il annonce « trois fois ». Sous la forme nue, stderr porte :
+#
+#   [ERROR] Échec (code 1) à la ligne 490 de configure-swap.sh.
+#   configure-swap.sh: line 490: / 1024 / 1024 : syntax error: operand expected
+#   [ERROR] Échec (code 1) à la ligne 496 de configure-swap.sh.
+#
+# soit DEUX lignes [ERROR] du trap, et non trois, plus un message brut de bash :
+# la substitution interne vidée, l'arithmétique « $(( / 1024 / 1024 )) » devient
+# une erreur de syntaxe. Le décompte à deux ne rougit donc PAS sous cette
+# mutation — l'ancienne forme en produisait deux elle aussi. Ce qui rougit, ce
+# sont les deux assertions de contenu : le diagnostic métier est absent, et
+# « Échec (code » présent. Le décompte les borde, il ne les remplace pas, et
+# l'assertion sur le message brut de bash ferme la troisième ligne.
+#
+# L'échec est provoqué par un faux « stat » en tête de PATH — le seul moyen
+# d'atteindre ce site, la disparition du fichier entre le test et la lecture
+# n'étant pas reproductible. Le PATH n'est modifié que pour l'appel : le harnais
+# garde le sien.
+#
+# La cible doit être un fichier d'échange reconnu, sans quoi valider_fichier_swap
+# la refuserait avant que lire_taille_actuelle ne soit atteinte. D'où le fichier
+# réellement produit par mkswap, et la garde qui vérifie que le MÊME appel
+# réussit SANS le stub : sans elle, un refus de cible ou un mkswap muet rendrait
+# le cas vert pour la mauvaise raison.
+if [ "$EST_ROOT" != "true" ]; then
+    saute "configure-swap.sh : « stat » en échec ne produit qu'un diagnostic" \
+        "la lecture de taille a lieu après require_root — l'atteindre exige root"
+elif ! command -v mkswap >/dev/null 2>&1; then
+    saute_indisponible "configure-swap.sh : « stat » en échec ne produit qu'un diagnostic" \
+        "mkswap est absent — aucune cible reconnue comme fichier d'échange ne peut être préparée"
+else
+    dd if=/dev/zero of="$SWAP_TEMOIN" bs=1M count=64 status=none 2>/dev/null
+    chmod 600 "$SWAP_TEMOIN"
+
+    if ! mkswap "$SWAP_TEMOIN" >/dev/null 2>&1; then
+        saute_indisponible "configure-swap.sh : « stat » en échec ne produit qu'un diagnostic" \
+            "mkswap n'a pas pu préparer $SWAP_TEMOIN — la cible ne serait pas reconnue comme fichier d'échange"
+    else
+        # Garde 1 : sans le stub, le même appel passe, et rend la BONNE taille.
+        # Ce qui échouera ensuite est donc bien « stat », et rien d'autre.
+        lancer bash "$SWAP_SH" 64M --file "$SWAP_TEMOIN" --dry-run
+        assert_code 0 "$CODE" \
+            "garde : sans le stub, configure-swap.sh --file <fichier mkswap> --dry-run passe"
+        assert_contient "$(erreur)" "remplacer  $SWAP_TEMOIN (64 Mo -> 64 Mo)" \
+            "garde : lire_taille_actuelle rend bien 64 Mo — la valeur, et pas seulement l'absence d'erreur"
+
+        # Garde 2 : le stub échoue réellement. Un stub muet rendrait tout le cas
+        # creux.
+        mkdir -p "$REP_STUB"
+        printf '#!/bin/sh\nexit 1\n' > "$REP_STUB/stat"
+        chmod +x "$REP_STUB/stat"
+        if "$REP_STUB/stat" -c %s "$SWAP_TEMOIN" >/dev/null 2>&1; then
+            ko "garde : le faux « stat » échoue bien" "le stub a rendu 0"
+        else
+            ok "garde : le faux « stat » échoue bien"
+        fi
+
+        lancer env "PATH=$REP_STUB:$PATH" bash "$SWAP_SH" 64M --file "$SWAP_TEMOIN" --dry-run
+
+        assert_code 1 "$CODE" \
+            "configure-swap.sh, « stat » en échec : échec d'exécution"
+        assert_contient "$(erreur)" "[ERROR] Taille de $SWAP_TEMOIN illisible." \
+            "configure-swap.sh, « stat » en échec : le diagnostic nomme la cause"
+        assert_absent "$(erreur)" "Échec (code" \
+            "configure-swap.sh, « stat » en échec : le trap ERR n'ajoute aucune ligne"
+        assert_absent "$(erreur)" "configure-swap.sh: line" \
+            "configure-swap.sh, « stat » en échec : aucun message brut de bash sur stderr"
+        assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+            "configure-swap.sh, « stat » en échec : deux lignes [ERROR] — celles du diagnostic, mesurées"
+        assert_absent "$(erreur)" "Opérations prévues" \
+            "configure-swap.sh, « stat » en échec : aucune opération n'est envisagée sur une taille inconnue"
+
+        rm -rf "$REP_STUB"
+        rm -f "$SWAP_TEMOIN"
+    fi
+fi
+# ===================================================================
+# 3 quinquies. Les lectures DÉGRADÉES — system-info.sh, update-system.sh
+# ===================================================================
+# Quatrième tour de TASK-018. Le recensement avait manqué system-info.sh en
+# entier, plus le décompte de paquets d'update-system.sh. Trois affectations y
+# sont passées en contexte de condition, et elles ont une propriété commune que
+# les précédentes n'avaient pas : LEUR ÉCHEC N'EST PAS FATAL.
+#
+# C'est le point que ce groupe verrouille, et il compte plus que le décompte de
+# lignes. system-info.sh est un script de diagnostic en lecture seule : sa nature
+# est de DÉGRADER — « non disponible » — pas de mourir parce qu'un nproc manque.
+# Sous la forme nue, un faux nproc en tête de PATH le tuait en 1 sur deux lignes
+# de trap. L'assertion décisive de chaque cas est donc « code 0 », et la valeur
+# affichée juste après.
+#
+# COMMENT LIRE LES DÉCOMPTES DE CE FICHIER. Le nombre de lignes que le trap ERR
+# produit n'est PAS un invariant du motif : il dépend de la profondeur d'appel et
+# du flux. Mesuré par le relecteur — une affectation dont la substitution appelle
+# une FONCTION en produit trois, une affectation directe en produit deux, et une
+# substitution en POSITION D'ARGUMENT n'en produit aucune, le script poursuivant
+# alors son cours. Voir Linux/System/recensement-substitutions.md §1. Chaque
+# décompte de ce fichier est donc mesuré sur son site, jamais déduit d'un autre.
+#
+# Aucun cas de ce groupe n'écrit dans /etc : system-info.sh ne fait que lire, et
+# update-system.sh tourne en --dry-run. Le groupe est placé avant la garde d'état
+# du groupe 4, qu'il ne trouble pas.
+titre "3 quinquies. Les lectures dégradées — system-info.sh, update-system.sh"
+
+# valeur_de_ligne <libellé> — la valeur que system-info.sh affiche en face de ce
+# libellé, sur le stdout du dernier « lancer ».
+#
+# Le remplissage est calculé par le script à partir de la longueur du libellé :
+# le recopier ici figerait une mise en forme qui ne regarde pas ces cas. On lit
+# donc la valeur, pas la ligne entière — et c'est la VALEUR qui est l'objet de la
+# preuve : « non disponible » plutôt qu'un nombre, ou l'inverse.
+valeur_de_ligne() {
+    local libelle="$1" ligne
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        case "$ligne" in
+            "  $libelle"*)
+                ligne="${ligne#"  $libelle"}"
+                while [ "${ligne# }" != "$ligne" ]; do
+                    ligne="${ligne# }"
+                done
+                printf '%s' "$ligne"
+                return 0
+                ;;
+        esac
+    done < "$F_OUT"
+    return 0
+}
+
+REP_STUB_NPROC="$REP_TMP/stub-nproc"
+REP_STUB_AWK="$REP_TMP/stub-awk"
+REP_SANS_FREE="$REP_TMP/bin-sans-free"
+REP_STUB_WC="$REP_TMP/stub-wc"
+REP_STUB_APT="$REP_TMP/stub-apt"
+
+# --- a. « nproc » en échec : le script dégrade, il ne meurt pas -------------
+# « command -v nproc » établissait que la commande existe, pas qu'elle réussit.
+# C'est la même erreur de raisonnement que « require_cmd hostname », et elle se
+# dément de la même façon : un binaire homonyme en tête de PATH.
+if [ "$EST_LINUX" != "true" ]; then
+    saute "system-info.sh : « nproc » en échec dégrade sans tuer le script" \
+        "ces scripts ne s'exécutent pas hors Linux"
+else
+    mkdir -p "$REP_STUB_NPROC"
+    printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_NPROC/nproc"
+    chmod +x "$REP_STUB_NPROC/nproc"
+    if "$REP_STUB_NPROC/nproc" >/dev/null 2>&1; then
+        ko "garde : le faux « nproc » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « nproc » échoue bien"
+    fi
+
+    # Garde de contraste : SANS le stub, la valeur est un nombre. Sans elle, le
+    # cas serait vert sur une machine où « Cœurs logiques » vaudrait déjà
+    # « non disponible » pour une tout autre raison.
+    lancer bash "$INFO_SH"
+    assert_code 0 "$CODE" "garde : system-info.sh sans stub sort en 0"
+    COEURS_NOMINAL="$(valeur_de_ligne "Cœurs logiques")"
+    if [ -n "$COEURS_NOMINAL" ] && [ "$COEURS_NOMINAL" != "non disponible" ]; then
+        ok "garde : system-info.sh sans stub affiche un nombre de cœurs — « $COEURS_NOMINAL »"
+    else
+        ko "garde : system-info.sh sans stub affiche un nombre de cœurs" \
+            "valeur obtenue « $COEURS_NOMINAL » — le cas ne prouverait rien"
+    fi
+
+    lancer env "PATH=$REP_STUB_NPROC:$PATH" bash "$INFO_SH"
+    # L'assertion décisive. Sous la forme nue, ce code valait 1.
+    assert_code 0 "$CODE" \
+        "system-info.sh, « nproc » en échec : sort en 0 — un script de diagnostic dégrade, il ne meurt pas"
+    assert_egal "non disponible" "$(valeur_de_ligne "Cœurs logiques")" \
+        "system-info.sh, « nproc » en échec : la valeur dégrade en « non disponible »"
+    assert_contient "$(erreur)" "[WARN] « nproc » a échoué : le nombre de cœurs logiques reste indéterminé." \
+        "system-info.sh, « nproc » en échec : la cause est nommée"
+    assert_absent "$(erreur)" "Échec (code" \
+        "system-info.sh, « nproc » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "system-info.sh: line" \
+        "system-info.sh, « nproc » en échec : aucun message brut de bash sur stderr"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "system-info.sh, « nproc » en échec : aucune ligne [ERROR] — ce n'est pas une erreur, c'est une lacune"
+    assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+        "system-info.sh, « nproc » en échec : un seul avertissement mesuré"
+    assert_egal "1" "$(nb_lignes_erreur)" \
+        "system-info.sh, « nproc » en échec : stderr ne porte QUE cet avertissement"
+    # Non-régression : le reste du rapport est intact. Une dégradation ne doit
+    # pas en emporter d'autres.
+    for section in $SECTIONS; do
+        assert_contient "$(sortie)" "$section" \
+            "system-info.sh, « nproc » en échec : la section « $section » est toujours produite"
+    done
+
+    rm -rf "$REP_STUB_NPROC"
+fi
+
+# --- b. « awk » en échec sur /proc/meminfo : la branche de repli ------------
+# Ces deux lectures ne sont atteintes que si « free » est ABSENT : le script le
+# préfère quand il existe. Le masquer est donc la première moitié du montage, et
+# elle ne se fait pas en le mettant en échec — « command -v free » réussirait
+# encore et la branche resterait fermée. Un bac à sable de liens symboliques
+# reproduit le PATH sans lui, et rien n'est touché sur le système.
+#
+# La seconde moitié est un faux « awk » SÉLECTIF : il ne refuse que les lectures
+# de MemTotal et MemAvailable, et délègue tout le reste au vrai awk. Un stub
+# total casserait les cinq autres awk de ce script et le cas ne dirait plus quel
+# site a parlé.
+if [ "$EST_LINUX" != "true" ] || [ ! -r /proc/meminfo ]; then
+    saute "system-info.sh : « awk » en échec sur /proc/meminfo" \
+        "exige un Linux avec /proc/meminfo lisible"
+else
+    mkdir -p "$REP_SANS_FREE" "$REP_STUB_AWK"
+    for repertoire in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin; do
+        [ -d "$repertoire" ] || continue
+        for binaire in "$repertoire"/*; do
+            nom="${binaire##*/}"
+            [ "$nom" != "free" ] || continue
+            [ -e "$REP_SANS_FREE/$nom" ] || ln -s "$binaire" "$REP_SANS_FREE/$nom" 2>/dev/null || true
+        done
+    done
+
+    {
+        printf '#!/bin/sh\n'
+        printf 'case "$*" in *MemTotal*|*MemAvailable*) exit 1 ;; esac\n'
+        printf 'exec %s "$@"\n' "$(command -v awk)"
+    } > "$REP_STUB_AWK/awk"
+    chmod +x "$REP_STUB_AWK/awk"
+
+    # Trois gardes. Sans elles, le cas serait vert parce que le montage a raté.
+    if PATH="$REP_SANS_FREE" command -v free >/dev/null 2>&1; then
+        ko "garde : « free » est bien masqué dans le bac à sable" \
+            "il y reste visible — la branche /proc/meminfo ne serait pas atteinte"
+    else
+        ok "garde : « free » est bien masqué dans le bac à sable"
+    fi
+    if "$REP_STUB_AWK/awk" '/^MemTotal:/ {print}' /proc/meminfo >/dev/null 2>&1; then
+        ko "garde : le faux « awk » refuse les lectures de MemTotal" "le stub a rendu 0"
+    else
+        ok "garde : le faux « awk » refuse les lectures de MemTotal"
+    fi
+    # Les guillemets simples sont VOULUS : « $1 » est un champ awk, à développer
+    # par awk et non par bash. C'est ce que SC2016 signale, et c'est ce qu'on veut.
+    # shellcheck disable=SC2016
+    if "$REP_STUB_AWK/awk" '{print $1}' /proc/uptime >/dev/null 2>&1; then
+        ok "garde : le faux « awk » délègue tout le reste au vrai awk"
+    else
+        ko "garde : le faux « awk » délègue tout le reste au vrai awk" "le stub a refusé une lecture qu'il devait déléguer"
+    fi
+
+    # Garde de contraste : le bac à sable SEUL ouvre bien la branche de repli, et
+    # elle rend un vrai nombre. C'est ce qui distingue « awk a échoué » de
+    # « la branche n'a jamais été atteinte ».
+    lancer env "PATH=$REP_SANS_FREE" bash "$INFO_SH"
+    assert_code 0 "$CODE" "garde : system-info.sh sans « free » sort en 0"
+    RAM_NOMINALE="$(valeur_de_ligne "RAM totale")"
+    if [ -n "$RAM_NOMINALE" ] && [ "$RAM_NOMINALE" != "non disponible" ]; then
+        ok "garde : la branche /proc/meminfo est bien empruntée et rend une valeur — « $RAM_NOMINALE »"
+    else
+        ko "garde : la branche /proc/meminfo est bien empruntée et rend une valeur" \
+            "valeur obtenue « $RAM_NOMINALE » — le cas suivant ne prouverait rien"
+    fi
+
+    lancer env "PATH=$REP_STUB_AWK:$REP_SANS_FREE" bash "$INFO_SH"
+    assert_code 0 "$CODE" \
+        "system-info.sh, « awk » en échec sur /proc/meminfo : sort en 0"
+    assert_egal "non disponible" "$(valeur_de_ligne "RAM totale")" \
+        "system-info.sh, « awk » en échec : RAM totale dégrade en « non disponible »"
+    assert_egal "non disponible" "$(valeur_de_ligne "RAM disponible")" \
+        "system-info.sh, « awk » en échec : RAM disponible dégrade en « non disponible »"
+    assert_contient "$(erreur)" "[WARN] MemTotal illisible dans /proc/meminfo : « awk » a échoué." \
+        "system-info.sh, « awk » en échec : la première lecture nomme sa cause"
+    assert_contient "$(erreur)" "[WARN] MemAvailable illisible dans /proc/meminfo : « awk » a échoué." \
+        "system-info.sh, « awk » en échec : la seconde lecture nomme sa cause"
+    assert_absent "$(erreur)" "Échec (code" \
+        "system-info.sh, « awk » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "system-info.sh: line" \
+        "system-info.sh, « awk » en échec : aucun message brut de bash sur stderr"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "system-info.sh, « awk » en échec : aucune ligne [ERROR]"
+    assert_egal "2" "$(nb_lignes_contenant '[WARN]')" \
+        "system-info.sh, « awk » en échec : deux avertissements mesurés, un par lecture"
+    assert_egal "2" "$(nb_lignes_erreur)" \
+        "system-info.sh, « awk » en échec : stderr ne porte QUE ces deux avertissements"
+    assert_contient "$(sortie)" "Stockage" \
+        "system-info.sh, « awk » en échec : les sections suivantes sont toujours produites"
+
+    rm -rf "$REP_SANS_FREE" "$REP_STUB_AWK"
+fi
+
+# --- c. « wc » en échec : le décompte de paquets d'update-system.sh ---------
+# Ce site n'est atteint que si la simulation d'apt-get annonce au moins un
+# paquet : sans cela le script sort plus haut sur « Le système est à jour ».
+# L'image de test n'a aucun paquet obsolète — mesuré, le cas nominal du groupe 3
+# emprunte cette sortie-là — d'où un faux « apt-get » qui répond deux lignes
+# « Inst » à « -s upgrade » et délègue tout le reste au vrai apt-get, « update »
+# compris.
+#
+# Les deux stubs vivent dans DEUX répertoires distincts, et ce n'est pas un
+# détail : la garde de contraste a besoin du faux apt-get SANS le faux wc.
+#
+# Le « --dry-run » borne le cas : rien n'est installé, et l'index de paquets est
+# la seule chose qu'apt écrive — ce que le groupe 3 fait déjà.
+if [ "$EST_ROOT" != "true" ]; then
+    saute "update-system.sh : « wc » en échec laisse « ? paquet(s) »" \
+        "require_root arrête le script avant la simulation"
+elif [ "$EST_DEBIAN" != "true" ]; then
+    saute "update-system.sh : « wc » en échec laisse « ? paquet(s) »" \
+        "l'hôte n'est ni Debian ni Ubuntu — require_os refuse le script"
+else
+    mkdir -p "$REP_STUB_WC" "$REP_STUB_APT"
+    printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_WC/wc"
+    # Les guillemets simples sont VOULUS ici aussi : ces printf écrivent le CORPS
+    # d'un script, et « $1 », « $2 » et « $@ » doivent y arriver littéralement
+    # pour être développés par le stub à son exécution, pas ici.
+    # shellcheck disable=SC2016
+    {
+        printf '#!/bin/sh\n'
+        printf 'if [ "$1" = "-s" ] && [ "$2" = "upgrade" ]; then\n'
+        printf '  echo "Inst mgnet-essai-un (1.0-1 Debian:12 [amd64])"\n'
+        printf '  echo "Inst mgnet-essai-deux (2.0-1 Debian:12 [amd64])"\n'
+        printf '  exit 0\n'
+        printf 'fi\n'
+        printf 'exec %s "$@"\n' "$(command -v apt-get)"
+    } > "$REP_STUB_APT/apt-get"
+    chmod +x "$REP_STUB_WC/wc" "$REP_STUB_APT/apt-get"
+
+    if "$REP_STUB_WC/wc" -l < /etc/hostname >/dev/null 2>&1; then
+        ko "garde : le faux « wc » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « wc » échoue bien"
+    fi
+    if [ "$("$REP_STUB_APT/apt-get" -s upgrade | grep -c '^Inst ')" = "2" ]; then
+        ok "garde : le faux « apt-get » annonce bien deux paquets à installer"
+    else
+        ko "garde : le faux « apt-get » annonce bien deux paquets à installer" \
+            "la simulation ne rend pas deux lignes « Inst »"
+    fi
+
+    # Garde de contraste : avec le seul faux apt-get, le décompte est un NOMBRE.
+    # Sans elle, le « ? » du cas suivant pourrait venir d'ailleurs.
+    lancer env "PATH=$REP_STUB_APT:$PATH" bash "$UPDATE_SH" --dry-run
+    assert_code 0 "$CODE" "garde : update-system.sh --dry-run sort en 0 avec le seul faux apt-get"
+    assert_contient "$(erreur)" "[INFO] 2 paquet(s) à mettre à jour :" \
+        "garde : sans le faux « wc », le décompte est un nombre"
+
+    lancer env "PATH=$REP_STUB_WC:$REP_STUB_APT:$PATH" bash "$UPDATE_SH" --dry-run
+    assert_code 0 "$CODE" \
+        "update-system.sh, « wc » en échec : sort en 0 — le décompte ne sert qu'à l'affichage"
+    assert_contient "$(erreur)" "[INFO] ? paquet(s) à mettre à jour :" \
+        "update-system.sh, « wc » en échec : le décompte dégrade en « ? », et non en chaîne vide"
+    assert_contient "$(erreur)" "[WARN] Décompte des paquets impossible : « wc » ou « tr » a échoué." \
+        "update-system.sh, « wc » en échec : la cause est nommée"
+    assert_contient "$(erreur)" "mgnet-essai-un" \
+        "update-system.sh, « wc » en échec : la LISTE des paquets est produite malgré tout"
+    assert_contient "$(erreur)" "[INFO] Mode --dry-run : aucune modification effectuée." \
+        "update-system.sh, « wc » en échec : le script va jusqu'au bout de son chemin"
+    assert_absent "$(erreur)" "Échec (code" \
+        "update-system.sh, « wc » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "update-system.sh: line" \
+        "update-system.sh, « wc » en échec : aucun message brut de bash sur stderr"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "update-system.sh, « wc » en échec : aucune ligne [ERROR]"
+    assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+        "update-system.sh, « wc » en échec : un seul avertissement mesuré"
+
+    rm -rf "$REP_STUB_WC" "$REP_STUB_APT"
+fi
+
+# ===================================================================
+# 3 sexies. Les sept sites FERMÉS au cinquième tour — TASK-018
+# ===================================================================
+# Le quatrième tour laissait six affectations en forme nue, plus le « dirname »
+# de configure-swap.sh, avec une raison écrite pour chacune. Le relecteur a
+# qualifié cela d'ABANDON DÉGUISÉ, et il avait raison : la raison invoquée était
+# toujours la même — « aucune cause n'atteint ce site » — et elle a été démentie
+# quatre fois de suite par la même mutation d'une ligne, un binaire homonyme en
+# tête de PATH.
+#
+# Le cas de dirname mérite d'être retenu, parce qu'il est allé et venu trois
+# fois : corrigé au premier tour, REMIS en forme nue au second — sa branche
+# « if ! » ayant été jugée du code mort —, remis en condition au cinquième.
+# L'argument de code mort couvrait l'ABSENCE de la commande, jamais son ÉCHEC.
+# C'est mot pour mot celui qui protégeait « NOM_ACTUEL="$(hostname)" » derrière un
+# require_cmd, et qui n'a pas tenu davantage.
+#
+# Quatre sites se prouvent sans rien écrire, et sont ici. Les trois autres —
+# deux « date » et la boucle de suffixe — modifient ou s'exécutent après une
+# activation de swap : ils sont au groupe 4 quinquies.
+#
+# LES STUBS SONT SÉLECTIFS, et il faut savoir pourquoi. Un faux « dirname » total
+# casserait les trois lignes de résolution en tête de chaque script, qui
+# l'appellent AVANT le chargement du socle ; un faux « sed » total tuerait
+# afficher_etat, qui s'exécute avant en_megaoctets ; un faux « basename » total
+# ferait échouer le « LOG_FILE="$LOG_DIR/$(basename …).log" » de lib/common.sh —
+# une affectation, donc un doublement, mais dans le socle et non dans le site
+# visé. Chaque stub ne refuse donc que l'appel du site éprouvé et délègue le
+# reste au vrai binaire, dont le chemin absolu est résolu ici : le PATH est
+# détourné, un « exec dirname » se rappellerait lui-même à l'infini.
+titre "3 sexies. Les sept sites fermés au cinquième tour"
+
+REP_STUB_DIRNAME="$REP_TMP/stub-dirname"
+REP_STUB_SED="$REP_TMP/stub-sed"
+REP_STUB_TR2="$REP_TMP/stub-tr2"
+REP_STUB_BASENAME="$REP_TMP/stub-basename"
+
+# --- e. « dirname » en échec — le site tranché trois fois -------------------
+# Sa branche n'a jamais été empruntée jusqu'ici : c'est le premier cas du dépôt à
+# l'ouvrir. Le stub ne refuse que l'appel portant « -- », qui est la signature du
+# site — les lignes de résolution appellent « dirname "$_dir" », sans séparateur.
+if [ "$EST_ROOT" != "true" ]; then
+    saute "configure-swap.sh : « dirname » en échec" \
+        "le site est après require_root — l'atteindre exige root"
+else
+    mkdir -p "$REP_STUB_DIRNAME"
+    # Guillemets simples VOULUS : ces printf écrivent le CORPS d'un script, et
+    # « $1 » comme « $@ » doivent y arriver littéralement pour être développés
+    # par le stub à son exécution, pas ici. C'est ce que SC2016 signale.
+    # shellcheck disable=SC2016
+    {
+        printf '#!/bin/sh\n'
+        printf 'if [ "$1" = "--" ]; then exit 1; fi\n'
+        printf 'exec %s "$@"\n' "$(command -v dirname)"
+    } > "$REP_STUB_DIRNAME/dirname"
+    chmod +x "$REP_STUB_DIRNAME/dirname"
+
+    if "$REP_STUB_DIRNAME/dirname" -- /a/b >/dev/null 2>&1; then
+        ko "garde : le faux « dirname » refuse l'appel avec « -- »" "le stub a rendu 0"
+    else
+        ok "garde : le faux « dirname » refuse l'appel avec « -- »"
+    fi
+    if [ "$("$REP_STUB_DIRNAME/dirname" /a/b 2>/dev/null)" = "/a" ]; then
+        ok "garde : le faux « dirname » délègue les autres appels au vrai binaire"
+    else
+        ko "garde : le faux « dirname » délègue les autres appels au vrai binaire" \
+            "l'appel sans « -- » n'a pas rendu « /a » — les lignes de résolution ne fonctionneraient pas"
+    fi
+
+    lancer env "PATH=$REP_STUB_DIRNAME:$PATH" bash "$SWAP_SH" 512M --dry-run
+
+    assert_code 1 "$CODE" \
+        "configure-swap.sh, « dirname » en échec : échec d'exécution, code 1"
+    assert_contient "$(erreur)" "[ERROR] Répertoire d'accueil de /swapfile indéterminable : « dirname » a échoué." \
+        "configure-swap.sh, « dirname » en échec : le diagnostic NOMME dirname"
+    assert_contient "$(erreur)" "[ERROR] Vérifier « dirname » dans le PATH, puis relancer." \
+        "configure-swap.sh, « dirname » en échec : le remède est donné"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh, « dirname » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "configure-swap.sh: line" \
+        "configure-swap.sh, « dirname » en échec : aucun message brut de bash sur stderr"
+    # DEUX lignes, et non une : « error » puis « die ». Mesuré dans le conteneur.
+    assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh, « dirname » en échec : deux lignes [ERROR] mesurées"
+    assert_absent "$(erreur)" "Opérations prévues" \
+        "configure-swap.sh, « dirname » en échec : aucune opération n'est envisagée"
+
+    rm -rf "$REP_STUB_DIRNAME"
+fi
+
+# --- f et g. « sed » puis « tr » dans en_megaoctets -------------------------
+# Le point de ces deux cas n'est pas le décompte, c'est le CODE et l'ABSENCE d'un
+# message. Une taille réellement invalide vaut 2 et dit « Taille invalide » ; un
+# outil en échec sur une taille parfaitement valide est un échec d'exécution — 1
+# — et ne doit surtout pas la faire passer pour fautive. C'est la seule chose que
+# ces deux cas prouvent, et c'est ce qui les rend nécessaires : sans eux, le
+# script pourrait reprocher à l'appelant une taille qu'il a bien écrite.
+#
+# La taille employée est « 512M », que le groupe 3 fait passer sans encombre.
+if [ "$EST_ROOT" != "true" ]; then
+    saute "configure-swap.sh : « sed » en échec dans en_megaoctets" \
+        "en_megaoctets s'exécute avant require_root, mais le cas se lit avec les autres — non joué hors root"
+    saute "configure-swap.sh : « tr » en échec dans en_megaoctets" \
+        "idem"
+else
+    mkdir -p "$REP_STUB_SED" "$REP_STUB_TR2"
+    # Le stub sed ne refuse que l'expression du site : « s/[^0-9]//g ».
+    # afficher_etat, qui s'exécute avant, emploie « s/^/  /» et doit passer.
+    {
+        printf '#!/bin/sh\n'
+        printf 'case "$*" in *"[^0-9]"*) exit 1 ;; esac\n'
+        printf 'exec %s "$@"\n' "$(command -v sed)"
+    } > "$REP_STUB_SED/sed"
+    # Le stub tr ne refuse que la mise en majuscules du site. est_fichier_swap
+    # emploie « tr -d '\000' » et doit passer.
+    {
+        printf '#!/bin/sh\n'
+        printf 'case "$*" in *"[:lower:]"*) exit 1 ;; esac\n'
+        printf 'exec %s "$@"\n' "$(command -v tr)"
+    } > "$REP_STUB_TR2/tr"
+    chmod +x "$REP_STUB_SED/sed" "$REP_STUB_TR2/tr"
+
+    if printf 'a1' | "$REP_STUB_SED/sed" 's/[^0-9]//g' >/dev/null 2>&1; then
+        ko "garde : le faux « sed » refuse l'expression du site" "le stub a rendu 0"
+    else
+        ok "garde : le faux « sed » refuse l'expression du site"
+    fi
+    if [ "$(printf 'x' | "$REP_STUB_SED/sed" 's/^/  /' 2>/dev/null)" = "  x" ]; then
+        ok "garde : le faux « sed » délègue les autres expressions"
+    else
+        ko "garde : le faux « sed » délègue les autres expressions" \
+            "afficher_etat mourrait avant en_megaoctets et le cas ne prouverait rien"
+    fi
+    if printf 'a' | "$REP_STUB_TR2/tr" '[:lower:]' '[:upper:]' >/dev/null 2>&1; then
+        ko "garde : le faux « tr » refuse la mise en majuscules du site" "le stub a rendu 0"
+    else
+        ok "garde : le faux « tr » refuse la mise en majuscules du site"
+    fi
+
+    # f. sed, sur la lecture du nombre.
+    lancer env "PATH=$REP_STUB_SED:$PATH" bash "$SWAP_SH" 512M --dry-run
+    assert_code 1 "$CODE" \
+        "configure-swap.sh, « sed » en échec : échec d'exécution, code 1 — et non 2"
+    assert_contient "$(erreur)" "[ERROR] Lecture du nombre impossible dans « 512M » : « sed » a échoué." \
+        "configure-swap.sh, « sed » en échec : le diagnostic nomme sed et la valeur reçue"
+    assert_absent "$(erreur)" "Taille invalide" \
+        "configure-swap.sh, « sed » en échec : la taille de l'appelant n'est PAS déclarée invalide"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh, « sed » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "configure-swap.sh: line" \
+        "configure-swap.sh, « sed » en échec : aucun message brut de bash sur stderr"
+    assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh, « sed » en échec : deux lignes [ERROR] mesurées"
+
+    # g. tr, sur la lecture de l'unité. Le second site de la même fonction : il
+    #    n'est atteint que si le premier a réussi, d'où deux stubs distincts.
+    lancer env "PATH=$REP_STUB_TR2:$PATH" bash "$SWAP_SH" 512M --dry-run
+    assert_code 1 "$CODE" \
+        "configure-swap.sh, « tr » en échec : échec d'exécution, code 1 — et non 2"
+    assert_contient "$(erreur)" "[ERROR] Lecture de l'unité impossible dans « 512M » : « sed » ou « tr » a échoué." \
+        "configure-swap.sh, « tr » en échec : le diagnostic nomme les deux outils possibles"
+    assert_absent "$(erreur)" "Taille invalide" \
+        "configure-swap.sh, « tr » en échec : la taille de l'appelant n'est PAS déclarée invalide"
+    assert_absent "$(erreur)" "Unité inconnue" \
+        "configure-swap.sh, « tr » en échec : l'unité n'est pas davantage déclarée inconnue"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh, « tr » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh, « tr » en échec : deux lignes [ERROR] mesurées"
+
+    # Non-régression : les deux refus MÉTIER gardent leur code 2 et leur message.
+    # C'est l'autre moitié de la distinction, et sans elle les deux cas ci-dessus
+    # passeraient encore si en_megaoctets renvoyait 1 pour tout.
+    lancer bash "$SWAP_SH" abc --dry-run
+    assert_code 2 "$CODE" "non-régression : une taille réellement invalide vaut toujours 2"
+    assert_contient "$(erreur)" "[ERROR] Taille invalide : « abc » (exemples : 2G, 512M, 2048)." \
+        "non-régression : le diagnostic métier est intact"
+
+    rm -rf "$REP_STUB_SED" "$REP_STUB_TR2"
+fi
+
+# --- h. « basename » dans configure-logging.sh ------------------------------
+# Le site consigné aux points en suspens §6, laissé nu pendant quatre tours.
+# Le stub ne refuse que l'appel portant le répertoire des journaux : celui de
+# lib/common.sh, « basename "${0%.sh}" », est une AFFECTATION du socle et son
+# échec produirait un doublement dans un fichier qui n'est pas celui qu'on
+# éprouve.
+#
+# Ce cas meurt avant tout — avant même require_root, le site étant en tête de
+# fichier. Il ne dépend donc d'aucun privilège, et rien n'est écrit.
+mkdir -p "$REP_STUB_BASENAME"
+# Guillemets simples VOULUS : « $1 » et « $@ » sont développés par le stub à son
+# exécution, pas ici — c'est ce que SC2016 signale.
+# shellcheck disable=SC2016
+{
+    printf '#!/bin/sh\n'
+    printf 'case "$1" in %s) exit 1 ;; esac\n' "$LOG_DIR"
+    printf 'exec %s "$@"\n' "$(command -v basename)"
+} > "$REP_STUB_BASENAME/basename"
+chmod +x "$REP_STUB_BASENAME/basename"
+
+if "$REP_STUB_BASENAME/basename" "$LOG_DIR" >/dev/null 2>&1; then
+    ko "garde : le faux « basename » refuse l'appel sur LOG_DIR" "le stub a rendu 0"
+else
+    ok "garde : le faux « basename » refuse l'appel sur LOG_DIR"
+fi
+if [ "$("$REP_STUB_BASENAME/basename" /a/b 2>/dev/null)" = "b" ]; then
+    ok "garde : le faux « basename » délègue les autres appels — lib/common.sh reste intact"
+else
+    ko "garde : le faux « basename » délègue les autres appels" \
+        "le socle échouerait à son chargement et le cas ne porterait pas sur configure-logging.sh"
+fi
+
+lancer env "PATH=$REP_STUB_BASENAME:$PATH" bash "$LOGGING_SH" --dry-run
+
+assert_code 1 "$CODE" \
+    "configure-logging.sh, « basename » en échec : échec d'exécution, code 1"
+assert_contient "$(erreur)" "[ERROR] Nom de la règle logrotate indéterminable : « basename » a échoué sur" \
+    "configure-logging.sh, « basename » en échec : le diagnostic nomme basename"
+assert_contient "$(erreur)" "« $LOG_DIR » (valeur par défaut)." \
+    "configure-logging.sh, « basename » en échec : le répertoire ET son origine sont cités"
+assert_contient "$(erreur)" "[ERROR] Vérifier cette valeur — LOG_DIR — et « basename » dans le PATH." \
+    "configure-logging.sh, « basename » en échec : la variable en cause est nommée"
+assert_absent "$(erreur)" "Échec (code" \
+    "configure-logging.sh, « basename » en échec : le trap ERR n'ajoute aucune ligne"
+assert_absent "$(erreur)" "configure-logging.sh: line" \
+    "configure-logging.sh, « basename » en échec : aucun message brut de bash sur stderr"
+assert_absent "$(erreur)" "common.sh: line" \
+    "configure-logging.sh, « basename » en échec : le socle n'a pas été touché par le stub"
+assert_egal "3" "$(nb_lignes_contenant '[ERROR]')" \
+    "configure-logging.sh, « basename » en échec : trois lignes [ERROR] mesurées"
+assert_egal "3" "$(nb_lignes_erreur)" \
+    "configure-logging.sh, « basename » en échec : stderr ne porte QUE ces trois lignes — le refus précède tout"
+
+rm -rf "$REP_STUB_BASENAME"
+
+
+# ===================================================================
 # 4. Idempotence — critère 4
 # ===================================================================
 titre "4. Idempotence — deux exécutions de suite"
@@ -1657,11 +2680,29 @@ else
     # --- configure-swap.sh : --dry-run seulement ----------------------------
     # L'activation exige CAP_SYS_ADMIN, refusé au conteneur : seul le chemin
     # sans écriture est éprouvé ici, deux fois de suite.
+    #
+    # Les quatre assertions ajoutées par TASK-018 bornent le CHEMIN NOMINAL, et
+    # c'est ce que les six affectations mises en contexte de condition pouvaient
+    # casser le plus discrètement. Une condition mal formée n'aurait pas produit
+    # de message : elle aurait rendu une valeur vide ou fausse, et le script
+    # aurait continué. Le décompte à ZÉRO ligne [ERROR] voit un diagnostic
+    # apparaître là où il n'y en avait pas ; le résumé « créer /swapfile
+    # (512 Mo) » voit la valeur elle-même — il n'est produit que si
+    # repertoire_swap, type_fs, TAILLE_ACTUELLE_MO et espace_libre_mo ont tous
+    # les quatre été renseignés correctement.
     empreinte "$REP_TMP/swap-a"
     lancer bash "$SWAP_SH" 512M --dry-run
     assert_code 0 "$CODE" "configure-swap.sh --dry-run première exécution sort en 0"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh --dry-run première exécution : aucune ligne [ERROR] sur stderr"
+    assert_contient "$(erreur)" "créer      /swapfile (512 Mo)" \
+        "configure-swap.sh --dry-run première exécution : les substitutions rendent bien leurs valeurs"
     lancer bash "$SWAP_SH" 512M --dry-run
     assert_code 0 "$CODE" "configure-swap.sh --dry-run seconde exécution sort en 0"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh --dry-run seconde exécution : aucune ligne [ERROR] sur stderr"
+    assert_contient "$(erreur)" "[INFO] Mode --dry-run : aucune modification effectuée." \
+        "configure-swap.sh --dry-run seconde exécution : le chemin nominal va jusqu'au bout"
     empreinte "$REP_TMP/swap-b"
     assert_empreinte_egale "$REP_TMP/swap-a" "$REP_TMP/swap-b" \
         "configure-swap.sh --dry-run exécuté deux fois laisse le système identique"
@@ -1686,6 +2727,828 @@ else
 fi
 
 # ===================================================================
+# 4 bis. « mktemp » en échec — configure-hostname.sh, TASK-018
+# ===================================================================
+# Le septième site corrigé, et le seul hors de configure-swap.sh. Sous la forme
+# nue « temporaire="$(mktemp)" », un mktemp en échec — /tmp plein, monté en
+# lecture seule, TMPDIR pointant sur un chemin absent — s'annonçait deux fois :
+# dans le sous-shell de la substitution, puis dans le shell principal pour
+# l'affectation. Deux lignes de trap identiques, et pas un mot sur ce qui
+# manquait.
+#
+# Sa cause d'échec S'ATTEINT depuis l'environnement de l'appel : TMPDIR est lu
+# par mktemp. C'est le troisième et dernier des sept sites qui se prouve par
+# l'exécution.
+#
+# CE GROUPE ÉCRIT : il réécrit /etc/hosts pour que le script ait quelque chose à
+# faire, et le script crée sa sauvegarde avant d'atteindre mktemp. Il est donc
+# placé APRÈS le groupe 4 — la garde d'état de l'idempotence compare l'empreinte
+# à celle du groupe 2 et déclarerait tout le groupe NON EXÉCUTÉ si celui-ci le
+# précédait. L'état antérieur est restitué à la fin.
+#
+# Le nom demandé est le nom COURANT de la machine : le changement porte alors
+# sur le seul /etc/hosts. Renommer réellement exige CAP_SYS_ADMIN, refusé au
+# conteneur — le script mourrait avant d'atteindre mktemp et le cas ne prouverait
+# rien.
+titre "4 bis. « mktemp » en échec — configure-hostname.sh"
+
+TMPDIR_ABSENT="/pas/de/tmpdir"
+
+if [ "$EST_ROOT" != "true" ]; then
+    saute "configure-hostname.sh, « mktemp » en échec : un seul diagnostic, /etc/hosts intact" \
+        "require_root arrête le script avant toute écriture"
+elif [ "$JETABLE" != "true" ]; then
+    saute "configure-hostname.sh, « mktemp » en échec : un seul diagnostic, /etc/hosts intact" \
+        "ce groupe réécrit /etc/hosts — réservé à un système jetable"
+elif [ -e "$TMPDIR_ABSENT" ]; then
+    saute "configure-hostname.sh, « mktemp » en échec : un seul diagnostic, /etc/hosts intact" \
+        "$TMPDIR_ABSENT existe sur cet hôte — mktemp y réussirait"
+else
+    NOM_COURANT_4BIS="$(hostname)"
+    cp -p /etc/hosts "$REP_TMP/hosts.avant-4bis"
+
+    # Aucune ligne 127.0.1.1, et le nom de la machine nulle part : le script a
+    # donc un changement à appliquer et atteint le bloc /etc/hosts. Sans cela il
+    # sortirait sur « Rien à faire » et mktemp ne serait jamais appelé.
+    printf '127.0.0.1\tlocalhost\n' > /etc/hosts
+
+    HOSTS_AVANT="$(empreinte_fichier /etc/hosts)"
+    SAUVEGARDES_AVANT="$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')"
+
+    lancer env "TMPDIR=$TMPDIR_ABSENT" bash "$HOSTNAME_SH" "$NOM_COURANT_4BIS" -y
+
+    assert_code 1 "$CODE" \
+        "configure-hostname.sh, « mktemp » en échec : échec d'exécution, code 1"
+    assert_contient "$(erreur)" "[ERROR] Fichier temporaire impossible à créer dans $TMPDIR_ABSENT." \
+        "configure-hostname.sh, « mktemp » en échec : le diagnostic nomme le répertoire en cause"
+    assert_contient "$(erreur)" "[ERROR] /etc/hosts n'a pas été modifié" \
+        "configure-hostname.sh, « mktemp » en échec : le diagnostic dit ce qui n'a PAS été fait"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-hostname.sh, « mktemp » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "mktemp:" \
+        "configure-hostname.sh, « mktemp » en échec : le message brut de mktemp est remplacé par le diagnostic"
+    # Le décompte, MESURÉ dans le conteneur : deux « error » puis le « die ». Il
+    # voit revenir la ligne du trap même si son libellé change un jour dans
+    # lib/common.sh, là où l'assertion d'absence ci-dessus est liée à son texte.
+    assert_egal "3" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-hostname.sh, « mktemp » en échec : stderr porte les trois lignes du refus, pas une de plus"
+
+    # /etc/hosts INTACT — contenu, taille, inode et date. Le script échoue entre
+    # la sauvegarde et la réécriture : si le « cat > /etc/hosts » était atteint
+    # avec un « $temporaire » vide, le fichier serait vidé sans que le décompte
+    # de lignes s'en aperçoive.
+    HOSTS_APRES="$(empreinte_fichier /etc/hosts)"
+    assert_egal "$HOSTS_AVANT" "$HOSTS_APRES" \
+        "configure-hostname.sh, « mktemp » en échec : /etc/hosts est resté strictement intact"
+
+    # La sauvegarde annoncée existe vraiment, et porte bien l'état d'origine :
+    # le diagnostic promet à l'appelant qu'elle « reste en place ».
+    SAUVEGARDES_APRES="$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')"
+    assert_egal "$(( SAUVEGARDES_AVANT + 1 ))" "$SAUVEGARDES_APRES" \
+        "configure-hostname.sh, « mktemp » en échec : la sauvegarde a bien été créée avant l'échec"
+
+    CHEMIN_SAUVEGARDE="$(sed -n 's/^.*\[INFO\] Sauvegarde : \(.*\)$/\1/p' "$F_ERR" | tail -n 1)"
+    if [ -z "$CHEMIN_SAUVEGARDE" ]; then
+        ko "configure-hostname.sh, « mktemp » en échec : la sauvegarde nommée dans le diagnostic existe" \
+            "aucun chemin de sauvegarde n'a pu être extrait de stderr"
+    elif [ ! -f "$CHEMIN_SAUVEGARDE" ]; then
+        ko "configure-hostname.sh, « mktemp » en échec : la sauvegarde nommée dans le diagnostic existe" \
+            "$CHEMIN_SAUVEGARDE est annoncé mais absent du disque"
+    elif ! cmp -s "$CHEMIN_SAUVEGARDE" /etc/hosts; then
+        ko "configure-hostname.sh, « mktemp » en échec : la sauvegarde nommée dans le diagnostic existe" \
+            "$CHEMIN_SAUVEGARDE diffère de /etc/hosts"
+    else
+        ok "configure-hostname.sh, « mktemp » en échec : la sauvegarde nommée dans le diagnostic existe et porte l'état d'origine"
+    fi
+
+    # Restitution : /etc/hosts tel qu'il était, et la sauvegarde produite par ce
+    # groupe retirée. Aucun cas ultérieur ne relève /etc, mais un résidu resterait
+    # un résidu.
+    cat "$REP_TMP/hosts.avant-4bis" > /etc/hosts
+    if [ -n "$CHEMIN_SAUVEGARDE" ]; then
+        rm -f "$CHEMIN_SAUVEGARDE"
+    fi
+fi
+
+# ===================================================================
+# 4 ter. La lecture du fuseau courant — configure-timezone.sh, TASK-018
+# ===================================================================
+# Trois corrections de TASK-018 vivent ici, et elles n'ont pas la même portée :
+#
+#   1. les deux lectures « ancien_fichier="$(tr -d … < /etc/timezone)" » et son
+#      jumeau de la vérification, passées en contexte de condition ;
+#   2. « fuseau_actuel », qui renseigne désormais la globale FUSEAU_ACTUEL et
+#      n'est plus appelée en substitution. C'est la correction que ce groupe a
+#      FAIT NAÎTRE : deux de ses assertions sont restées rouges un tour entier
+#      avant qu'elle n'existe.
+#
+# Ce qu'il y avait à corriger en 2, MESURÉ à l'époque sous un faux « tr » :
+#
+#   [ERROR] Échec (code 1) à la ligne 150 de configure-timezone.sh.
+#   [INFO] Fuseau actuel  :   (2026-09-02 12:00:00 UTC)
+#
+# Une ligne de trap qui ne nomme rien, et surtout : le « return 0 » placé après
+# le « tr » effaçait le code de celui-ci, la substitution rendait 0, et
+# FUSEAU_ACTUEL valait la CHAÎNE VIDE. Le script comparait le fuseau demandé à
+# rien, puis l'appliquait sur cette base. C'est le motif de TASK-018 dans sa
+# forme la plus coûteuse : pas un message en trop, une décision prise sur rien.
+#
+# Chaque source est maintenant lue en condition, l'échec de l'une fait passer à
+# la suivante en le DISANT, et la fonction rend 1 quand aucune n'a répondu. Deux
+# appels, deux traitements de cet échec — non fatal avant l'application, fatal à
+# la vérification — et ce groupe éprouve le premier.
+#
+# DEUX choses sont donc mesurées, et il faut les distinguer :
+#
+#   a. la NON-RÉGRESSION du chemin nominal, DEUX FOIS DE SUITE. C'est là que la
+#      réécriture de fuseau_actuel peut régresser sans bruit : une source mal
+#      lue ne produit aucun message, elle produit une comparaison fausse. Le
+#      seul garde-fou est d'exiger la VALEUR affichée, et pas seulement
+#      l'absence d'erreur ;
+#   b. le CHEMIN D'ÉCHEC de la première lecture, atteint par un faux « tr ».
+#
+# CE GROUPE ÉCRIT /etc/localtime et /etc/timezone. Il est placé APRÈS le groupe
+# 4 — dont la garde d'état compare l'empreinte à celle du groupe 2 — et rend
+# l'état où il l'a trouvé, ce qu'il vérifie plutôt que de le supposer.
+titre "4 ter. La lecture du fuseau courant — configure-timezone.sh"
+
+FUSEAU_INTERMEDIAIRE="Etc/UTC"
+REP_STUB_TR="$REP_TMP/stub-tr"
+REP_STUB_RL="$REP_TMP/stub-readlink"
+
+RAISON_4TER="oui"
+if [ "$EST_ROOT" != "true" ]; then
+    RAISON_4TER="require_root arrête le script avant toute écriture"
+elif [ "$JETABLE" != "true" ]; then
+    RAISON_4TER="ce groupe réécrit /etc/localtime et /etc/timezone — réservé à un système jetable"
+elif [ ! -f "/usr/share/zoneinfo/$FUSEAU_INTERMEDIAIRE" ] || [ ! -f "/usr/share/zoneinfo/$FUSEAU_CIBLE" ]; then
+    RAISON_4TER="/usr/share/zoneinfo ne fournit pas les deux fuseaux nécessaires sur cet hôte"
+elif [ ! -f /etc/timezone ]; then
+    RAISON_4TER="/etc/timezone est absent de cet hôte — les deux lectures ne sont jamais atteintes"
+fi
+
+if [ "$RAISON_4TER" != "oui" ]; then
+    saute "configure-timezone.sh : le chemin nominal, deux fois de suite" "$RAISON_4TER"
+    saute "configure-timezone.sh : /etc/timezone lisible mais VIDE part au repli" "$RAISON_4TER"
+    saute "configure-timezone.sh : la lecture du fuseau courant en échec" "$RAISON_4TER"
+    saute "configure-timezone.sh : aucune source lisible, les deux traitements de l'échec" "$RAISON_4TER"
+else
+    TZ_ORIGINE="$(cat /etc/timezone)"
+
+    # --- a. Le chemin nominal, deux fois de suite --------------------------
+    # Le groupe 4 a laissé le système sur FUSEAU_CIBLE : demander un AUTRE
+    # fuseau est le seul moyen de rouvrir le chemin d'application. Sans cela le
+    # script sortirait sur « Rien à faire » et ni fuseau_actuel ni les deux
+    # lectures ne seraient éprouvées — le cas passerait sans rien prouver.
+    lancer bash "$TIMEZONE_SH" "$FUSEAU_INTERMEDIAIRE" -y
+    assert_code 0 "$CODE" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : sort en 0"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : aucune ligne [ERROR]"
+    # La VALEUR, et pas seulement l'absence d'erreur. fuseau_actuel rend ici la
+    # valeur d'AVANT le changement : c'est la seule assertion qui verrait une
+    # source mal lue — « inconnu » ou une chaîne vide passeraient toutes les
+    # autres.
+    assert_contient "$(erreur)" "[INFO] Fuseau actuel  : $FUSEAU_CIBLE  (" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : fuseau_actuel rend la valeur courante, et non « inconnu »"
+    assert_contient "$(erreur)" "[INFO] Fuseau défini via /etc/localtime." \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : le repli /etc/localtime est bien emprunté, faute de systemd"
+    assert_contient "$(erreur)" "/etc/timezone mis en cohérence (était « $FUSEAU_CIBLE »)" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : la lecture de /etc/timezone rend l'ANCIENNE valeur, et pas une chaîne vide"
+    # Le WARN attendu est celui des tâches planifiées, et LUI SEUL : le nouvel
+    # avertissement de repli n'a rien à faire sur un chemin nominal. Deux
+    # assertions plutôt qu'une, parce que le décompte seul ne dirait pas LEQUEL.
+    assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : un seul avertissement sur stderr"
+    assert_absent "$(erreur)" "/etc/timezone est illisible ou vide" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : le repli de lecture n'est PAS emprunté quand /etc/timezone répond"
+    assert_egal "9" "$(nb_lignes_erreur)" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : stderr porte neuf lignes, mesurées — aucune ne s'ajoute en silence"
+    assert_egal "$FUSEAU_INTERMEDIAIRE" "$(cat /etc/timezone)" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : /etc/timezone porte le nouveau fuseau"
+    assert_egal "/usr/share/zoneinfo/$FUSEAU_INTERMEDIAIRE" "$(readlink -f /etc/localtime)" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE : /etc/localtime pointe sur le nouveau fuseau"
+
+    # Le second passage. C'est ici que fuseau_actuel est le SEUL juge : le script
+    # ne fait plus rien, et ce qu'il annonce vient entièrement d'elle.
+    lancer bash "$TIMEZONE_SH" "$FUSEAU_INTERMEDIAIRE" -y
+    assert_code 0 "$CODE" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE, second passage : sort en 0"
+    assert_contient "$(erreur)" "Rien à faire : le fuseau est déjà « $FUSEAU_INTERMEDIAIRE »." \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE, second passage : rien à faire"
+    assert_contient "$(erreur)" "[INFO] Fuseau actuel  : $FUSEAU_INTERMEDIAIRE  (" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE, second passage : fuseau_actuel relit bien la valeur qui vient d'être posée"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE, second passage : aucune ligne [ERROR]"
+    assert_egal "0" "$(nb_lignes_contenant '[WARN]')" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE, second passage : aucun avertissement"
+    assert_egal "3" "$(nb_lignes_erreur)" \
+        "configure-timezone.sh $FUSEAU_INTERMEDIAIRE, second passage : stderr porte trois lignes, mesurées"
+
+    # --- b. /etc/timezone lisible mais VIDE ---------------------------------
+    # Le seul cas qui emprunte le repli de lecture sans faux « tr ». Avant
+    # TASK-018, la lecture rendait la chaîne vide et le script la prenait pour le
+    # fuseau courant ; elle passe désormais à /etc/localtime, en le disant. Le
+    # « && [ -n "$valeur" ] » de fuseau_actuel n'a aucune autre preuve.
+    printf '' > /etc/timezone
+    lancer bash "$TIMEZONE_SH" "$FUSEAU_CIBLE" -y
+    assert_code 0 "$CODE" \
+        "configure-timezone.sh, /etc/timezone vide : sort en 0"
+    assert_contient "$(erreur)" "[WARN] /etc/timezone est illisible ou vide : lecture du fuseau par /etc/localtime." \
+        "configure-timezone.sh, /etc/timezone vide : le repli est annoncé, pas silencieux"
+    assert_contient "$(erreur)" "[INFO] Fuseau actuel  : $FUSEAU_INTERMEDIAIRE  (" \
+        "configure-timezone.sh, /etc/timezone vide : la valeur vient de /etc/localtime, et n'est ni vide ni « inconnu »"
+    assert_absent "$(erreur)" "Fuseau actuel  : inconnu" \
+        "configure-timezone.sh, /etc/timezone vide : une source a répondu — « inconnu » serait un aveu d'échec"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-timezone.sh, /etc/timezone vide : aucune ligne [ERROR] — un fichier vide n'est pas une erreur fatale"
+    assert_egal "2" "$(nb_lignes_contenant '[WARN]')" \
+        "configure-timezone.sh, /etc/timezone vide : deux avertissements mesurés — le repli, et les tâches planifiées"
+    assert_egal "$FUSEAU_CIBLE" "$(cat /etc/timezone)" \
+        "configure-timezone.sh, /etc/timezone vide : le fichier est remis en cohérence"
+
+    # --- c. La lecture du fuseau courant en échec, par un faux « tr » -------
+    # Le faux « tr » atteint DEUX sites à la fois : fuseau_actuel, qui bascule
+    # sur /etc/localtime en avertissant, puis la lecture corrigée de la mise en
+    # cohérence, qui n'a pas de repli et diagnostique.
+    #
+    # Les deux assertions marquées ci-dessous — absence de ligne de trap, valeur
+    # non vide — sont restées ROUGES un tour entier, jamais neutralisées. C'est
+    # ce qui a fait réécrire fuseau_actuel. Elles sont le seul endroit du dépôt
+    # qui l'ait signalé, et leur passage au vert est la preuve de la correction.
+    #
+    # Le système est remis sur FUSEAU_INTERMEDIAIRE d'abord : le cas doit avoir
+    # un changement à appliquer, sinon le script sort sur « Rien à faire » avant
+    # d'atteindre quoi que ce soit.
+    lancer bash "$TIMEZONE_SH" "$FUSEAU_INTERMEDIAIRE" -y
+    assert_code 0 "$CODE" "garde : le système est ramené sur $FUSEAU_INTERMEDIAIRE avant le cas au faux « tr »"
+
+    mkdir -p "$REP_STUB_TR"
+    printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_TR/tr"
+    chmod +x "$REP_STUB_TR/tr"
+    if "$REP_STUB_TR/tr" -d '[:space:]' < /etc/timezone >/dev/null 2>&1; then
+        ko "garde : le faux « tr » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « tr » échoue bien"
+    fi
+
+    lancer env "PATH=$REP_STUB_TR:$PATH" bash "$TIMEZONE_SH" "$FUSEAU_CIBLE" -y
+
+    assert_code 1 "$CODE" \
+        "configure-timezone.sh, « tr » en échec : échec d'exécution, code 1"
+    assert_contient "$(erreur)" "[ERROR] /etc/timezone illisible : sa mise en cohérence est impossible." \
+        "configure-timezone.sh, « tr » en échec : la lecture corrigée nomme la cause"
+    assert_contient "$(erreur)" "[ERROR] Le fuseau vient d'être appliqué ; ce fichier seul reste en arrière." \
+        "configure-timezone.sh, « tr » en échec : le diagnostic dit ce qui a déjà été fait"
+    assert_egal "3" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-timezone.sh, « tr » en échec : trois lignes [ERROR] mesurées, celles du diagnostic"
+    assert_absent "$(erreur)" "configure-timezone.sh: line" \
+        "configure-timezone.sh, « tr » en échec : aucun message brut de bash sur stderr"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-timezone.sh, « tr » en échec : le trap ERR n'ajoute aucune ligne"
+    # La valeur, mesurée et non seulement non vide : c'est /etc/localtime qui
+    # répond, et il pointe sur FUSEAU_INTERMEDIAIRE.
+    assert_contient "$(erreur)" "[INFO] Fuseau actuel  : $FUSEAU_INTERMEDIAIRE  (" \
+        "configure-timezone.sh, « tr » en échec : fuseau_actuel bascule sur /etc/localtime et rend la BONNE valeur"
+    assert_absent "$(erreur)" "Fuseau actuel  : inconnu" \
+        "configure-timezone.sh, « tr » en échec : /etc/localtime a répondu — « inconnu » serait un repli manqué"
+    assert_absent "$(erreur)" "Fuseau actuel  :   (" \
+        "configure-timezone.sh, « tr » en échec : fuseau_actuel ne rend pas une valeur vide en silence"
+    # Le nouvel avertissement de repli, et lui seul : le script meurt avant
+    # celui des tâches planifiées. Le décompte le fige — c'est l'assertion qui
+    # verrait un avertissement s'ajouter là où on ne l'attend pas.
+    assert_contient "$(erreur)" "[WARN] /etc/timezone est illisible ou vide : lecture du fuseau par /etc/localtime." \
+        "configure-timezone.sh, « tr » en échec : le repli de lecture est annoncé"
+    assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+        "configure-timezone.sh, « tr » en échec : un seul avertissement mesuré"
+    assert_egal "9" "$(nb_lignes_erreur)" \
+        "configure-timezone.sh, « tr » en échec : stderr porte neuf lignes, mesurées — le warn de repli y est compté, rien d'autre ne s'ajoute"
+
+    rm -rf "$REP_STUB_TR"
+
+    # --- d. AUCUNE source lisible : les deux traitements de l'échec ---------
+    # fuseau_actuel rend 1 quand aucune source n'a répondu, et ses deux appels
+    # n'en font PAS la même chose. C'est l'asymétrie que TASK-018 a introduite, et
+    # ce cas est le seul à la montrer, parce qu'il est le seul à faire échouer
+    # TOUTES les sources à la fois :
+    #
+    #   avant l'application  échec NON fatal — rien n'a encore été modifié, et un
+    #                        fuseau courant indéterminable n'empêche pas de poser
+    #                        le fuseau demandé. FUSEAU_ACTUEL vaut « inconnu »,
+    #                        JAMAIS la chaîne vide de l'ancienne forme ;
+    #   à la vérification    échec FATAL — une vérification qui ne peut pas lire
+    #                        l'état courant ne prouve rien. Elle le dit, en 1.
+    #
+    # Trois sources, trois neutralisations : timedatectl est absent du profil
+    # debian, /etc/timezone est mis de côté le temps du cas — son absence ferme
+    # aussi la mise en cohérence, qui sinon tuerait le script avant la
+    # vérification — et readlink est remplacé par un stub en échec.
+    mkdir -p "$REP_STUB_RL"
+    printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_RL/readlink"
+    chmod +x "$REP_STUB_RL/readlink"
+    if "$REP_STUB_RL/readlink" -f /etc/localtime >/dev/null 2>&1; then
+        ko "garde : le faux « readlink » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « readlink » échoue bien"
+    fi
+    if command -v timedatectl >/dev/null 2>&1; then
+        saute "configure-timezone.sh : aucune source lisible" \
+            "timedatectl est présent sur cet hôte et répondrait — les trois sources ne peuvent pas échouer ensemble"
+    else
+        mv /etc/timezone "$REP_TMP/timezone.mis-de-cote"
+        lancer env "PATH=$REP_STUB_RL:$PATH" bash "$TIMEZONE_SH" "$FUSEAU_CIBLE" -y
+        mv "$REP_TMP/timezone.mis-de-cote" /etc/timezone
+
+        assert_code 1 "$CODE" \
+            "configure-timezone.sh, aucune source lisible : échec d'exécution, code 1"
+        assert_contient "$(erreur)" "[WARN] /etc/localtime est illisible : le fuseau courant reste indéterminé." \
+            "configure-timezone.sh, aucune source lisible : l'échec de la dernière source est dit"
+        assert_contient "$(erreur)" "[WARN] Fuseau actuel indéterminable : aucune source lisible." \
+            "configure-timezone.sh, aucune source lisible : le premier appel traite l'échec sans être fatal"
+        assert_contient "$(erreur)" "[INFO] Fuseau actuel  : inconnu  (" \
+            "configure-timezone.sh, aucune source lisible : FUSEAU_ACTUEL vaut « inconnu », jamais la chaîne vide"
+        assert_absent "$(erreur)" "Fuseau actuel  :   (" \
+            "configure-timezone.sh, aucune source lisible : la chaîne vide de l'ancienne forme ne revient pas"
+        assert_contient "$(erreur)" "[INFO] Fuseau défini via /etc/localtime." \
+            "configure-timezone.sh, aucune source lisible : le premier échec n'a PAS empêché l'application"
+        assert_contient "$(erreur)" "[ERROR] Fuseau courant illisible : la vérification ne peut pas aboutir." \
+            "configure-timezone.sh, aucune source lisible : le second appel, lui, est fatal"
+        assert_absent "$(erreur)" "Échec (code" \
+            "configure-timezone.sh, aucune source lisible : le trap ERR n'ajoute aucune ligne"
+        assert_absent "$(erreur)" "configure-timezone.sh: line" \
+            "configure-timezone.sh, aucune source lisible : aucun message brut de bash sur stderr"
+        assert_egal "2" "$(nb_lignes_contenant '[ERROR]')" \
+            "configure-timezone.sh, aucune source lisible : deux lignes [ERROR] mesurées"
+        assert_egal "3" "$(nb_lignes_contenant '[WARN]')" \
+            "configure-timezone.sh, aucune source lisible : trois avertissements mesurés — deux au premier appel, un au second"
+        assert_egal "10" "$(nb_lignes_erreur)" \
+            "configure-timezone.sh, aucune source lisible : stderr porte dix lignes, mesurées"
+
+        if [ -f /etc/timezone ]; then
+            ok "garde : /etc/timezone a été remis en place après le cas d"
+        else
+            ko "garde : /etc/timezone a été remis en place après le cas d" "le fichier est absent"
+        fi
+    fi
+
+    rm -rf "$REP_STUB_RL"
+
+    # --- Restitution --------------------------------------------------------
+    # Le cas c a réellement appliqué FUSEAU_CIBLE à /etc/localtime avant de
+    # mourir, et laissé /etc/timezone en arrière. Une exécution nominale remet
+    # les deux d'accord ; l'état rendu est celui que le groupe 4 avait laissé, et
+    # c'est vérifié plutôt que supposé.
+    lancer bash "$TIMEZONE_SH" "$FUSEAU_CIBLE" -y
+    assert_code 0 "$CODE" "restitution : configure-timezone.sh $FUSEAU_CIBLE sort en 0"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "restitution : aucune ligne [ERROR]"
+    assert_egal "$FUSEAU_CIBLE" "$(cat /etc/timezone)" \
+        "restitution : /etc/timezone est revenu à $FUSEAU_CIBLE"
+    assert_egal "/usr/share/zoneinfo/$FUSEAU_CIBLE" "$(readlink -f /etc/localtime)" \
+        "restitution : /etc/localtime est revenu à $FUSEAU_CIBLE"
+    assert_egal "$TZ_ORIGINE" "$(cat /etc/timezone)" \
+        "restitution : /etc/timezone porte exactement ce qu'il portait à l'entrée du groupe"
+fi
+
+# ===================================================================
+# 4 quater. « hostname » en échec — configure-hostname.sh, TASK-018
+# ===================================================================
+# Deux sites, et une erreur de raisonnement que trois tours de relecture ont
+# répétée : « require_cmd hostname » a servi d'argument pour ne pas les traiter.
+# Il prouve que la commande EXISTE, pas qu'elle RÉUSSIT. Un binaire homonyme en
+# tête de PATH la met en échec — la mutation la moins coûteuse du dépôt — et sous
+# la forme nue « NOM_ACTUEL="$(hostname)" » le trap ERR parlait alors deux fois,
+# puis errexit arrêtait le script.
+#
+# Les DEUX sites sont atteints par le même appel, et c'est délibéré : le faux
+# hostname fait rendre « inconnu » au premier, donc demander « inconnu » comme
+# nom d'hôte laisse CHANGEMENT_NOM à false. Le script n'essaie alors pas
+# d'appliquer un nom — « hostname <nom> » exige CAP_SYS_ADMIN, refusé au
+# conteneur, et le cas mourrait là — mais il réécrit /etc/hosts et atteint la
+# vérification finale, second site.
+#
+# Aucun des deux échecs n'est fatal, et pour deux raisons distinctes :
+#
+#   au préflight      rien n'a encore été modifié, et un nom courant
+#                     indéterminable n'empêche pas de poser celui qui est
+#                     demandé. La valeur porte « inconnu », jamais la chaîne
+#                     vide — c'est ce que fait déjà fuseau_actuel ;
+#   à la vérification l'écart que cette vérification cherche n'est lui-même
+#                     qu'un « warn » — certains systèmes n'appliquent le nom
+#                     qu'au redémarrage. Une lecture impossible ne peut pas être
+#                     punie plus sévèrement que l'écart qu'elle sert à détecter.
+#
+# CE GROUPE ÉCRIT /etc/hosts et y laisse une sauvegarde. Il est placé APRÈS le
+# groupe 4 — dont la garde d'état compare l'empreinte à celle du groupe 2 — et
+# rend l'état où il l'a trouvé, ce qu'il vérifie plutôt que de le supposer.
+titre "4 quater. « hostname » en échec — configure-hostname.sh"
+
+REP_STUB_HOST="$REP_TMP/stub-hostname"
+
+RAISON_4QUATER="oui"
+if [ "$EST_ROOT" != "true" ]; then
+    RAISON_4QUATER="require_root arrête le script avant toute écriture"
+elif [ "$JETABLE" != "true" ]; then
+    RAISON_4QUATER="ce groupe réécrit /etc/hosts — réservé à un système jetable"
+fi
+
+if [ "$RAISON_4QUATER" != "oui" ]; then
+    saute "configure-hostname.sh : « hostname » en échec aux deux sites" "$RAISON_4QUATER"
+    saute "configure-hostname.sh : non-régression, « Rien à faire » quand le nom est déjà bon" "$RAISON_4QUATER"
+else
+    cp -p /etc/hosts "$REP_TMP/hosts.avant-4quater"
+    SAUVEGARDES_AVANT_4QUATER="$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')"
+
+    mkdir -p "$REP_STUB_HOST"
+    printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_HOST/hostname"
+    chmod +x "$REP_STUB_HOST/hostname"
+    if "$REP_STUB_HOST/hostname" >/dev/null 2>&1; then
+        ko "garde : le faux « hostname » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « hostname » échoue bien"
+    fi
+    # Le stub doit rester TROUVABLE : c'est tout le propos du site. Si
+    # « require_cmd hostname » refusait le script, le cas mourrait en 1 sans
+    # rien prouver.
+    if PATH="$REP_STUB_HOST:$PATH" command -v hostname >/dev/null 2>&1; then
+        ok "garde : « command -v hostname » trouve le stub — require_cmd ne refusera pas"
+    else
+        ko "garde : « command -v hostname » trouve le stub" "le stub n'est pas dans le PATH construit"
+    fi
+    # Le nom courant N'EST PAS « inconnu » : sans cela CHANGEMENT_HOSTS serait
+    # peut-être déjà false et le cas ne traverserait pas /etc/hosts.
+    if [ "$(hostname)" != "inconnu" ]; then
+        ok "garde : le nom d'hôte de la machine n'est pas déjà « inconnu »"
+    else
+        ko "garde : le nom d'hôte de la machine n'est pas déjà « inconnu »" \
+            "le cas ne prouverait plus que la valeur de repli a été employée"
+    fi
+
+    lancer env "PATH=$REP_STUB_HOST:$PATH" bash "$HOSTNAME_SH" inconnu -y
+
+    # Le chemin de la sauvegarde est LU dans la trace, et non retrouvé par
+    # « find -newer » : le script la produit par « cp -p », qui recopie la date
+    # de /etc/hosts. Les deux fichiers ont alors le même âge, aucun n'est plus
+    # récent que l'autre — c'est ce qui a fait échouer la première écriture de ce
+    # nettoyage, et l'assertion de restitution l'a vu.
+    CHEMIN_SAUVEGARDE_4QUATER="$(sed -n 's/^.*\[INFO\] Sauvegarde : \(.*\)$/\1/p' "$F_ERR" | tail -n 1)"
+
+    # L'assertion décisive : sous la forme nue, ce code valait 1 et le script
+    # s'arrêtait avant d'avoir rien fait.
+    assert_code 0 "$CODE" \
+        "configure-hostname.sh, « hostname » en échec : sort en 0 — aucun des deux échecs n'est fatal"
+    # Site 1, au préflight.
+    assert_contient "$(erreur)" "[WARN] « hostname » a échoué : le nom d'hôte courant reste indéterminé." \
+        "configure-hostname.sh, site 1 : la cause est nommée"
+    assert_contient "$(erreur)" "[WARN] Le nom demandé sera appliqué malgré tout — l'opération est sans risque." \
+        "configure-hostname.sh, site 1 : l'échec est explicitement déclaré non fatal"
+    assert_contient "$(erreur)" "[INFO] Nom d'hôte actuel  : inconnu" \
+        "configure-hostname.sh, site 1 : la valeur de repli est « inconnu », jamais la chaîne vide"
+    # Site 2, à la vérification.
+    assert_contient "$(erreur)" "[WARN] « hostname » a échoué : la vérification n'a pas pu aboutir." \
+        "configure-hostname.sh, site 2 : la cause est nommée"
+    assert_contient "$(erreur)" "[WARN] Contrôler à la main que le nom d'hôte est « inconnu »." \
+        "configure-hostname.sh, site 2 : l'appelant est renvoyé vers un contrôle manuel"
+    # Le script est allé jusqu'au bout : /etc/hosts réécrit, succès annoncé.
+    assert_contient "$(erreur)" "[SUCCESS] /etc/hosts mis à jour." \
+        "configure-hostname.sh, « hostname » en échec : le travail utile est fait malgré tout"
+    assert_contient "$(erreur)" "[SUCCESS] Nom d'hôte configuré : inconnu" \
+        "configure-hostname.sh, « hostname » en échec : le script va jusqu'au bout de son chemin"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-hostname.sh, « hostname » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "configure-hostname.sh: line" \
+        "configure-hostname.sh, « hostname » en échec : aucun message brut de bash sur stderr"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-hostname.sh, « hostname » en échec : aucune ligne [ERROR] — ce sont des lacunes, pas des erreurs"
+    assert_egal "4" "$(nb_lignes_contenant '[WARN]')" \
+        "configure-hostname.sh, « hostname » en échec : quatre avertissements mesurés, deux par site"
+
+    # /etc/hosts porte bien la ligne demandée : le repli n'a pas dégradé le
+    # travail, il n'a dégradé que la connaissance de l'état d'avant.
+    lignes_inconnu="$(grep -cE '^[[:space:]]*127\.0\.1\.1[[:space:]]+inconnu$' /etc/hosts)" || lignes_inconnu="0"
+    assert_egal "1" "$lignes_inconnu" \
+        "configure-hostname.sh, « hostname » en échec : /etc/hosts porte exactement une ligne « 127.0.1.1 inconnu »"
+
+    # --- Non-régression : idempotence quand le nom est déjà bon -------------
+    # Le stub est retiré. Le nom demandé est celui de la machine, /etc/hosts est
+    # remis dans son état d'origine : le script doit conclure « Rien à faire »,
+    # sans avertissement et sans écrire.
+    rm -rf "$REP_STUB_HOST"
+    cat "$REP_TMP/hosts.avant-4quater" > /etc/hosts
+
+    empreinte "$REP_TMP/hn-avant"
+    lancer bash "$HOSTNAME_SH" "$(hostname)" -y
+    assert_code 0 "$CODE" \
+        "non-régression : configure-hostname.sh <nom courant> sort en 0"
+    assert_contient "$(erreur)" "Rien à faire : le nom d'hôte et /etc/hosts sont déjà conformes." \
+        "non-régression : le script reconnaît un système déjà conforme"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "non-régression : aucune ligne [ERROR]"
+    assert_egal "0" "$(nb_lignes_contenant '[WARN]')" \
+        "non-régression : aucun avertissement — la lecture de « hostname » a réussi"
+    empreinte "$REP_TMP/hn-apres"
+    assert_empreinte_egale "$REP_TMP/hn-avant" "$REP_TMP/hn-apres" \
+        "non-régression : un système déjà conforme n'est pas modifié"
+
+    # --- Restitution --------------------------------------------------------
+    # /etc/hosts a déjà été remis ci-dessus ; reste la sauvegarde déposée par le
+    # cas au stub, et son retrait est vérifié.
+    SAUVEGARDES_APRES_4QUATER="$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')"
+    assert_egal "$(( SAUVEGARDES_AVANT_4QUATER + 1 ))" "$SAUVEGARDES_APRES_4QUATER" \
+        "configure-hostname.sh, « hostname » en échec : une sauvegarde de /etc/hosts a bien été déposée"
+    if [ -z "$CHEMIN_SAUVEGARDE_4QUATER" ]; then
+        ko "restitution : la sauvegarde déposée par ce groupe est retirée" \
+            "aucun chemin de sauvegarde n'a pu être lu dans la trace"
+    else
+        rm -f "$CHEMIN_SAUVEGARDE_4QUATER"
+        assert_egal "$SAUVEGARDES_AVANT_4QUATER" "$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')" \
+            "restitution : la sauvegarde déposée par ce groupe est retirée"
+    fi
+    if cmp -s "$REP_TMP/hosts.avant-4quater" /etc/hosts; then
+        ok "restitution : /etc/hosts porte exactement ce qu'il portait à l'entrée du groupe"
+    else
+        ko "restitution : /etc/hosts porte exactement ce qu'il portait à l'entrée du groupe" \
+            "le fichier diffère de l'état relevé à l'entrée"
+    fi
+fi
+
+# ===================================================================
+# 4 quinquies. Les trois derniers sites — « date » et la boucle de suffixe
+# ===================================================================
+# Les trois sites du cinquième tour qui ne se prouvent pas sans écrire, ou sans
+# aller jusqu'à l'activation du swap.
+#
+# Les deux « date » sont des substitutions NOYÉES DANS UNE CHAÎNE —
+# « base="/etc/hosts.bak-$(date …)" ». Elles ne se trouvent pas en cherchant
+# « ="$( » ; c'est pour cela que le recensement impose un relevé manuel, et
+# c'est pour cela qu'elles avaient été manquées. L'affectation échoue pourtant
+# tout autant, et le trap parle deux fois.
+#
+# Leur traitement diffère, et c'est délibéré :
+#
+#   configure-hostname.sh  fatal, et rien n'est écrit. Sans horodatage il n'y a
+#                          pas de nom de sauvegarde, donc pas de sauvegarde — et
+#                          /etc/hosts ne se modifie pas sans copie préalable ;
+#   configure-swap.sh      fatal aussi, mais APRÈS l'activation. Le swap reste
+#                          actif pour cette session, le fichier n'est pas
+#                          nettoyé — « trap - EXIT » a déjà été exécuté — et la
+#                          ligne à inscrire à la main est donnée.
+#
+# Le troisième n'est pas une mise en condition mais une SUPPRESSION : la boucle
+# de désambiguïsation rappelait « date », si bien qu'une collision de nom
+# produisait « …-<nouvel horodatage>-1 » alors que « …-<nouvel horodatage> »
+# était libre. L'horodatage est désormais lu une fois et réutilisé.
+#
+# CE GROUPE ÉCRIT /etc/fstab et /etc/hosts, et active un swap — par un faux
+# swapon, le vrai exigeant CAP_SYS_ADMIN. Il est placé APRÈS le groupe 4 et rend
+# l'état où il l'a trouvé, ce qu'il vérifie plutôt que de le supposer.
+titre "4 quinquies. « date » et la boucle de suffixe"
+
+REP_STUB_DATE="$REP_TMP/stub-date"
+REP_STUB_SWAPON="$REP_TMP/stub-swapon"
+REP_STUB_HORO="$REP_TMP/stub-horodatage"
+
+RAISON_4QUINQ="oui"
+if [ "$EST_ROOT" != "true" ]; then
+    RAISON_4QUINQ="require_root arrête ces scripts avant toute écriture"
+elif [ "$JETABLE" != "true" ]; then
+    RAISON_4QUINQ="ce groupe réécrit /etc/hosts et /etc/fstab — réservé à un système jetable"
+fi
+
+if [ "$RAISON_4QUINQ" != "oui" ]; then
+    saute "configure-hostname.sh : « date » en échec, rien n'est écrit" "$RAISON_4QUINQ"
+    saute "configure-swap.sh : « date » en échec en phase fstab" "$RAISON_4QUINQ"
+    saute "configure-swap.sh : la boucle de suffixe réutilise l'horodatage" "$RAISON_4QUINQ"
+else
+    mkdir -p "$REP_STUB_DATE" "$REP_STUB_SWAPON"
+    printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_DATE/date"
+    chmod +x "$REP_STUB_DATE/date"
+    if "$REP_STUB_DATE/date" '+%Y%m%d-%H%M%S' >/dev/null 2>&1; then
+        ko "garde : le faux « date » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « date » échoue bien"
+    fi
+
+    # --- i. configure-hostname.sh : fatal, et /etc/hosts INTACT -------------
+    # Le nom demandé est celui de la machine, et /etc/hosts est vidé de sa ligne
+    # 127.0.1.1 : le script a donc un changement à appliquer et atteint la
+    # sauvegarde. Sans cela il sortirait sur « Rien à faire ».
+    #
+    # Le faux « date » est TOTAL, et c'est sans danger ici : le « $(date …) » de
+    # lib/common.sh est en POSITION D'ARGUMENT dans son printf — il ne double
+    # rien et ne tue rien, l'horodatage du journal reste seulement vide. Mesuré.
+    cp -p /etc/hosts "$REP_TMP/hosts.avant-4quinq"
+    printf '127.0.0.1\tlocalhost\n' > /etc/hosts
+    HOSTS_AVANT_DATE="$(empreinte_fichier /etc/hosts)"
+    SAUVEGARDES_AVANT_DATE="$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')"
+
+    lancer env "PATH=$REP_STUB_DATE:$PATH" bash "$HOSTNAME_SH" "$(hostname)" -y
+
+    assert_code 1 "$CODE" \
+        "configure-hostname.sh, « date » en échec : échec d'exécution, code 1"
+    assert_contient "$(erreur)" "[ERROR] Horodatage impossible à produire : « date » a échoué." \
+        "configure-hostname.sh, « date » en échec : le diagnostic nomme date"
+    assert_contient "$(erreur)" "[ERROR] /etc/hosts n'a pas été modifié, faute de pouvoir le sauvegarder." \
+        "configure-hostname.sh, « date » en échec : le diagnostic dit ce qui n'a PAS été fait"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-hostname.sh, « date » en échec : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "configure-hostname.sh: line" \
+        "configure-hostname.sh, « date » en échec : aucun message brut de bash sur stderr"
+    assert_absent "$(erreur)" "Sauvegarde :" \
+        "configure-hostname.sh, « date » en échec : aucune sauvegarde n'est même annoncée"
+    assert_egal "3" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-hostname.sh, « date » en échec : trois lignes [ERROR] mesurées"
+    assert_egal "0" "$(nb_lignes_contenant '[WARN]')" \
+        "configure-hostname.sh, « date » en échec : aucun avertissement — « hostname », lui, a réussi"
+    assert_egal "$HOSTS_AVANT_DATE" "$(empreinte_fichier /etc/hosts)" \
+        "configure-hostname.sh, « date » en échec : /etc/hosts est resté strictement intact"
+    assert_egal "$SAUVEGARDES_AVANT_DATE" "$(find /etc -maxdepth 1 -name 'hosts.bak-*' | wc -l | tr -d ' ')" \
+        "configure-hostname.sh, « date » en échec : AUCUNE sauvegarde n'a été déposée"
+
+    cat "$REP_TMP/hosts.avant-4quinq" > /etc/hosts
+
+    # --- j. configure-swap.sh : « date » en échec APRÈS l'activation --------
+    # Le seul site du dépôt qui s'atteigne après « trap - EXIT ». Deux
+    # conséquences, et les deux sont voulues : le fichier d'échange n'est PAS
+    # nettoyé — le trap de nettoyage a été désarmé —, et le swap reste actif pour
+    # la session. Seule sa persistance manque, et la ligne à inscrire est donnée.
+    #
+    # swapon est remplacé par un stub qui rend 0 : le vrai exige CAP_SYS_ADMIN,
+    # refusé au conteneur, et sans lui le script mourrait avant la phase fstab.
+    # Ce que ce cas éprouve n'est donc pas l'activation — elle reste NON EXÉCUTÉE
+    # au groupe 5 — mais tout ce qui la suit.
+    printf '#!/bin/sh\nexit 0\n' > "$REP_STUB_SWAPON/swapon"
+    chmod +x "$REP_STUB_SWAPON/swapon"
+
+    SWAP_FSTAB="$REP_TMP/swapfile-fstab"
+    cp -p /etc/fstab "$REP_TMP/fstab.avant-4quinq"
+    SAUVEGARDES_FSTAB_AVANT="$(find /etc -maxdepth 1 -name 'fstab.bak-*' | wc -l | tr -d ' ')"
+
+    if [ -e "$SWAP_FSTAB" ]; then
+        ko "garde : le fichier d'échange témoin n'existe pas avant l'appel" "$SWAP_FSTAB existe"
+    else
+        ok "garde : le fichier d'échange témoin n'existe pas avant l'appel"
+    fi
+
+    lancer env "PATH=$REP_STUB_DATE:$REP_STUB_SWAPON:$PATH" \
+        bash "$SWAP_SH" 64M --file "$SWAP_FSTAB" -y
+
+    assert_code 1 "$CODE" \
+        "configure-swap.sh, « date » en échec en phase fstab : échec d'exécution, code 1"
+    assert_contient "$(erreur)" "[SUCCESS] Swap actif : $SWAP_FSTAB (64 Mo)" \
+        "configure-swap.sh, « date » en phase fstab : l'activation a bien eu lieu avant l'échec"
+    assert_contient "$(erreur)" "[ERROR] Horodatage impossible à produire : « date » a échoué." \
+        "configure-swap.sh, « date » en phase fstab : le diagnostic nomme date"
+    assert_contient "$(erreur)" "[ERROR] Le swap est actif pour cette session, mais pas au redémarrage." \
+        "configure-swap.sh, « date » en phase fstab : l'état réel est dit à l'appelant"
+    assert_contient "$(erreur)" "[ERROR] Ligne à ajouter : $SWAP_FSTAB	none	swap	sw	0	0" \
+        "configure-swap.sh, « date » en phase fstab : la ligne fstab est donnée telle quelle"
+    assert_absent "$(erreur)" "Échec (code" \
+        "configure-swap.sh, « date » en phase fstab : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "configure-swap.sh: line" \
+        "configure-swap.sh, « date » en phase fstab : aucun message brut de bash sur stderr"
+    assert_egal "5" "$(nb_lignes_contenant '[ERROR]')" \
+        "configure-swap.sh, « date » en phase fstab : cinq lignes [ERROR] mesurées"
+
+    # Le fichier n'est PAS nettoyé : « trap - EXIT » a précédé l'échec. C'est le
+    # seul cas du dépôt à éprouver ce désarmement, et l'inverse — un fichier
+    # effacé alors que le swap est actif — serait une perte de swap silencieuse.
+    if [ -e "$SWAP_FSTAB" ]; then
+        ok "configure-swap.sh, « date » en phase fstab : le fichier d'échange subsiste — le trap de nettoyage est bien désarmé"
+    else
+        ko "configure-swap.sh, « date » en phase fstab : le fichier d'échange subsiste" \
+            "$SWAP_FSTAB a été supprimé alors que le swap était actif"
+    fi
+    assert_absent "$(erreur)" "a été supprimé" \
+        "configure-swap.sh, « date » en phase fstab : aucun nettoyage n'est même annoncé"
+
+    if cmp -s "$REP_TMP/fstab.avant-4quinq" /etc/fstab; then
+        ok "configure-swap.sh, « date » en phase fstab : /etc/fstab est resté intact"
+    else
+        ko "configure-swap.sh, « date » en phase fstab : /etc/fstab est resté intact" \
+            "le fichier a été modifié sans sauvegarde préalable"
+    fi
+    assert_egal "$SAUVEGARDES_FSTAB_AVANT" "$(find /etc -maxdepth 1 -name 'fstab.bak-*' | wc -l | tr -d ' ')" \
+        "configure-swap.sh, « date » en phase fstab : aucune sauvegarde de /etc/fstab n'a été déposée"
+
+    rm -f "$SWAP_FSTAB"
+
+    # --- k. La boucle de suffixe réutilise l'horodatage ----------------------
+    # La substitution SUPPRIMÉE. La boucle rappelait « date » à chaque tour :
+    # quand le nom de base était pris, elle produisait « …-<NOUVEL horodatage>-1 »
+    # alors que « …-<nouvel horodatage> » était libre. Deux horodatages mêlés
+    # dans un même nom, et un suffixe posé pour rien.
+    #
+    # Le montage est le seul qui discrimine les deux formes. Un « date » à valeur
+    # FIXE ne dirait rien — les deux écriraient le même nom. Le stub compte donc
+    # les appels PORTANT LE FORMAT DU SITE, « +%Y%m%d-%H%M%S », et rend « HORO<n> ».
+    # Celui de lib/common.sh emploie un autre format et est délégué : il ne fausse
+    # pas le compte, ce qui a été mesuré — sans ce filtre, le socle consommait
+    # quinze appels et le cas ne prouvait rien.
+    #
+    #   forme corrigée   un seul appel  -> HORO1, nom pris, suffixe -> HORO1-1
+    #   forme nue        deux appels    -> HORO1 pris, la boucle relit -> HORO2-1
+    #
+    # Les deux assertions — le nom produit ET le nombre d'appels — se contrôlent
+    # l'une l'autre.
+    mkdir -p "$REP_STUB_HORO"
+    # Guillemets simples VOULUS, comme pour les stubs précédents : « $* », « $n »
+    # et « $@ » sont développés par le stub, pas par le harnais. SC2016 signale
+    # exactement ce qu'on veut ici.
+    # shellcheck disable=SC2016
+    {
+        printf '#!/bin/sh\n'
+        printf 'case "$*" in\n'
+        printf '  "+%%Y%%m%%d-%%H%%M%%S")\n'
+        printf '    n=0\n'
+        printf '    [ -f %s ] && n=$(cat %s)\n' "$REP_STUB_HORO/compteur" "$REP_STUB_HORO/compteur"
+        printf '    n=$((n + 1))\n'
+        printf '    echo "$n" > %s\n' "$REP_STUB_HORO/compteur"
+        printf '    echo "HORO$n"\n'
+        printf '    exit 0\n'
+        printf '    ;;\n'
+        printf 'esac\n'
+        printf 'exec %s "$@"\n' "$(command -v date)"
+    } > "$REP_STUB_HORO/date"
+    chmod +x "$REP_STUB_HORO/date"
+    rm -f "$REP_STUB_HORO/compteur"
+
+    if [ "$("$REP_STUB_HORO/date" '+%Y%m%d-%H%M%S')" = "HORO1" ] \
+        && [ "$("$REP_STUB_HORO/date" '+%Y%m%d-%H%M%S')" = "HORO2" ]; then
+        ok "garde : le faux « date » numérote ses appels au format du site"
+    else
+        ko "garde : le faux « date » numérote ses appels au format du site" \
+            "le stub ne rend pas HORO1 puis HORO2"
+    fi
+    if [ -n "$("$REP_STUB_HORO/date" '+%Y')" ] && [ "$("$REP_STUB_HORO/date" '+%Y')" != "HORO3" ]; then
+        ok "garde : le faux « date » délègue les autres formats — le socle ne fausse pas le compte"
+    else
+        ko "garde : le faux « date » délègue les autres formats" \
+            "un format étranger a été numéroté ; le compteur ne dirait plus ce qu'on lui demande"
+    fi
+    rm -f "$REP_STUB_HORO/compteur"
+
+    # Le nom de base est occupé d'avance : la boucle DOIT s'exécuter.
+    : > /etc/fstab.bak-HORO1
+    lancer env "PATH=$REP_STUB_HORO:$REP_STUB_SWAPON:$PATH" \
+        bash "$SWAP_SH" 64M --file "$SWAP_FSTAB" -y
+
+    # Le code est 1 : le faux swapon n'a rien activé, et la vérification finale
+    # le voit. C'est le contrat de cet environnement, pas un défaut — l'assertion
+    # le fige plutôt que de le taire.
+    assert_code 1 "$CODE" \
+        "boucle de suffixe : le script sort en 1 — le faux swapon n'inscrit rien dans /proc/swaps"
+    assert_contient "$(erreur)" "[ERROR] $SWAP_FSTAB n'apparaît pas dans /proc/swaps après activation." \
+        "boucle de suffixe : c'est bien la vérification finale qui refuse, et rien d'autre"
+    assert_contient "$(erreur)" "[SUCCESS] /etc/fstab complété : le swap sera actif au redémarrage." \
+        "boucle de suffixe : la phase fstab est allée à son terme"
+    assert_absent "$(erreur)" "Échec (code" \
+        "boucle de suffixe : le trap ERR n'ajoute aucune ligne"
+
+    # LES DEUX ASSERTIONS QUI DISCRIMINENT.
+    assert_contient "$(erreur)" "[INFO] Sauvegarde : /etc/fstab.bak-HORO1-1" \
+        "boucle de suffixe : le nom suffixé réutilise l'horodatage déjà lu, et n'en produit pas un second"
+    assert_egal "1" "$(cat "$REP_STUB_HORO/compteur" 2>/dev/null || printf '0')" \
+        "boucle de suffixe : « date » n'a été appelé QU'UNE FOIS au format du site"
+
+    if [ -f /etc/fstab.bak-HORO1-1 ]; then
+        ok "boucle de suffixe : la sauvegarde suffixée existe bien sur le disque"
+    else
+        ko "boucle de suffixe : la sauvegarde suffixée existe bien sur le disque" \
+            "/etc/fstab.bak-HORO1-1 est absent"
+    fi
+
+    # --- Restitution --------------------------------------------------------
+    # Le motif est large — « HORO* » et non les deux noms littéraux : sous la
+    # mutation qui rétablit l'appel à « date » dans la boucle, le nom produit
+    # porte un autre horodatage, et un nettoyage littéral le laisserait derrière
+    # lui. La restitution doit rester vraie même quand le script est fautif.
+    rm -f /etc/fstab.bak-HORO* "$SWAP_FSTAB"
+    cat "$REP_TMP/fstab.avant-4quinq" > /etc/fstab
+    rm -rf "$REP_STUB_DATE" "$REP_STUB_SWAPON" "$REP_STUB_HORO"
+
+    if cmp -s "$REP_TMP/fstab.avant-4quinq" /etc/fstab; then
+        ok "restitution : /etc/fstab porte exactement ce qu'il portait à l'entrée du groupe"
+    else
+        ko "restitution : /etc/fstab porte exactement ce qu'il portait à l'entrée du groupe" \
+            "le fichier diffère de l'état relevé à l'entrée"
+    fi
+    assert_egal "$SAUVEGARDES_FSTAB_AVANT" "$(find /etc -maxdepth 1 -name 'fstab.bak-*' | wc -l | tr -d ' ')" \
+        "restitution : les sauvegardes de /etc/fstab déposées par ce groupe sont retirées"
+    if cmp -s "$REP_TMP/hosts.avant-4quinq" /etc/hosts; then
+        ok "restitution : /etc/hosts porte exactement ce qu'il portait à l'entrée du groupe"
+    else
+        ko "restitution : /etc/hosts porte exactement ce qu'il portait à l'entrée du groupe" \
+            "le fichier diffère de l'état relevé à l'entrée"
+    fi
+    if [ -e "$SWAP_FSTAB" ]; then
+        ko "restitution : le fichier d'échange témoin est supprimé" "$SWAP_FSTAB subsiste"
+    else
+        ok "restitution : le fichier d'échange témoin est supprimé"
+    fi
+fi
+
+# ===================================================================
 # 5. Hors de portée de cet environnement
 # ===================================================================
 # Ces lignes ne sont pas des cas manqués : ce sont des cas dont on sait qu'ils
@@ -1703,6 +3566,41 @@ saute "update-system.sh appliquant réellement apt-get upgrade" \
     "exclu par TASK-004 : l'image n'a aucun paquet obsolète, la mise à jour n'apprendrait rien"
 saute "configure-logging.sh sur un système sans le groupe « adm »" \
     "l'image Debian le fournit toujours — la branche GROUPE_LOGS=root reste sans preuve"
+
+# Les sites de TASK-018 dont la CAUSE D'ÉCHEC n'est pas atteignable depuis une
+# ligne de commande ni depuis l'environnement de l'appel. Le groupe 3 quater, le
+# groupe 4 bis et tests/integration/configure-cron.test.sh prouvent les autres ;
+# ceux-ci restent des corrections que rien n'a exécutées, et les taire laisserait
+# croire tout le lot vérifié.
+#
+# Chacun a été REMIS EN FORME NUE, et le fichier de cas est resté intégralement
+# vert : c'est la mesure qui justifie ces lignes, et non une lecture du code.
+#
+# « saute » NEUTRE, et non « saute_par_nature ». La distinction n'est pas
+# cosmétique : « par nature » est une SIGNATURE, elle affirme qu'aucune exécution
+# ne rendra jamais ce cas atteignable. Or la raison invoquée pour df -T et df -BM
+# — « le contrôle de répertoire les précède » — est une propriété du code que
+# CETTE MÊME TÂCHE vient d'ajouter, pas une limite de l'environnement de test.
+# Une correction rendue invérifiable par une autre correction du même diff ne
+# peut pas s'auto-certifier hors d'atteinte. Le saut neutre dit ce qu'on sait :
+# le cas n'a pas tourné, et il n'est pas compté comme réussi.
+saute "configure-swap.sh : df -T en échec sur un répertoire EXISTANT" \
+    "le contrôle de répertoire ajouté par TASK-018 intercepte le seul cas atteignable — les cas a, b et b bis du groupe 3 quater éprouvent ce contrôle, pas la mise en condition de df ; faire échouer df sur un répertoire existant demanderait de démonter un système de fichiers sous les pieds du script"
+saute "configure-swap.sh : df -BM en échec sur le calcul d'espace libre" \
+    "le même contrôle le précède, et le répertoire a déjà servi à df -T quelques lignes plus haut — aucune ligne de commande n'atteint cet échec"
+saute_par_nature "configure-swap.sh : /proc/swaps illisible avant swapoff" \
+    "ce chemin exige un swap ACTIF sur la cible — swapon exige CAP_SYS_ADMIN, refusé au conteneur — et un /proc rendu illisible en cours d'exécution"
+saute_par_nature "configure-swap.sh : /proc/meminfo illisible avant swapoff" \
+    "même chemin et même condition que /proc/swaps ci-dessus"
+saute "configure-timezone.sh : la seconde lecture de /etc/timezone, à la vérification" \
+    "l'atteindre demanderait un tr qui échoue à la vérification seulement, après avoir réussi à la mise en cohérence — le stub du groupe 4 ter échoue aux deux et le script meurt à la première"
+
+# Le cinquième tour a FERMÉ les six sites que le quatrième laissait en forme nue,
+# plus le « dirname ». Il ne reste ici qu'une réserve, et elle n'est pas un
+# doublement : sa nature est différente, et la nommer parmi les autres serait la
+# noyer.
+saute "update-system.sh:133 — « restant » vide passé à un test arithmétique" \
+    "le « || true » empêche le doublement mais laisse une chaîne vide au « -gt 0 » qui suit — réserve d'une autre nature, versée aux points en suspens"
 
 # ===================================================================
 # Nettoyage

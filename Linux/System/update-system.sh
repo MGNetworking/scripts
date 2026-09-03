@@ -90,7 +90,21 @@ if [ -z "$a_installer" ]; then
     exit 0
 fi
 
-nombre="$(printf '%s\n' "$a_installer" | wc -l | tr -d ' ')"
+# Affectation en CONTEXTE DE CONDITION. Contrairement aux deux substitutions
+# ci-dessus, celle-ci n'est éteinte par aucun « || true » : sous pipefail,
+# l'échec de wc ou de tr — un faux binaire en tête de PATH suffit — emporte le
+# pipeline, l'affectation échoue, et le trap ERR de lib/common.sh parle deux fois
+# sans dire ce qui a flanché. En condition, ni errexit ni le trap n'ont prise.
+#
+# L'échec n'est pas fatal : ce décompte ne sert qu'à l'affichage et au libellé de
+# la confirmation — aucune décision n'en dépend, et la liste des paquets, elle,
+# est produite par awk juste en dessous. Le « ? » dit qu'on ne sait pas, là où
+# une chaîne vide laisserait lire « paquet(s) à mettre à jour » sans nombre.
+if ! nombre="$(printf '%s\n' "$a_installer" | wc -l | tr -d ' ')"; then
+    warn "Décompte des paquets impossible : « wc » ou « tr » a échoué."
+    nombre="?"
+fi
+
 info "$nombre paquet(s) à mettre à jour :"
 # Sur stderr, comme les messages de common.sh : la liste est un diagnostic,
 # pas une donnée produite par le script.
