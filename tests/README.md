@@ -31,7 +31,7 @@ tests/env/run-in-container.sh -- tests/run.sh
 | `lint` | `bash -n` sur tous les `.sh`, `shellcheck` si disponible | hôte | **implémenté** |
 | `unit` | fonctions de `lib/common.sh` | conteneur `debian` | **implémenté** |
 | `integration` | exécution réelle, `--dry-run`, idempotence | conteneur `debian` | **implémenté** |
-| `environment` | services, `systemctl`, état système | conteneur `systemd` | à écrire |
+| `environment` | services, `systemctl`, état système | conteneur `systemd` | **implémenté** |
 | `acceptance` | critères d'acceptation d'une tâche | selon la tâche | **implémenté** |
 
 Un niveau s'ajoute en déposant son script au chemin annoncé par
@@ -508,6 +508,94 @@ s'écrit alors comme telle — dans le recensement, et en `NON EXÉCUTÉ` dans l
 fichier de cas. Et un site laissé nu avec une raison écrite reste un site laissé
 nu : la raison ne remplace pas la mutation qui l'aurait éprouvée.
 
+### Le niveau `environment`
+
+Un fichier par sujet, nommé `tests/environment/<sujet>.test.sh`.
+`run-environment.sh` les découvre — **en `maxdepth 1`**, comme les trois autres
+niveaux — et agrège leurs verdicts, à l'identique de `run-integration.sh`.
+
+```text
+tests/environment/
+├── run-environment.sh     le dispatcher
+└── systemd.test.sh        les scripts de Linux/System face à un init réel
+```
+
+C'est le domicile des preuves qui exigent un **init réel** — `systemctl`,
+`timedatectl`, `hostnamectl`. Sa commande de référence est le profil `systemd`
+du §4 :
+
+```bash
+tests/env/run-in-container.sh --profil systemd -- tests/run.sh environment
+```
+
+**Ce niveau modifie le système sur lequel il tourne** : fuseau horaire, nom
+d'hôte, `/etc/hosts`. Comme pour l'`integration`, les fichiers de cas se
+protègent eux-mêmes — rien n'est écrit tant qu'un système jetable n'a pas été
+reconnu — et chaque groupe modifiant restitue l'état de départ **et vérifie sa
+restitution**.
+
+Ce que `systemd.test.sh` prouve, et que rien ne prouvait avant lui :
+
+| Cas | Où il était déclaré `NON EXÉCUTÉ` |
+|---|---|
+| `configure-timezone.sh` applique le fuseau **par `timedatectl`** — et n'emprunte alors pas son repli `/etc/localtime` | `tests/integration/linux-system.test.sh` §5 |
+| `configure-hostname.sh` change **réellement** le nom de la machine, `/etc/hostname` et `/etc/hosts` suivant | le même §5 |
+| systemd répond : PID 1, inventaire des unités, **activation de `systemd-timedated` par le bus** au premier appel de `timedatectl` | nulle part — le profil n'existait pas |
+
+Les deux lignes correspondantes du §5 de `linux-system.test.sh` **ont disparu**,
+remplacées par un commentaire qui nomme l'endroit où la preuve vit désormais.
+
+#### Deux règles propres à ce niveau
+
+**La garde éprouve systemd, jamais le nom du profil.** Aucun groupe n'est
+conditionné à `--profil systemd` : la condition est mesurée — `/proc/1/comm`
+vaut `systemd`, et `systemctl is-system-running` rend un état de marche. Un
+profil futur portant un autre init verra ces cas s'exécuter sans qu'on retouche
+le fichier. `running` et `degraded` valent tous deux ; `offline` et `unknown`
+disent que rien ne répond.
+
+**Le niveau garde des cas exécutables sans systemd, et il le doit.**
+`tests/run.sh` sans argument passe par cet étage, **y compris sous le profil
+`debian`**. Un fichier qui ne ferait qu'y sauter sortirait en 3 — *rien n'est
+prouvé* — et la commande de référence du dépôt cesserait d'être verte (§2). Le
+groupe 1 de `systemd.test.sh` ne dépend donc d'aucun init : aide, option
+inconnue, `--list`. Il sert aussi de **garde de contraste** — si les scripts ne
+démarraient plus du tout, les sauts des groupes suivants ne pourraient plus être
+lus comme « seul systemd manque ».
+
+Mesuré, les deux profils donnent :
+
+| Profil | Réussites | `NON EXÉCUTÉ` | Fichier | Niveau | `tests/run.sh` |
+|---|---|---|---|---|---|
+| `systemd` | 48 | 2, tous par nature | 4 | 4 | **0** |
+| `debian` | 13 | 13, tous par nature | 4 | 4 | **0** |
+
+#### Ce qui reste hors de portée, et pourquoi
+
+- **`hostnamectl set-hostname`** échoue dans ce profil sur `Failed to set static
+  hostname: Device or resource busy`. La cause est **structurelle** et non une
+  lacune de l'image : Docker monte `/etc/hostname` depuis l'hôte — le montage
+  est relevé dans `/proc/mounts` par le fichier de cas lui-même — et
+  `hostnamectl` procède par remplacement du fichier. Aucune option de lancement
+  n'y change rien ; `--transient` est accepté sans effet, le nom statique
+  primant. Le chemin `hostname(1)`, lui, fonctionne : c'est celui que
+  `configure-hostname.sh` emprunte, et c'est lui qui est éprouvé ;
+- **un démon `cron` en service** : `cron` n'est pas dans l'image, qui n'embarque
+  aucun service applicatif. Le saut de `tests/integration/configure-cron.test.sh`
+  §9 subsiste donc, avec une raison changée de nature — ce n'est plus « le profil
+  n'existe pas », c'est « son image n'a pas cron » ;
+- **un redémarrage** : `reboot` et `systemctl poweroff` arrêtent le PID 1, donc
+  le conteneur, et décapitent la suite en cours.
+
+#### Ne jamais lancer le niveau `integration` sous le profil `systemd`
+
+Plusieurs assertions de `tests/integration/linux-system.test.sh` sont vraies
+**parce que** systemd est absent : le repli `/etc/localtime` explicitement
+attendu, un décompte exact de lignes sur `stderr`, un saut conditionné à
+l'absence de `timedatectl`. Sous un init, elles rougiraient sans qu'aucun défaut
+n'existe. Le niveau `integration` reste l'affaire du profil `debian` ; la preuve
+qui exige systemd vit ici.
+
 ### Le niveau `acceptance`
 
 Un fichier par tâche, nommé `tests/acceptance/TASK-0xx-<sujet>.sh`.
@@ -736,13 +824,20 @@ sort en 1.
 ### Ce que fait le script
 
 1. vérifie que `docker` existe **et que le démon répond** — un démon arrêté
-   produit un message explicite et le code 3, jamais un faux succès ;
+   produit un message explicite et le code 3, jamais un faux succès ; en mode
+   `systemd`, vérifie aussi `timeout`, qui borne les interrogations du préflight,
+   le lancement du conteneur, l'attente du démarrage, le nettoyage et le
+   diagnostic ;
 2. construit l'image du profil si elle est absente ;
 3. lance un conteneur neuf, dépôt monté en **lecture-écriture** sur `/depot`,
    répertoire de travail `/depot` ;
-4. détruit le conteneur — `--rm`, plus un filet de sécurité sur interruption.
-   **Aucun état ne survit :** deux exécutions consécutives partent d'un état
-   identique, condition sans laquelle un test d'idempotence ne prouve rien.
+4. détruit le conteneur — `--rm` en mode direct, le `trap … EXIT` en mode
+   systemd. **Aucun état ne survit :** deux exécutions consécutives partent d'un
+   état identique, condition sans laquelle un test d'idempotence ne prouve rien.
+   Si la destruction n'aboutit pas, elle le dit en `[WARN]` — le conteneur
+   survivant est nommé, la commande qui le retire à la main est donnée — et
+   **le code de retour n'en est pas changé** : un nettoyage manqué ne
+   transforme pas un succès en échec.
 
 ### Options
 
@@ -758,8 +853,8 @@ sort en 1.
 | Code | Sens |
 |---|---|
 | 0 | la commande exécutée dans le conteneur a réussi |
-| 2 | erreur d'usage — option inconnue, profil inexistant, commande absente |
-| 3 | environnement indisponible — `docker` absent ou démon arrêté, **rien n'a été exécuté** |
+| 2 | erreur d'usage — option inconnue, profil inexistant ou déclarant un mode d'init inconnu, commande absente |
+| 3 | environnement indisponible — `docker` absent, démon arrêté ou **devenu muet au préflight, au lancement du conteneur ou pendant l'attente**, `timeout` absent, ou **systemd qui ne démarre pas** dans le conteneur ; **rien n'a été exécuté** |
 | 4 | échec de la construction de l'image, rien n'a été exécuté |
 | autre | code de retour de la commande, transmis tel quel |
 
@@ -772,14 +867,208 @@ l'ambiguïté.
 | Profil | Image | Couvre | État |
 |---|---|---|---|
 | `debian` | `debian:12` | `lint`, `unit`, `--dry-run`, idempotence, `apt` | **implémenté** — `tests/env/Dockerfile.debian` |
-| `systemd` | dérivée, `/sbin/init`, `--privileged` | `systemctl`, `timedatectl`, `hostnamectl`, `logrotate` | à écrire |
+| `systemd` | `debian:12`, `/sbin/init`, `--privileged` | `systemctl`, `timedatectl`, `hostnamectl`, niveau `environment` | **implémenté** — `tests/env/Dockerfile.systemd` |
 
 Un profil `<nom>` correspond au fichier `tests/env/Dockerfile.<nom>`. En déposer
 un nouveau suffit à le rendre disponible — le script ne tient aucune liste en
-dur. Le profil `systemd` demandera en plus `--privileged` et un point d'entrée
-`/sbin/init`, que le script ne gère pas encore.
+dur.
 
-### L'image
+#### Le profil `systemd`
+
+Sa seule raison d'être : sans `systemctl`, `timedatectl` ni `hostnamectl` réels,
+tout un pan du dépôt est écrit sans jamais être exécuté. C'est ce profil qui
+porte le niveau `environment` (§1).
+
+```bash
+tests/env/run-in-container.sh --profil systemd -- tests/run.sh environment
+tests/env/run-in-container.sh --profil systemd -- systemctl list-units --type=service
+```
+
+**Le mode de lancement est déclaré par le Dockerfile lui-même**, par le label
+`mgnet.test.init="systemd"` — le lanceur ne tient aucune liste de profils en
+dur, et un `Dockerfile.<nom>` futur portant ce label suivra le même chemin. Ce
+chemin diffère de celui du profil `debian` :
+
+| | `debian` | `systemd` |
+|---|---|---|
+| PID 1 | la commande demandée | `/sbin/init` |
+| lancement | `docker run --rm <image> <commande>`, non borné | `docker run -d` **borné à 30 s**, **sans `--rm`**, puis `docker exec -w /depot` |
+| options `docker` en plus | — | `--privileged`, `--tmpfs /run` |
+| avant la commande | rien | attente de la fin du démarrage |
+| destruction | `--rm`, le `trap … EXIT` en filet | le `trap … EXIT`, seul |
+
+Pourquoi ces options : `--privileged` parce que systemd crée un cgroup par unité
+et écrit donc dans `/sys/fs/cgroup`, que Docker monte en lecture seule pour un
+conteneur ordinaire ; `--tmpfs /run` parce que `/run` porte l'état volatile du
+système, que systemd s'attend à trouver vide au démarrage. Deux recettes
+courantes sont volontairement **absentes**, et le `Dockerfile` dit pourquoi :
+`-v /sys/fs/cgroup:/sys/fs/cgroup:ro` relève de cgroup v1, et `--cgroupns=host`
+exposerait à ce conteneur privilégié l'arborescence de l'hôte entier.
+
+**Le conteneur systemd est lancé sans `--rm`, et c'est délibéré.** Sur un
+conteneur détaché, Docker efface le conteneur dès l'arrêt de son PID 1 —
+c'est-à-dire dans le cas exact où l'on veut savoir *pourquoi* il s'est arrêté.
+`docker logs` ne trouvait alors plus rien et ne rendait qu'un
+`No such container` : le seul élément de diagnostic prévu pour cette panne était
+**systématiquement vide**. Le conteneur est donc conservé le temps que le
+lanceur en lise le journal, puis détruit par le `trap … EXIT`, qui efface un
+conteneur quel que soit son état.
+
+Rien ne survit davantage qu'avant : en mode détaché, `--rm` ne couvrait que ce
+cas-là. Reste la mort brutale du lanceur, où le `trap` ne passe pas — mais
+`--rm` n'y aurait rien effacé non plus, le conteneur tournant toujours. C'est le
+cas que `docker ps -a --filter 'name=mgnet-test-'` sert à constater.
+
+**L'attente du démarrage est active.** Un `docker exec` lancé aussitôt après le
+`run` tombe sur un systemd encore en `initializing` : `systemctl` répond mal, ou
+pas du tout. Le lanceur interroge donc `systemctl is-system-running` en boucle.
+Si le conteneur s'arrête entre-temps, ou si le démarrage n'aboutit pas, il rend
+**3**, affiche le dernier état obtenu puis les vingt dernières lignes du journal
+du conteneur, et **détruit le conteneur** : rien n'est exécuté, rien ne survit.
+Le journal a quatre issues, toutes annoncées — des lignes, un conteneur qui
+n'existe plus, un PID 1 qui n'a rien écrit, un démon qui ne répond plus. Aucune
+ne laisse un silence, et aucune ne présente l'erreur de `docker logs` comme s'il
+s'agissait d'un journal.
+
+**L'attente est bornée en temps mural, pas seulement en réessais** — et ce qui
+l'entoure l'est aussi, en amont comme en aval. Quatre bornes, et il en faut
+quatre :
+
+| Borne | Valeur | Ce qu'elle empêche |
+|---|---|---|
+| plafond de l'attente | 60 s | un systemd qui ne finit jamais de démarrer |
+| borne d'un sondage, et des deux interrogations du préflight | 10 s, puis `SIGKILL` 5 s plus tard | un démon Docker figé, qui retiendrait `docker info` ou `docker image inspect` **avant** tout, puis `docker exec` ou `docker ps` **avant** que la boucle n'atteigne le contrôle de son plafond |
+| borne du lancement | 30 s, puis `SIGKILL` 5 s plus tard | ce même démon figé retenant le `docker run -d`, **entre** le préflight et la boucle |
+| borne du nettoyage et du diagnostic | 5 s, puis `SIGKILL` 5 s plus tard | ce même démon figé retenant `docker ps -a`, `docker logs` ou `docker rm -f`, **après** le diagnostic — dans le `trap … EXIT`, où l'appelant croit le script terminé |
+
+Le plafond seul ne suffisait pas : il compte les réessais, et une boucle dont
+chaque tour ne rend pas la main ne réessaie jamais. Les deux appels Docker du
+sondage passent donc par `timeout -k 5 10`. Sa présence est vérifiée au
+préflight, en mode `systemd` uniquement ; absent, le lanceur rend **3** plutôt
+que de promettre une borne qu'il ne tiendrait pas.
+
+Borner la boucle ne suffisait pas davantage : **le blocage s'était déplacé de la
+boucle vers le `trap`**. Mesuré, avec un `docker` qui répond au `build` et au
+`run` puis ne répond plus : le diagnostic s'affichait bien au bout de 10 s, puis
+le script mettait **305 s de plus** à rendre la main, suspendu sur le
+`docker ps -a` puis le `docker rm -f` du nettoyage. Les appels du nettoyage et du
+diagnostic passent donc par `timeout -k 5 5`. La borne y est **plus courte que
+celle des sondages** : aucune de ces commandes n'attend un démarrage, toutes
+rendent la main en une fraction de seconde sur un démon sain.
+
+Borner la boucle et le `trap` ne suffisait pas encore : **le blocage s'était
+déplacé une troisième fois, en amont cette fois**. Mesuré, avec un `docker` qui
+répond à `info` et à `build` puis dort 300 s sur `run` : le lanceur restait
+suspendu sur son `docker run -d` — 200 s constatées, et seulement parce qu'un
+`timeout` externe coupait la mesure — sans jamais entrer dans la boucle que les
+bornes précédentes protégeaient. Ce lancement-là est **détaché** : il n'exécute
+aucune commande, il crée le conteneur, démarre son PID 1 et rend la main —
+mesuré en moins d'une seconde. Il passe donc par `timeout -k 5 30`. La borne y est **plus
+longue que celle des sondages** parce que le démon y fait un vrai travail —
+espaces de noms, `tmpfs` sur `/run`, montage du dépôt à travers la frontière
+Windows/WSL2 — mais il ne télécharge rien : l'image est présente, construite ou
+vérifiée juste avant. Les deux interrogations du préflight, `docker info` et
+`docker image inspect`, sont bornées par la même occasion : mêmes questions
+instantanées, même trou. Pour `docker image inspect`, une borne expirée **ne
+vaut pas « image absente »** — on partirait construire, et `docker build` n'est
+pas borné.
+
+**Si le lancement expire, le lanceur nomme le conteneur.** Son nom est choisi
+*avant* le lancement, et le démon a pu le créer pendant que le client renonçait.
+Le message dit donc quoi vérifier une fois le démon revenu —
+`docker ps -a --filter name=<conteneur>` — et laisse le `trap … EXIT` tenter la
+destruction ; si elle n'aboutit pas, c'est lui qui donne la commande de retrait à
+la main, en `[WARN]`, sans changer le code de retour.
+
+**Ce qui n'est pas borné l'est délibérément** : `docker build`, dont la durée
+légitime se compte en minutes, et la commande demandée elle-même — le
+`docker run <image> <commande>` du mode direct et le `docker exec` du mode
+`systemd`. Le mode direct n'est donc borné nulle part : c'est lui qui exécute
+`tests/run.sh` entier, et le borner serait un contresens.
+
+Ce que l'appelant attend au pire : **165 s** avant que la main lui soit rendue —
+hors durée de la commande demandée, qui n'est pas bornée et n'a pas à l'être.
+Quatre termes, chaque appel se comptant pour sa borne plus le sursis avant
+`SIGKILL` :
+
+| Terme | Détail | Durée |
+|---|---|---|
+| lancement du conteneur | détaché : il crée le conteneur, il n'exécute rien | 30 + 5 s |
+| plafond de l'attente | il compte les réessais | 60 s |
+| dernier tour de boucle | le sondage a lieu d'abord, le plafond est vérifié ensuite : un tour peut commencer juste avant l'échéance et ajouter ses deux appels bornés | 2 × 15 s |
+| chemin de sortie | lecture du journal — existence puis `docker logs` — puis `trap` — existence puis `docker rm -f` | 4 × 10 s |
+
+La somme **majore**, et c'est ce qu'on attend d'un pire cas : les chemins ne
+s'additionnent pas tous, un lancement qui expire s'arrête là et n'atteint jamais
+la boucle. Le préflight n'y figure pas — ses bornes sont déjà consommées quand la
+durée est annoncée, juste avant le `docker run -d`, dernier moment où elle est
+encore entièrement devant l'appelant.
+
+Il y a donc toujours au moins un sondage : un plafond de 0 n'interdit pas
+d'essayer mais de recommencer. C'est cette durée maximale que le message de
+lancement annonce, plutôt qu'un plafond que le lanceur ne tient pas — et elle
+mesure le moment où l'appelant **reprend la main**, non celui où le diagnostic
+s'affiche.
+
+**L'expiration de la borne a son propre diagnostic**, et c'est tout l'intérêt de
+la distinguer. `timeout` rend 124 — ou 137 si la commande n'a cédé qu'au
+`SIGKILL`. Le lanceur ne dit alors pas « systemd n'a pas fini de démarrer », qui
+enverrait chercher la panne dans le conteneur, mais que le démon Docker n'a pas
+répondu, qui la situe sur l'hôte. Il **ne lit pas** le journal du conteneur dans
+ce cas : `docker logs` passerait par ce même démon, qui vient de prouver qu'il ne
+répond plus. Cette lecture est désormais bornée elle aussi et ne suspendrait donc
+plus rien, mais elle coûterait deux attentes de plus pour un échec certain — et
+le `trap`, juste après, en paie déjà une pour tenter la destruction.
+
+**Les bornes du nettoyage valent aussi pour le profil `debian`**, dont le `trap`
+emprunte le même code. Elles ne le pénalisent pas : en sortie normale, `--rm` a
+déjà effacé le conteneur et le `trap` n'a rien à détruire. Les autres — préflight
+et lancement — ne s'appliquent qu'au mode `systemd` : le profil `debian`
+interroge le démon et lance son conteneur exactement comme avant, appels non
+bornés compris. C'est voulu, et c'est la contrepartie de ne rien lui promettre :
+il n'annonce aucune durée maximale, et c'est lui qui exécute les suites longues.
+`timeout` reste exigé au préflight du seul mode `systemd` — là où une durée
+maximale est annoncée. S'il manque sur une machine où le profil `debian` tourne
+aujourd'hui, ce profil continue de tourner exactement comme avant.
+
+**Le « dernier état » est trié, jamais recopié.** `docker exec` écrit ses
+propres erreurs — un `OCI runtime exec failed: … executable file not found` de
+plusieurs lignes — sur `stdout`, à l'endroit même où `systemctl` écrit son état.
+N'est donc retenu comme état qu'un mot de la liste que systemd documente
+(`initializing`, `starting`, `running`, `degraded`, `maintenance`, `stopping`,
+`offline`, `unknown`). Toute autre réponse est affichée sur sa propre ligne,
+sous son vrai nom et tronquée à une ligne : elle vaut diagnostic — c'est souvent
+elle qui nomme la panne — mais pas sous une étiquette systemd.
+
+Mesuré sur cet hôte, le démarrage prend **1 à 2 secondes** et l'état obtenu est
+`running` ou `degraded` selon le moment ; les deux sont acceptés, `degraded`
+signifiant seulement qu'une unité a échoué, ce qui est banal en conteneur.
+
+L'image déclare quatre paquets par-dessus `debian:12`, chacun avec sa raison
+écrite dans le `Dockerfile` :
+
+| Paquet | Pourquoi |
+|---|---|
+| `systemd` | `systemctl`, `journald`, `systemd-timedated`, `systemd-hostnamed` — l'objet du profil |
+| `systemd-sysv` | fournit `/sbin/init` ; le paquet `systemd` seul ne le pose pas |
+| `dbus` | bus par lequel `timedatectl` et `hostnamectl` atteignent leurs services. Simple *Recommends* de `systemd`, donc absent sous `--no-install-recommends` |
+| `tzdata` | `/usr/share/zoneinfo`, sans quoi `timedatectl set-timezone` n'aurait aucun fuseau à poser. **Déjà présent** dans l'image de base — mesuré : `Europe/Paris` existe dans le profil `debian`, qui n'installe pas ce paquet. La ligne est gardée pour que la dépendance soit déclarée : sur une base allégée, l'absence se verrait à la construction plutôt qu'à l'exécution. Ce qui manque au profil `debian`, ce ne sont pas les données de fuseau, c'est `timedatectl` |
+
+Les unités qui n'ont aucun sens en conteneur — `systemd-udevd`, les montages de
+`/sys/kernel`, `console-getty` — sont **masquées à la construction**, et la
+cible par défaut est `multi-user.target`. Chacune rapprocherait sinon le
+démarrage de `degraded`, un état accepté mais qui masquerait alors les vraies
+défaillances.
+
+**Ne jamais y lancer `reboot` ni `systemctl poweroff`** : le PID 1 s'arrête, le
+conteneur meurt, et la suite en cours est décapitée.
+
+Deux limites connues, mesurées, et déclarées `NON EXÉCUTÉ` par le fichier de cas
+plutôt que contournées : `hostnamectl set-hostname` échoue — `/etc/hostname` est
+un bind-mount Docker — et `cron` n'est pas dans l'image. Voir le niveau
+`environment` au §1.
+
+### L'image du profil `debian`
 
 `debian:12` officielle, volontairement minimale. Quatre paquets seulement, et
 chacun a sa raison écrite dans le `Dockerfile` :
@@ -809,8 +1098,13 @@ justification dans le `Dockerfile`.
 
 Images et conteneurs sont préfixés `mgnet-test-`, sans exception :
 [AGENTS.md](../AGENTS.md) §8 n'autorise les commandes Docker de l'agent que sur
-ce préfixe. L'image est `mgnet-test-debian:latest`, le conteneur
-`mgnet-test-debian-<pid>-<horodatage>`.
+ce préfixe. L'image est `mgnet-test-<profil>:latest`, le conteneur
+`mgnet-test-<profil>-<pid>-<horodatage>`.
+
+Le profil `systemd` rend cette vérification **moins décorative** : son conteneur
+est détaché, et lancé sans `--rm` pour que son journal survive à la mort de son
+PID 1. C'est donc le `trap … EXIT` du lanceur, et lui seul, qui le détruit — en
+sortie normale comme après interruption ou échec du démarrage.
 
 Pour vérifier qu'il ne reste rien après une exécution :
 

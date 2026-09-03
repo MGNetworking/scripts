@@ -1,7 +1,7 @@
 ---
 id: TASK-020
 title: "Construire le profil de conteneur systemd et ouvrir le niveau environment"
-status: ready
+status: completed
 priority: high
 depends_on: []
 environment: host

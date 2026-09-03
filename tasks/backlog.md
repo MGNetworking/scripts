@@ -40,10 +40,10 @@ de ce que cet ADR a tranché.
 | [TASK-018](completed/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | `completed` | moyenne | 017 | conteneur | non |
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
-| [TASK-020](pending/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | `ready` | haute | — | hôte | non |
+| [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | `completed` | haute | — | hôte | non |
 | [TASK-021](pending/TASK-021.md) | Écrire `Linux/System/check-disk.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-022](pending/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | `ready` | moyenne | — | conteneur `debian` | non |
-| [TASK-023](pending/TASK-023.md) | Écrire `Linux/System/check-services.sh` | `pending` | moyenne | 020 | conteneur `systemd` | non |
+| [TASK-023](pending/TASK-023.md) | Écrire `Linux/System/check-services.sh` | `ready` | moyenne | 020 | conteneur `systemd` | non |
 | [TASK-024](pending/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-025](pending/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
@@ -54,9 +54,10 @@ décision 16 : l'outillage d'abord, puis la lecture seule, puis ce qui modifie,
 puis le destructif. `human_approval_required: true` ne suspend plus l'exécution
 (décision 2) : il signale ce qui mérite une lecture attentive.
 
-**TASK-023 est la seule à porter `pending` :** elle attend le profil `systemd`
-de TASK-020, sans lequel aucune de ses preuves n'existe. À passer en `ready`
-lorsque TASK-020 est `completed`.
+**TASK-023 attendait le profil `systemd`**, sans lequel aucune de ses preuves
+n'existait. TASK-020 étant `completed` depuis le 2026-09-03, elle est passée
+`ready` : les six tâches restantes du domaine sont désormais sélectionnables et
+indépendantes entre elles.
 
 ### Chemin critique
 
@@ -198,7 +199,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | Entrée | Source | Note |
 |---|---|---|
 | Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 15 : script de notification vers `ntfy` ou webhook. **Atomisée** : [TASK-024](pending/TASK-024.md) |
-| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4. **Atomisée** : [TASK-020](pending/TASK-020.md) |
+| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4. **Faite** le 2026-09-03 : [TASK-020](completed/TASK-020.md), [rapport](reports/TASK-020-report.md) |
 | Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | **ouvert** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décisions 1 à 4 : fusion et push par l'agent, ouverture des tâches déléguée, point d'étape par domaine |
 | Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | **autorisé en permanence** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 5 : mode léger pour les scripts en lecture seule, relecteur obligatoire dès qu'un script écrit |
 | Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
@@ -235,6 +236,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-017](completed/TASK-017.md) | Durcir la validation de `--file` dans `configure-swap.sh` | [rapport](reports/TASK-017-report.md) |
 | [TASK-019](completed/TASK-019.md) | Contrôler la nature de la cible de `--file`, pas seulement la forme du chemin | [rapport](reports/TASK-019-report.md) |
 | [TASK-018](completed/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | [rapport](reports/TASK-018-report.md) |
+| [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

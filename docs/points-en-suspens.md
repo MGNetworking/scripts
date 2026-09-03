@@ -476,3 +476,53 @@ La mesure attendue sur les substitutions **en position d'argument** avait déjà
 été faite au quatrième tour : trois sondes en conteneur, consignées au §1 du
 recensement. Une substitution en échec y est sans effet — aucune ligne de trap,
 script poursuivi, code 0 — ce qui borne le périmètre à la forme `var="$(…)"`.
+
+---
+
+## 9. `--privileged` sur le profil de conteneur `systemd`
+
+**Soulevé le** 2026-09-03, pendant TASK-020, par le relecteur.
+
+Le profil `systemd` est lancé avec `--privileged`. L'option est justifiée dans le
+script et dans `tests/README.md` par un besoin réel — systemd crée un cgroup par
+unité, et `/sys/fs/cgroup` est monté en lecture seule pour un conteneur
+ordinaire — mais **personne n'a démontré qu'elle soit indispensable**. Le
+rédacteur l'écrit lui-même : c'est la seule option dont il doute au sens
+« peut-être trop large ».
+
+Mesuré : le profil démarre en 1 à 2 secondes avec `--privileged` et
+`--tmpfs /run`. Les deux recettes classiques ont été écartées avec leur raison —
+le montage cgroup v1 est un contresens en v2, et `--cgroupns=host` exposerait
+toute l'arborescence de cgroups de l'hôte. Ce qui n'a **pas** été essayé est
+l'alternative étroite : `--cap-add SYS_ADMIN` assorti des `--security-opt`
+nécessaires.
+
+**Pourquoi ce n'est pas urgent.** Le conteneur est jetable, ne porte aucun
+secret, et ne monte que le dépôt. Il ne tourne que sur la machine de
+développement, jamais sur un serveur.
+
+**Pourquoi ça mérite d'être écrit.** Un choix non prouvé qui n'est consigné nulle
+part se re-décide à l'aveugle. Le jour où quelqu'un voudra resserrer les droits
+de ce conteneur — ou l'exécuter dans une CI qui refuse `--privileged` — la
+question se reposera entière, et la mesure qui la tranche n'aura pas été faite.
+
+**Concerne** `tests/env/run-in-container.sh`, mode `systemd` uniquement. Le
+profil `debian` ne demande aucun privilège particulier.
+
+### Une seconde valeur non mesurée, dans le même fichier
+
+Le même travail a posé des bornes de temps sur les appels Docker du mode
+`systemd`. Quatre valeurs y sont écrites : 10 s par sondage, 30 s pour le
+lancement détaché, 5 s pour le chemin de sortie, 60 s de plafond — soit 165 s au
+pire avant que la main soit rendue.
+
+Trois de ces valeurs bornent des appels dont le nominal a été mesuré et se compte
+en fractions de seconde. **Celle de 30 s ne l'est pas** : le `docker run -d`
+nominal a été mesuré à moins d'une seconde, mais le cas défavorable *légitime* —
+hôte chargé, premier montage du dépôt après un redémarrage de Docker Desktop — ne
+l'a pas été. Trente secondes est donc un jugement, pas une mesure.
+
+Le dépôt s'est donné pour règle qu'une propriété se mesure. La valeur est
+consignée ici comme jugement, pour qu'un faux positif — une exécution légitime
+abandonnée à 30 s sur une machine lente — soit reconnu pour ce qu'il est : la
+borne à réviser, et non une panne du démon.

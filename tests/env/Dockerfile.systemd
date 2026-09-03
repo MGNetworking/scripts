@@ -1,0 +1,117 @@
+# tests/env/Dockerfile.systemd — image du profil « systemd ».
+#
+# Même Debian 12 que le profil « debian », à une différence près, qui est toute
+# la raison d'être de ce fichier : systemd y tourne en PID 1. Le conteneur
+# démarre sur /sbin/init, et la commande à valider passe ensuite par
+# « docker exec ». Sans cela, systemctl, timedatectl et hostnamectl répondent
+# « System has not been booted with systemd as init system », et tout un pan du
+# dépôt reste écrit sans jamais être exécuté.
+#
+# Le dépôt n'est pas copié dans l'image, il est monté à l'exécution sur /depot —
+# l'image ne contient donc que le système, jamais le code à tester.
+#
+# Volontairement minimale, comme Dockerfile.debian : chaque paquet ajouté doit
+# avoir sa raison écrite ici. Aucun service applicatif — ni Docker, ni K3s, ni
+# base de données : ce conteneur ne prouve que le comportement des scripts face
+# à systemd.
+#
+# Ne jamais y lancer « reboot » ni « systemctl poweroff » : le PID 1 s'arrête,
+# le conteneur meurt, et la suite en cours est décapitée.
+#
+# Construction et usage : voir tests/env/run-in-container.sh et tests/README.md.
+
+FROM debian:12
+
+# Le lanceur lit ce label pour savoir comment démarrer le profil : conteneur
+# détaché sur /sbin/init, attente du démon, puis « docker exec ». Il ne tient
+# aucune liste de profils en dur — c'est le Dockerfile qui déclare son mode de
+# lancement, et déposer un Dockerfile.<nom> portant ce label suffit à ouvrir le
+# même chemin à un profil futur.
+LABEL mgnet.test.init="systemd"
+
+# La glibc de Debian 12 fournit C.UTF-8 nativement : aucun paquet « locales »
+# n'est nécessaire. Sans cela, la locale C ferait compter les caractères
+# accentués pour deux octets et décalerait l'alignement des colonnes affichées
+# par les scripts.
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
+
+# systemd lit « container » dans l'environnement de son PID 1 pour savoir qu'il
+# ne tourne pas sur une machine : il renonce alors à ce qui n'appartient qu'à
+# un hôte — montage des systèmes de fichiers du noyau, chargement de modules,
+# horloge matérielle. Docker ne pose pas cette variable de lui-même.
+ENV container=docker
+
+# systemd        systemctl, journald, systemd-timedated, systemd-hostnamed —
+#                l'objet même de ce profil
+# systemd-sysv   fournit /sbin/init, le PID 1 sur lequel le conteneur démarre.
+#                Le paquet systemd seul ne le pose pas
+# dbus           bus système par lequel timedatectl et hostnamectl atteignent
+#                systemd-timedated et systemd-hostnamed. dbus n'est qu'une
+#                « Recommends » de systemd : sous --no-install-recommends il
+#                serait absent, et les deux commandes échoueraient sur
+#                « Failed to connect to bus »
+# tzdata         /usr/share/zoneinfo, sans quoi « timedatectl set-timezone »
+#                n'aurait aucun fuseau à poser — or c'est l'un des cas que ce
+#                profil existe pour prouver.
+#                Mesuré : /usr/share/zoneinfo/Europe/Paris est déjà présent dans
+#                l'image du profil debian, qui n'installe pas ce paquet. La
+#                ligne ne change donc probablement rien à la construction — elle
+#                est gardée pour deux raisons. D'abord parce qu'une dépendance
+#                dont tout un groupe de cas dépend se déclare : le jour où
+#                l'image de base cesse d'embarquer zoneinfo, ou qu'on passe sur
+#                une base allégée, l'absence se voit à la construction et non à
+#                l'exécution, sous la forme d'un « Failed to set time zone »
+#                qu'on prendrait pour un défaut de script. Ensuite parce qu'apt
+#                sur un paquet déjà installé ne fait rien : le coût est nul.
+#                Et ce qui manque au profil debian, ce ne sont PAS les données de
+#                fuseau — elles y sont — c'est timedatectl, que le paquet systemd
+#                apporte, et l'init qui le sert.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        systemd \
+        systemd-sysv \
+        dbus \
+        tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Les listes apt sont supprimées : un script qui installe un paquet doit faire
+# son propre « apt-get update », exactement comme sur un serveur neuf.
+
+# Le noyau est celui de l'hôte : il n'y a ici ni périphérique à découvrir, ni
+# journal d'audit, ni pseudo-système de fichiers du noyau à monter, ni terminal
+# à ouvrir. Ces unités échouent ou s'attardent en conteneur, et chacune
+# rapproche le démarrage de « degraded » — un état que le lanceur accepte, mais
+# qui masque alors les vraies défaillances. Les masquer garde l'état de sortie
+# lisible et raccourcit l'attente.
+#
+# « systemctl mask » ne fait que poser des liens vers /dev/null dans
+# /etc/systemd/system : l'opération porte sur des fichiers, pas sur un démon, et
+# s'exécute donc à la construction, où aucun systemd ne tourne.
+#
+# « set-default » : le défaut de Debian est graphical.target, qui ne sert à rien
+# ici et réclame un gestionnaire d'affichage absent de l'image.
+RUN systemctl mask \
+        systemd-udevd.service \
+        systemd-udevd-control.socket \
+        systemd-udevd-kernel.socket \
+        systemd-udev-trigger.service \
+        systemd-journald-audit.socket \
+        sys-kernel-config.mount \
+        sys-kernel-debug.mount \
+        sys-kernel-tracing.mount \
+        dev-hugepages.mount \
+        dev-mqueue.mount \
+        console-getty.service \
+    && systemctl set-default multi-user.target
+
+# Le dépôt est monté ici à l'exécution. Déclarer le répertoire de travail dès la
+# construction garantit que le point de montage existe.
+WORKDIR /depot
+
+# Le conteneur démarre sur systemd, jamais sur la commande à valider : celle-ci
+# passe par « docker exec » une fois le démarrage terminé. Un
+# « docker run <image> <commande> » remplacerait ce CMD, et systemd ne
+# démarrerait pas.
+CMD ["/sbin/init"]
