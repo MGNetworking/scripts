@@ -145,6 +145,31 @@
 # Il ne reste au groupe 5 qu'une seule réserve de forme nue, d'une autre nature
 # que le doublement.
 #
+# TASK-021 y ajoute le SEPTIÈME script du domaine, check-disk.sh — diagnostic de
+# stockage en lecture seule stricte —, groupe « 2 bis » :
+#
+#   cc. les six refus en 2, et surtout l'ABSENCE DE TOUTE SORTIE avant chacun :
+#       les arguments se valident avant qu'un seul chiffre ne soit lu
+#   dd. le tableau n'est PAS VIDE en conteneur : « overlay » figure aux deux
+#       sections d'occupation, et c'est un DÉCOMPTE de lignes qui le voit — un
+#       filtre naïf produirait un écran blanc sur lequel toutes les assertions
+#       de contenu resteraient vertes
+#   ee. le code 0 sous n'importe quelle commande défaillante, une par une : df,
+#       du, lsblk en échec, lsblk ABSENT, awk, sort. Chaque fois un [WARN]
+#       nommant la cause, « non disponible » à l'affichage, et AUCUNE ligne
+#       « Échec (code » — le motif de TASK-018, qu'un script neuf ne doit pas
+#       réintroduire
+#   ff. LA SORTIE PARTIELLE : « df » et « du » rendent 1 dès qu'un seul point de
+#       montage leur résiste, APRÈS avoir écrit tout ce qu'ils ont pu. Le script
+#       décide sur le VIDE, pas sur le code. Éprouvé deux fois — par un faux df
+#       qui écrit puis sort en 1, et par le cas réel d'un « du » sur « / » sans
+#       privilège
+#   gg. le seuil est ATTEINT (« -ge ») et non DÉPASSÉ (« -gt ») : à occupation
+#       exactement égale au seuil, le [WARN] doit sortir. Un « -gt » resterait
+#       vert sous tout jeu de données qui ne tombe pas pile sur la valeur
+#   hh. la lecture seule, prouvée sur la totalité du groupe : empreinte de tout
+#       /etc et « find -newer », journal excepté
+#
 # CE FICHIER MODIFIE LE SYSTÈME. Il n'écrit rien tant qu'il n'a pas reconnu un
 # système jetable (conteneur Docker, ou MGNET_TEST_JETABLE=1) : ailleurs, les
 # groupes modifiants se déclarent NON EXÉCUTÉS plutôt que de réécrire
@@ -1282,6 +1307,1262 @@ assert_code 0 "$CODE" "system-info.sh seconde exécution sort en 0"
 empreinte "$REP_TMP/info-idem-b"
 assert_empreinte_egale "$REP_TMP/info-idem-a" "$REP_TMP/info-idem-b" \
     "system-info.sh exécuté deux fois laisse le système identique"
+
+# ===================================================================
+# 2 bis. check-disk.sh — diagnostic de stockage, en lecture seule
+# ===================================================================
+# TASK-021. Septième script du domaine, et le second — avec system-info.sh — à
+# ne rien modifier et à n'exiger aucun privilège. Son contrat tient en une
+# phrase : IL REND 0 QUOI QU'IL CONSTATE. Seule une erreur d'usage rend 2.
+#
+# Ce groupe est placé ici, entre « system-info.sh » et « --dry-run », parce
+# qu'il n'écrit RIEN : la garde d'état du groupe « idempotence » — qui compare
+# l'empreinte relevée à l'ouverture du groupe 2 à celle relevée juste avant le
+# groupe 4 — n'en est donc pas troublée. C'est vérifié plutôt que supposé, par
+# l'empreinte et le « find -newer » des sections c et j.
+#
+# Ce que ce groupe éprouve, par ordre d'importance :
+#
+#   a. les refus en 2, ET l'ABSENCE DE TOUTE SORTIE avant le refus — les
+#      arguments se valident avant que le premier chiffre ne soit lu ;
+#   b. le chemin nominal, et surtout que LE TABLEAU N'EST PAS VIDE dans un
+#      conteneur : « overlay » figure aux sections « Systèmes de fichiers » et
+#      « Inodes ». Un filtre écrit naïvement afficherait un écran vide, et ce
+#      fichier passerait au vert sans que rien ne le signale — c'est le piège
+#      que TASK-021 nomme, et seul un DÉCOMPTE de lignes le voit ;
+#   c. la lecture seule, empreinte de tout /etc et « find -newer » à l'appui ;
+#   d. deux exécutions consécutives ;
+#   e. LA DÉGRADATION, une commande en échec à la fois — df, du, lsblk,
+#      lsblk absent, awk, sort. Chaque fois : un [WARN] nommant la cause,
+#      « non disponible » à l'affichage, code 0, et AUCUNE ligne « Échec (code »
+#      du trap ERR — le motif de TASK-018, qu'un script neuf ne doit pas
+#      réintroduire ;
+#   f. LA SORTIE PARTIELLE, régression la plus probable de ce script. « df » et
+#      « du » rendent 1 dès qu'UN SEUL point de montage leur résiste, APRÈS
+#      avoir écrit tout ce qu'ils ont pu. Le script décide sur le VIDE, jamais
+#      sur le code. Qui « simplifierait » la gestion du code de retour casserait
+#      cela sans qu'aucune autre assertion ne s'en aperçoive ;
+#   g. le seuil, et le fait qu'il est ATTEINT (« -ge ») et non DÉPASSÉ
+#      (« -gt ») : à occupation égale au seuil, le [WARN] doit sortir ;
+#   h. les inodes non déclarés — « non disponible » plutôt qu'un pourcentage
+#      faux ;
+#   i. les trois bornes de l'analyse des répertoires : --top, la profondeur 1,
+#      et « -x » qui interdit de franchir un point de montage.
+#
+# DEUX ASSERTIONS DE CE GROUPE ONT ÉTÉ RETOURNÉES, ET C'EST LE SCRIPT QUI A
+# CHANGÉ. Toutes deux portaient, au premier tour, le commentaire « épinglé sans
+# être approuvé » : le fichier de cas décrivait le comportement observé tout en
+# disant en quoi il était faux. Les deux défauts ont été corrigés, les deux
+# attentes suivent, et chacune porte à son endroit le diagnostic de ce qui a été
+# tranché — sections e.7 et g bis.
+#
+#   défaut 1  un « awk » en échec sur /proc/partitions affichait « aucun
+#             périphérique bloc visible », qui AFFIRME une absence, pendant que
+#             son [WARN] disait « non disponible ». Un drapeau « lue » sépare
+#             désormais l'ignorance du constat — et le cas e.8, nouveau, éprouve
+#             l'AUTRE branche : sans lui, la correction se réduirait à un
+#             message renommé ;
+#   défaut 2  une valeur fautive de config/server.env rendait 2 pour le seuil et
+#             0 pour le répertoire. La règle ne dépend plus que de l'ORIGINE :
+#             ligne de commande fautive → 2, configuration fautive → [WARN],
+#             repli, code 0. L'assertion décisive du groupe g bis n'est ni le
+#             code ni le message, c'est LE TABLEAU EST PRODUIT.
+#
+# Un TROISIÈME site relève de la même règle et n'était couvert par rien : le
+# refus d'un --repertoire à tiret ne s'applique plus qu'à la ligne de commande.
+# Le groupe g ter le juge et le couvre, jusqu'au cas qui tranche — un répertoire
+# réellement nommé « -x », que le script parcourt.
+#
+# CE QUI N'EST PAS COMPARÉ ICI : les deux sorties standard, octet pour octet.
+# Mesuré — deux exécutions consécutives diffèrent d'une ligne, le total de /tmp
+# ayant grossi entre les deux du fait du journal de lib/common.sh. Ce que
+# l'idempotence exige de ce script-ci est ailleurs : le système inchangé (§d) et
+# la même LISTE de systèmes de fichiers.
+#
+# La garde « P0 != A » du groupe 4 n'a pas de sens ici, et son absence est
+# délibérée : elle interdit une idempotence prouvée à vide sur un script qui
+# MODIFIE. Celui-ci ne modifie rien par contrat — exiger qu'il ait changé
+# quelque chose au premier passage reviendrait à exiger qu'il viole ce contrat.
+titre "2 bis. check-disk.sh"
+
+CHECK_DISK_SH="$SYS/check-disk.sh"
+
+# Témoin du groupe entier : AUCUNE des exécutions qui suivent, y compris celles
+# sous stub et celle sans privilège, ne doit écrire hors du répertoire de
+# journaux. Relevé ici, contrôlé en fin de groupe.
+touch "$REP_TMP/temoin-disque-groupe"
+
+# --- Outillage propre à ce script ------------------------------------------
+# « valeur_de_ligne » existe déjà dans ce fichier, mais elle n'est définie qu'au
+# groupe 3 quinquies, plus bas : un appel ici tomberait sur une commande
+# introuvable. D'où ces lecteurs, nommés distinctement.
+
+# valeur_ligne_disque <libellé> — la valeur affichée en face de ce libellé, sur
+# le stdout du dernier « lancer ». Le remplissage étant calculé par le script à
+# partir de la longueur du libellé, on lit la VALEUR et non la ligne entière.
+valeur_ligne_disque() {
+    local libelle="$1" ligne
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        case "$ligne" in
+            "  $libelle"*)
+                ligne="${ligne#"  $libelle"}"
+                while [ "${ligne# }" != "$ligne" ]; do
+                    ligne="${ligne# }"
+                done
+                printf '%s' "$ligne"
+                return 0
+                ;;
+        esac
+    done < "$F_OUT"
+    return 0
+}
+
+# section_disque <titre> — le corps d'une section de la sortie.
+# Une section commence à son titre et s'arrête à la première ligne vide : c'est
+# exactement la mise en page que « titre() » produit dans le script.
+section_disque() {
+    local titre_section="$1" ligne dans="non"
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        if [ "$ligne" = "$titre_section" ]; then
+            dans="oui"
+            continue
+        fi
+        [ "$dans" = "oui" ] || continue
+        if [ -z "$ligne" ]; then
+            dans="non"
+            continue
+        fi
+        printf '%s\n' "$ligne"
+    done < "$F_OUT"
+}
+
+# montages_disque <titre de section> — les points de montage d'un tableau
+# d'occupation, un par ligne, la ligne de tirets et l'en-tête écartés.
+montages_disque() {
+    local ligne montage
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        case "$ligne" in
+            '-'*|'  Monté sur'*) continue ;;
+        esac
+        read -r montage _ <<< "$ligne"
+        [ -n "$montage" ] || continue
+        printf '%s\n' "$montage"
+    done < <(section_disque "$1")
+}
+
+# nb_montages <titre de section> — le nombre de lignes de ce tableau.
+# C'EST LE DÉCOMPTE QUI VOIT UN TABLEAU VIDE. Une assertion de contenu, elle,
+# resterait verte sur un écran blanc.
+nb_montages() {
+    local ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        [ -n "$ligne" ] || continue
+        n=$(( n + 1 ))
+    done < <(montages_disque "$1")
+    printf '%s' "$n"
+}
+
+# occupation_disque <titre de section> <point de montage> — le dernier champ de
+# la ligne de ce montage, c'est-à-dire son pourcentage. Chaîne vide si le
+# montage est absent, ou si sa ligne ne porte pas six champs.
+occupation_disque() {
+    local section="$1" cible="$2" ligne
+    local -a champs
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        case "$ligne" in
+            '-'*|'  Monté sur'*) continue ;;
+        esac
+        read -r -a champs <<< "$ligne"
+        [ "${#champs[@]}" -ge 6 ] || continue
+        [ "${champs[0]}" = "$cible" ] || continue
+        printf '%s' "${champs[$(( ${#champs[@]} - 1 ))]}"
+        return 0
+    done < <(section_disque "$section")
+    return 0
+}
+
+# montage_present <titre de section> <point de montage> — appartenance EXACTE.
+#
+# « assert_contient » ne convient PAS pour « / » : c'est une sous-chaîne de tout
+# point de montage, et l'assertion resterait verte sur une liste où la racine ne
+# figure pas. Mesuré — sous la mutation qui ajoute « overlay » aux
+# pseudo-systèmes écartés, la forme « assert_contient … "/" » ne rougissait pas,
+# « /depot » et « /etc/hosts » suffisant à la satisfaire.
+montage_present() {
+    local section="$1" cible="$2" montage
+    while IFS= read -r montage || [ -n "$montage" ]; do
+        if [ "$montage" = "$cible" ]; then
+            return 0
+        fi
+    done < <(montages_disque "$section")
+    return 1
+}
+
+# chemins_classement — les répertoires listés par la section des consommateurs.
+# L'en-tête « Taille  Répertoire » ouvre le tableau, qui court jusqu'à la fin du
+# flux — la dernière ligne écrite par le script étant vide.
+chemins_classement() {
+    local ligne dans="non" chemin
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        case "$ligne" in
+            *"Taille  Répertoire") dans="oui"; continue ;;
+        esac
+        [ "$dans" = "oui" ] || continue
+        [ -n "$ligne" ] || continue
+        read -r _ chemin <<< "$ligne"
+        [ -n "$chemin" ] || continue
+        printf '%s\n' "$chemin"
+    done < "$F_OUT"
+}
+
+# nb_entrees_classement — le nombre d'entrées du classement, pour éprouver --top.
+nb_entrees_classement() {
+    local ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        [ -n "$ligne" ] || continue
+        n=$(( n + 1 ))
+    done < <(chemins_classement)
+    printf '%s' "$n"
+}
+
+# nb_lignes_sortie_contenant <motif> — lignes de STDOUT portant ce motif.
+# Le pendant de « nb_lignes_contenant », qui ne lit que stderr. Les tableaux de
+# ce script partent sur stdout : sans ce décompte, « les deux tableaux ont
+# dégradé » ne se distinguerait pas de « un seul l'a fait ».
+nb_lignes_sortie_contenant() {
+    local motif="$1" ligne n=0
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+        if contient "$ligne" "$motif"; then
+            n=$(( n + 1 ))
+        fi
+    done < "$F_OUT"
+    printf '%s' "$n"
+}
+
+# invariants_disque <libellé> — les quatre invariants de TOUTE dégradation de ce
+# script, sur le dernier « lancer ». Le code 0 est l'assertion décisive ; les
+# trois autres verrouillent le motif de TASK-018, qu'un script neuf pourrait
+# réintroduire sans que personne ne le voie.
+invariants_disque() {
+    local libelle="$1"
+    assert_code 0 "$CODE" "check-disk.sh, $libelle : sort en 0"
+    assert_egal "0" "$(nb_lignes_contenant '[ERROR]')" \
+        "check-disk.sh, $libelle : aucune ligne [ERROR] — ce n'est pas une erreur, c'est une lacune"
+    assert_absent "$(erreur)" "Échec (code" \
+        "check-disk.sh, $libelle : le trap ERR n'ajoute aucune ligne"
+    assert_absent "$(erreur)" "check-disk.sh: line" \
+        "check-disk.sh, $libelle : aucun message brut de bash sur stderr"
+}
+
+# refus_disque <libellé> <motif attendu> <arguments...>
+# Le refus, et ce qui compte davantage : QUE RIEN N'AIT ÉTÉ PRODUIT AVANT LUI.
+# Un stdout strictement vide est la seule forme qui le voie — une assertion
+# d'absence de titre resterait verte sur un flux vide comme sur un flux mal
+# capturé. Sa garde de contraste est le chemin nominal de la section b, qui
+# exige au contraire un stdout riche.
+refus_disque() {
+    local libelle="$1" motif="$2"; shift 2
+
+    lancer bash "$CHECK_DISK_SH" "$@"
+    assert_code 2 "$CODE" "check-disk.sh refuse $libelle"
+    assert_contient "$(erreur)" "$motif" "check-disk.sh, $libelle : la cause est nommée"
+    assert_egal "1" "$(nb_lignes_contenant '[ERROR]')" \
+        "check-disk.sh, $libelle : une seule ligne [ERROR]"
+    assert_egal "1" "$(nb_lignes_erreur)" \
+        "check-disk.sh, $libelle : stderr ne porte QUE ce diagnostic"
+    assert_absent "$(erreur)" "Usage :" \
+        "check-disk.sh, $libelle : l'aide n'est pas déversée sur stderr"
+    assert_absent "$(erreur)" "Échec (code" \
+        "check-disk.sh, $libelle : le trap ERR n'ajoute aucune ligne"
+    assert_egal "" "$(sortie)" \
+        "check-disk.sh, $libelle : AUCUNE sortie de diagnostic avant le refus"
+}
+
+# --- a. Aide et refus d'usage ----------------------------------------------
+lancer bash "$CHECK_DISK_SH" --help
+assert_code 0 "$CODE" "check-disk.sh --help sort en 0"
+aide_disque="$(sortie)"
+assert_contient "$aide_disque" "Usage : check-disk.sh" "check-disk.sh --help écrit son usage sur stdout"
+assert_contient "$aide_disque" "--seuil <1-100>" "l'aide de check-disk.sh documente --seuil"
+assert_contient "$aide_disque" "--repertoire <chemin>" "l'aide de check-disk.sh documente --repertoire"
+assert_contient "$aide_disque" "--top <1-100>" "l'aide de check-disk.sh documente --top"
+assert_contient "$aide_disque" "--sans-repertoires" "l'aide de check-disk.sh documente --sans-repertoires"
+assert_contient "$aide_disque" "--tous" "l'aide de check-disk.sh documente --tous"
+assert_contient "$aide_disque" "Défaut : 85" "l'aide de check-disk.sh donne la valeur par défaut du seuil"
+assert_contient "$aide_disque" "SRV_DISK_SEUIL" "l'aide de check-disk.sh nomme l'origine du seuil"
+assert_contient "$aide_disque" "SRV_DISK_REPERTOIRE" "l'aide de check-disk.sh nomme l'origine du répertoire"
+assert_contient "$aide_disque" "Codes de retour :" "l'aide de check-disk.sh documente les codes de retour"
+# La règle d'origine fait partie du contrat : l'aide doit la dire, sans quoi un
+# appelant attendrait un 2 d'un server.env mal saisi et ne le verrait jamais.
+assert_contient "$aide_disque" "erreur d'usage sur la LIGNE DE COMMANDE" \
+    "l'aide de check-disk.sh borne le code 2 à la ligne de commande"
+assert_contient "$aide_disque" "Une valeur fautive venue de config/server.env ne rend jamais 2" \
+    "l'aide de check-disk.sh documente le repli d'une valeur de configuration fautive"
+assert_egal "0" "$(nb_lignes_erreur)" "check-disk.sh --help n'écrit rien sur stderr"
+
+lancer bash "$CHECK_DISK_SH" -h
+assert_code 0 "$CODE" "check-disk.sh -h sort en 0"
+assert_contient "$(sortie)" "Usage : check-disk.sh" "check-disk.sh -h écrit son usage sur stdout"
+
+refus_disque "un seuil non numérique" \
+    "[ERROR] --seuil : « abc » n'est pas un entier (ligne de commande)." \
+    --seuil abc
+refus_disque "un seuil nul" \
+    "[ERROR] --seuil : « 0 » est hors bornes (ligne de commande)" \
+    --seuil 0
+refus_disque "un seuil de 101" \
+    "[ERROR] --seuil : « 101 » est hors bornes (ligne de commande)" \
+    --seuil 101
+refus_disque "un --top nul" \
+    "[ERROR] --top : « 0 » est hors bornes (ligne de commande)" \
+    --top 0
+refus_disque "un répertoire inexistant" \
+    "[ERROR] --repertoire : « /pas/la » n'est pas un répertoire" \
+    --repertoire /pas/la
+refus_disque "une option inconnue" \
+    "[ERROR] Option inconnue : --option-qui-n-existe-pas" \
+    --option-qui-n-existe-pas
+refus_disque "un --seuil sans valeur" \
+    "[ERROR] --seuil attend un entier de 1 à 100." \
+    --seuil
+# Le piège que l'aide du script annonce : sans ce contrôle, « --tous » devient
+# le répertoire analysé et l'option demandée disparaît en silence.
+#
+# Ce contrôle ne s'applique plus qu'à la LIGNE DE COMMANDE. Sa moitié « venu de
+# config/server.env » — où il n'y a aucun jeton suivant à avaler — est éprouvée
+# en g ter. Ces deux refus-ci sont la moitié qui doit rester en 2 : un correctif
+# qui aurait retiré le contrôle au lieu de le conditionner les ferait rougir.
+refus_disque "un --repertoire suivi d'une option" \
+    "[ERROR] --repertoire : « --tous » commence par un tiret" \
+    --repertoire --tous
+refus_disque "un --repertoire à valeur courte commençant par un tiret" \
+    "[ERROR] --repertoire : « -x » commence par un tiret (ligne de commande) — c'est une option, pas un chemin." \
+    --repertoire -x
+
+# --- b. Chemin nominal — et le tableau n'est PAS vide -----------------------
+empreinte "$REP_TMP/disque-avant"
+touch "$REP_TMP/temoin-disque"
+
+lancer bash "$CHECK_DISK_SH"
+invariants_disque "chemin nominal"
+
+texte_disque="$(sortie)"
+SECTIONS_DISQUE=(
+    "Diagnostic de stockage"
+    "Systèmes de fichiers"
+    "Inodes"
+    "Périphériques et partitions"
+    "Répertoires les plus consommateurs"
+)
+for section in "${SECTIONS_DISQUE[@]}"; do
+    assert_contient "$texte_disque" "$section" "check-disk.sh affiche la section « $section »"
+done
+
+# Le rappel des paramètres et de leur ORIGINE, en tête de la sortie.
+assert_egal "85 % (valeur par défaut)" "$(valeur_ligne_disque "Seuil d'alerte")" \
+    "check-disk.sh rappelle le seuil et son origine"
+assert_egal "pseudo-systèmes écartés, overlay conservé" "$(valeur_ligne_disque "Filtre")" \
+    "check-disk.sh rappelle le filtre appliqué"
+assert_egal "/ (valeur par défaut)" "$(valeur_ligne_disque "Répertoire analysé")" \
+    "check-disk.sh rappelle le répertoire analysé et son origine"
+assert_egal "10 (valeur par défaut)" "$(valeur_ligne_disque "Entrées affichées")" \
+    "check-disk.sh rappelle le nombre d'entrées et son origine"
+
+# L'ASSERTION QUI VOIT L'ÉCRAN VIDE. Un filtre qui écarterait « overlay » —
+# « ne garder que ext4, xfs, btrfs » — ne produirait AUCUNE ligne ici, et toutes
+# les assertions de contenu de ce groupe resteraient vertes sur un tableau vide.
+# Seul le décompte le voit.
+NB_FS_DEFAUT="$(nb_montages "Systèmes de fichiers")"
+if [ "$NB_FS_DEFAUT" -ge 1 ]; then
+    ok "check-disk.sh : le tableau des systèmes de fichiers n'est PAS vide — $NB_FS_DEFAUT ligne(s)"
+else
+    ko "check-disk.sh : le tableau des systèmes de fichiers n'est PAS vide" \
+        "aucune ligne retenue par le filtre — l'écran est vide"
+fi
+NB_INODES_DEFAUT="$(nb_montages "Inodes")"
+if [ "$NB_INODES_DEFAUT" -ge 1 ]; then
+    ok "check-disk.sh : le tableau des inodes n'est PAS vide — $NB_INODES_DEFAUT ligne(s)"
+else
+    ko "check-disk.sh : le tableau des inodes n'est PAS vide" "aucune ligne — l'écran est vide"
+fi
+
+# « overlay » nommément : c'est le système de fichiers de la racine d'un
+# conteneur, et le seul que celui-ci ait à montrer.
+TYPE_RACINE=""
+if command -v df >/dev/null 2>&1; then
+    TYPE_RACINE="$(df -P -T / 2>/dev/null | awk 'NR == 2 { print $2 }')" || TYPE_RACINE=""
+fi
+if [ "$TYPE_RACINE" != "overlay" ]; then
+    saute "check-disk.sh conserve « overlay » aux deux tableaux d'occupation" \
+        "la racine de cet hôte est de type « ${TYPE_RACINE:-inconnu} » et non « overlay » — le piège du tableau vide ne s'y reproduit pas"
+else
+    assert_contient "$(section_disque "Systèmes de fichiers")" "overlay" \
+        "check-disk.sh n'écarte PAS « overlay » du tableau des systèmes de fichiers"
+    assert_contient "$(section_disque "Inodes")" "overlay" \
+        "check-disk.sh n'écarte PAS « overlay » du tableau des inodes"
+    if montage_present "Systèmes de fichiers" "/"; then
+        ok "check-disk.sh affiche la racine « / » parmi les systèmes de fichiers"
+    else
+        ko "check-disk.sh affiche la racine « / » parmi les systèmes de fichiers" \
+            "liste obtenue : $(montages_disque "Systèmes de fichiers" | tr '\n' ' ')"
+    fi
+    if montage_present "Inodes" "/"; then
+        ok "check-disk.sh affiche la racine « / » parmi les tableaux d'inodes"
+    else
+        ko "check-disk.sh affiche la racine « / » parmi les tableaux d'inodes" \
+            "liste obtenue : $(montages_disque "Inodes" | tr '\n' ' ')"
+    fi
+fi
+
+# La racine porte bien un POURCENTAGE, et non une cellule vide.
+OCCUP_RACINE="$(occupation_disque "Systèmes de fichiers" "/")"
+case "$OCCUP_RACINE" in
+    [0-9]*%) ok "check-disk.sh affiche l'occupation de la racine — « $OCCUP_RACINE »" ;;
+    *)       ko "check-disk.sh affiche l'occupation de la racine" \
+                "valeur obtenue « $OCCUP_RACINE », un pourcentage était attendu" ;;
+esac
+
+# GARDES DE CONTRASTE de tout le reste du groupe. Sans elles, un « non
+# disponible » constaté sous stub pourrait venir d'ailleurs.
+assert_egal "" "$(valeur_ligne_disque "Occupation")" \
+    "garde : sans stub, aucune ligne « Occupation » — les deux tableaux sont bien produits"
+assert_egal "" "$(valeur_ligne_disque "Analyse")" \
+    "garde : sans stub, aucune ligne « Analyse » — la section des répertoires est bien produite"
+TOTAL_NOMINAL="$(valeur_ligne_disque "Total (ce montage)")"
+if [ -n "$TOTAL_NOMINAL" ] && [ "$TOTAL_NOMINAL" != "non disponible" ]; then
+    ok "garde : sans stub, le total du répertoire analysé est une vraie valeur — « $TOTAL_NOMINAL »"
+else
+    ko "garde : sans stub, le total du répertoire analysé est une vraie valeur" \
+        "valeur obtenue « $TOTAL_NOMINAL » — les cas dégradés ne prouveraient rien"
+fi
+NB_CLASSEMENT_NOMINAL="$(nb_entrees_classement)"
+if [ "$NB_CLASSEMENT_NOMINAL" -ge 1 ]; then
+    ok "garde : sans stub, le classement des répertoires porte $NB_CLASSEMENT_NOMINAL entrée(s)"
+else
+    ko "garde : sans stub, le classement des répertoires n'est pas vide" "aucune entrée"
+fi
+NB_PERIPH_NOMINAL="$(nb_montages "Périphériques et partitions")"
+if [ "$NB_PERIPH_NOMINAL" -ge 1 ]; then
+    ok "garde : sans stub, la section des périphériques porte $NB_PERIPH_NOMINAL ligne(s)"
+else
+    ko "garde : sans stub, la section des périphériques n'est pas vide" "aucune ligne"
+fi
+
+# L'autre moitié du filtre : les pseudo-systèmes sont bien écartés par défaut.
+if ! df -P -T 2>/dev/null | awk 'NR > 1 && $2 == "tmpfs" { trouve = 1 } END { exit !trouve }'; then
+    saute "check-disk.sh écarte les pseudo-systèmes de fichiers par défaut" \
+        "cet hôte ne monte aucun tmpfs — le filtre n'aurait rien à écarter, le cas ne prouverait rien"
+else
+    assert_absent "$(section_disque "Systèmes de fichiers")" "tmpfs" \
+        "check-disk.sh écarte les pseudo-systèmes (tmpfs) du tableau par défaut"
+fi
+
+# --- c. La lecture seule, prouvée ------------------------------------------
+empreinte "$REP_TMP/disque-apres"
+assert_empreinte_egale "$REP_TMP/disque-avant" "$REP_TMP/disque-apres" \
+    "check-disk.sh ne modifie aucun fichier"
+assert_aucune_ecriture "$REP_TMP/temoin-disque" \
+    "check-disk.sh n'écrit rien hors du répertoire de journaux"
+
+# --- d. Deux exécutions consécutives ---------------------------------------
+# Ce qui est comparé : le système, et la LISTE des systèmes de fichiers. Pas les
+# deux sorties octet pour octet — mesuré, elles diffèrent d'une ligne, le total
+# de /tmp ayant grossi du journal que lib/common.sh venait d'y écrire.
+empreinte "$REP_TMP/disque-idem-a"
+lancer bash "$CHECK_DISK_SH"
+assert_code 0 "$CODE" "check-disk.sh seconde exécution sort en 0"
+MONTAGES_IDEM_A="$(montages_disque "Systèmes de fichiers")"
+lancer bash "$CHECK_DISK_SH"
+assert_code 0 "$CODE" "check-disk.sh troisième exécution sort en 0"
+MONTAGES_IDEM_B="$(montages_disque "Systèmes de fichiers")"
+empreinte "$REP_TMP/disque-idem-b"
+assert_empreinte_egale "$REP_TMP/disque-idem-a" "$REP_TMP/disque-idem-b" \
+    "check-disk.sh exécuté deux fois laisse le système identique"
+assert_egal "$MONTAGES_IDEM_A" "$MONTAGES_IDEM_B" \
+    "check-disk.sh exécuté deux fois liste les mêmes systèmes de fichiers"
+
+# --- e. La dégradation, une commande en échec à la fois ---------------------
+# Un binaire homonyme en tête de PATH : la mutation la moins coûteuse du dépôt,
+# et celle qui a démenti quatre arbitrages de non-traitement au chantier
+# TASK-018. « command -v df » établit que la commande existe, pas qu'elle
+# réussit.
+REP_STUB_DISQUE_DF="$REP_TMP/stub-disque-df"
+REP_STUB_DISQUE_DU="$REP_TMP/stub-disque-du"
+REP_STUB_DISQUE_LSBLK="$REP_TMP/stub-disque-lsblk"
+REP_STUB_DISQUE_AWK="$REP_TMP/stub-disque-awk"
+REP_STUB_DISQUE_SORT="$REP_TMP/stub-disque-sort"
+REP_STUB_DISQUE_DF_PARTIEL="$REP_TMP/stub-disque-df-partiel"
+REP_STUB_DISQUE_DF_PLEIN="$REP_TMP/stub-disque-df-plein"
+REP_STUB_DISQUE_DF_INODES="$REP_TMP/stub-disque-df-inodes"
+REP_SANS_LSBLK="$REP_TMP/bin-sans-lsblk"
+
+mkdir -p "$REP_STUB_DISQUE_DF" "$REP_STUB_DISQUE_DU" "$REP_STUB_DISQUE_LSBLK" \
+    "$REP_STUB_DISQUE_AWK" "$REP_STUB_DISQUE_SORT" "$REP_STUB_DISQUE_DF_PARTIEL" \
+    "$REP_STUB_DISQUE_DF_PLEIN" "$REP_STUB_DISQUE_DF_INODES"
+
+printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_DISQUE_DF/df"
+printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_DISQUE_DU/du"
+printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_DISQUE_LSBLK/lsblk"
+printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_DISQUE_AWK/awk"
+printf '#!/bin/sh\nexit 1\n' > "$REP_STUB_DISQUE_SORT/sort"
+chmod +x "$REP_STUB_DISQUE_DF/df" "$REP_STUB_DISQUE_DU/du" \
+    "$REP_STUB_DISQUE_LSBLK/lsblk" "$REP_STUB_DISQUE_AWK/awk" \
+    "$REP_STUB_DISQUE_SORT/sort"
+
+# garde_stub_echoue <nom> <commande...> — sans elle, un stub mal posé rendrait
+# le cas vert pour la plus mauvaise des raisons : la commande n'a jamais échoué.
+garde_stub_echoue() {
+    local nom="$1"; shift
+    if "$@" >/dev/null 2>&1; then
+        ko "garde : le faux « $nom » échoue bien" "le stub a rendu 0"
+    else
+        ok "garde : le faux « $nom » échoue bien"
+    fi
+}
+
+garde_stub_echoue "df" "$REP_STUB_DISQUE_DF/df" -P -T -h
+garde_stub_echoue "du" "$REP_STUB_DISQUE_DU/du" -x -h --max-depth=1 -- /
+garde_stub_echoue "lsblk" "$REP_STUB_DISQUE_LSBLK/lsblk"
+garde_stub_echoue "awk" "$REP_STUB_DISQUE_AWK/awk" '{ print }' /etc/hostname
+garde_stub_echoue "sort" "$REP_STUB_DISQUE_SORT/sort" /etc/hostname
+
+# e.1 — « df » en échec : les DEUX tableaux d'occupation dégradent.
+lancer env "PATH=$REP_STUB_DISQUE_DF:$PATH" bash "$CHECK_DISK_SH"
+invariants_disque "« df » en échec"
+assert_contient "$(erreur)" "[WARN] « df » a échoué : occupation des systèmes de fichiers non disponible." \
+    "check-disk.sh, « df » en échec : la cause est nommée pour les systèmes de fichiers"
+assert_contient "$(erreur)" "[WARN] « df -i » a échoué : occupation des inodes non disponible." \
+    "check-disk.sh, « df » en échec : la cause est nommée pour les inodes"
+assert_egal "2" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh, « df » en échec : deux avertissements mesurés, un par tableau"
+assert_egal "non disponible" "$(valeur_ligne_disque "Occupation")" \
+    "check-disk.sh, « df » en échec : l'occupation dégrade en « non disponible »"
+assert_egal "2" "$(nb_lignes_sortie_contenant "non disponible")" \
+    "check-disk.sh, « df » en échec : les DEUX tableaux dégradent, et pas seulement le premier"
+assert_contient "$(sortie)" "Périphériques et partitions" \
+    "check-disk.sh, « df » en échec : les sections suivantes sont toujours produites"
+if [ "$(nb_entrees_classement)" -ge 1 ]; then
+    ok "check-disk.sh, « df » en échec : le classement des répertoires est produit malgré tout"
+else
+    ko "check-disk.sh, « df » en échec : le classement des répertoires est produit malgré tout" \
+        "aucune entrée — une dégradation en a emporté une autre"
+fi
+
+# e.2 — « du » en échec.
+lancer env "PATH=$REP_STUB_DISQUE_DU:$PATH" bash "$CHECK_DISK_SH"
+invariants_disque "« du » en échec"
+assert_contient "$(erreur)" "[WARN] « du » n'a rien pu lire sous « / » : répertoires consommateurs non disponibles." \
+    "check-disk.sh, « du » en échec : la cause est nommée"
+assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh, « du » en échec : un seul avertissement mesuré"
+assert_egal "non disponible" "$(valeur_ligne_disque "Analyse")" \
+    "check-disk.sh, « du » en échec : l'analyse dégrade en « non disponible »"
+if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+    ok "check-disk.sh, « du » en échec : le tableau des systèmes de fichiers est intact"
+else
+    ko "check-disk.sh, « du » en échec : le tableau des systèmes de fichiers est intact" "tableau vide"
+fi
+
+# e.3 — « lsblk » en ÉCHEC : repli sur /proc/partitions.
+lancer env "PATH=$REP_STUB_DISQUE_LSBLK:$PATH" bash "$CHECK_DISK_SH"
+invariants_disque "« lsblk » en échec"
+assert_contient "$(erreur)" "[WARN] « lsblk » a échoué : repli sur /proc/partitions." \
+    "check-disk.sh, « lsblk » en échec : la cause est nommée et le repli annoncé"
+assert_contient "$(section_disque "Périphériques et partitions")" "Taille" \
+    "check-disk.sh, « lsblk » en échec : le repli /proc/partitions produit son en-tête"
+if [ "$(nb_montages "Périphériques et partitions")" -ge 2 ]; then
+    ok "check-disk.sh, « lsblk » en échec : le repli /proc/partitions liste des périphériques"
+else
+    ko "check-disk.sh, « lsblk » en échec : le repli /proc/partitions liste des périphériques" \
+        "la section est vide ou réduite à son en-tête"
+fi
+
+# e.4 — « lsblk » ABSENT : c'est le critère d'acceptation, et il ne se prouve
+# pas en mettant la commande en échec. « command -v lsblk » réussirait encore et
+# la branche « introuvable » resterait fermée. Un bac à sable de liens
+# symboliques reproduit le PATH sans lui, et rien n'est touché sur le système.
+mkdir -p "$REP_SANS_LSBLK"
+for repertoire in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin; do
+    [ -d "$repertoire" ] || continue
+    for binaire in "$repertoire"/*; do
+        nom="${binaire##*/}"
+        [ "$nom" != "lsblk" ] || continue
+        [ -e "$REP_SANS_LSBLK/$nom" ] || ln -s "$binaire" "$REP_SANS_LSBLK/$nom" 2>/dev/null || true
+    done
+done
+if PATH="$REP_SANS_LSBLK" command -v lsblk >/dev/null 2>&1; then
+    ko "garde : « lsblk » est bien masqué dans le bac à sable" \
+        "il y reste visible — la branche « introuvable » ne serait pas atteinte"
+else
+    ok "garde : « lsblk » est bien masqué dans le bac à sable"
+fi
+
+lancer env "PATH=$REP_SANS_LSBLK" bash "$CHECK_DISK_SH"
+invariants_disque "« lsblk » absent"
+assert_contient "$(erreur)" "[WARN] « lsblk » est introuvable : repli sur /proc/partitions." \
+    "check-disk.sh, « lsblk » absent : l'absence est nommée et le repli annoncé"
+if [ "$(nb_montages "Périphériques et partitions")" -ge 2 ]; then
+    ok "check-disk.sh, « lsblk » absent : le repli /proc/partitions liste des périphériques"
+else
+    ko "check-disk.sh, « lsblk » absent : le repli /proc/partitions liste des périphériques" \
+        "la section est vide ou réduite à son en-tête"
+fi
+
+# e.5 — « awk » en échec. Deux sites de la section des répertoires : le total et
+# le classement. Le troisième site — l'awk de /proc/partitions — n'est atteint
+# que si lsblk n'a rien donné ; il est éprouvé en e.7.
+lancer env "PATH=$REP_STUB_DISQUE_AWK:$PATH" bash "$CHECK_DISK_SH"
+invariants_disque "« awk » en échec"
+assert_contient "$(erreur)" "[WARN] « awk » a échoué : total de « / » non disponible." \
+    "check-disk.sh, « awk » en échec : le total nomme sa cause"
+assert_contient "$(erreur)" "[WARN] Classement des répertoires non disponible : « awk » ou « sort » a échoué." \
+    "check-disk.sh, « awk » en échec : le classement nomme sa cause"
+assert_egal "2" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh, « awk » en échec : deux avertissements mesurés, un par site"
+assert_egal "non disponible" "$(valeur_ligne_disque "Total (ce montage)")" \
+    "check-disk.sh, « awk » en échec : le total dégrade en « non disponible »"
+assert_egal "aucun" "$(valeur_ligne_disque "Sous-répertoires")" \
+    "check-disk.sh, « awk » en échec : le classement dégrade en « aucun »"
+if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+    ok "check-disk.sh, « awk » en échec : les tableaux d'occupation sont intacts"
+else
+    ko "check-disk.sh, « awk » en échec : les tableaux d'occupation sont intacts" "tableau vide"
+fi
+
+# e.6 — « sort » en échec. Un seul site : le classement. Le total, lui, reste
+# une vraie valeur — c'est ce qui distingue ce cas du précédent, et ce qui
+# prouve que le pipeline n'a pas été jeté en bloc.
+lancer env "PATH=$REP_STUB_DISQUE_SORT:$PATH" bash "$CHECK_DISK_SH"
+invariants_disque "« sort » en échec"
+assert_contient "$(erreur)" "[WARN] Classement des répertoires non disponible : « awk » ou « sort » a échoué." \
+    "check-disk.sh, « sort » en échec : la cause est nommée"
+assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh, « sort » en échec : un seul avertissement mesuré"
+assert_egal "aucun" "$(valeur_ligne_disque "Sous-répertoires")" \
+    "check-disk.sh, « sort » en échec : le classement dégrade en « aucun »"
+TOTAL_SOUS_SORT="$(valeur_ligne_disque "Total (ce montage)")"
+if [ -n "$TOTAL_SOUS_SORT" ] && [ "$TOTAL_SOUS_SORT" != "non disponible" ]; then
+    ok "check-disk.sh, « sort » en échec : le total reste une vraie valeur — « $TOTAL_SOUS_SORT »"
+else
+    ko "check-disk.sh, « sort » en échec : le total reste une vraie valeur" \
+        "valeur obtenue « $TOTAL_SOUS_SORT » — la dégradation a débordé sur un site voisin"
+fi
+
+# e.7 — « awk » en échec SUR /proc/partitions. Ce site n'est atteint que si lsblk
+# n'a rien donné : les deux montages se cumulent.
+#
+# ASSERTION RETOURNÉE — LE SCRIPT A ÉTÉ CORRIGÉ, PAS LE TEST PLIÉ.
+#
+# Ce cas attendait « aucun périphérique bloc visible ». Il l'attendait en le
+# dénonçant : le [WARN] émis juste au-dessus disait « non disponible » —
+# l'IGNORANCE, la table n'a pas pu être lue — pendant que la ligne affichée
+# AFFIRMAIT une absence que personne n'avait établie. Les deux issues se
+# rejoignaient sur le même appel à « ligne ».
+#
+# Ce qui a été tranché : « section_peripheriques » porte désormais un drapeau
+# « lue » qui sépare les deux. Un « awk » en échec donne « non disponible », le
+# mot que ce script emploie partout ailleurs pour une information hors
+# d'atteinte ; « aucun périphérique bloc visible » reste réservé au cas où la
+# table a bien été LUE et se trouve vide. C'est le vrai qui a changé, pas
+# l'attente : l'assertion d'origine avait raison de gêner.
+#
+# Le cas e.8 éprouve l'AUTRE branche du même drapeau. Les deux vont ensemble :
+# retourner celle-ci sans ouvrir celle-là reviendrait à renommer un message au
+# lieu de vérifier qu'on en distingue bien deux.
+lancer env "PATH=$REP_STUB_DISQUE_AWK:$REP_SANS_LSBLK" bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "« awk » en échec sur /proc/partitions"
+assert_contient "$(erreur)" "[WARN] « lsblk » est introuvable : repli sur /proc/partitions." \
+    "check-disk.sh, awk + lsblk absent : le repli est bien emprunté"
+assert_contient "$(erreur)" "[WARN] « awk » a échoué sur /proc/partitions : périphériques et partitions non disponibles." \
+    "check-disk.sh, awk + lsblk absent : la cause est nommée"
+assert_egal "non disponible" "$(valeur_ligne_disque "Périphériques")" \
+    "check-disk.sh, awk + lsblk absent : la ligne affichée dit « non disponible » — l'ignorance, le même mot que le [WARN], et non une absence affirmée"
+assert_absent "$(sortie)" "aucun périphérique bloc visible" \
+    "check-disk.sh, awk + lsblk absent : aucune absence n'est AFFIRMÉE — la table n'a pas été lue"
+
+# e.8 — LA TABLE A ÉTÉ LUE, ET ELLE EST VIDE. L'autre branche du drapeau « lue ».
+#
+# Sans ce cas, la correction du défaut 1 se réduirait à un message renommé :
+# rien ne prouverait que « aucun périphérique bloc visible » reste atteignable,
+# ni qu'il est réservé au constat. Un futur « simplificateur » qui remplacerait
+# les deux issues par la seule « non disponible » ne ferait rougir personne.
+#
+# Le montage est un faux « awk » SÉLECTIF qui RÉUSSIT en ne produisant rien sur
+# /proc/partitions, et délègue le reste au vrai awk. C'est la seule façon
+# d'obtenir une table vide sans remonter /proc, ce qu'un conteneur ne permet pas.
+REP_STUB_AWK_MUET="$REP_TMP/stub-disque-awk-muet"
+mkdir -p "$REP_STUB_AWK_MUET"
+# Les guillemets simples sont VOULUS : ces printf écrivent le CORPS d'un script,
+# et « $argument » comme « $@ » doivent y arriver littéralement pour être
+# développés par le stub à son exécution, pas ici. C'est ce que SC2016 signale,
+# et c'est ce qu'on veut.
+# shellcheck disable=SC2016
+{
+    printf '#!/bin/sh\n'
+    printf 'for argument in "$@"; do\n'
+    printf '    [ "$argument" = "/proc/partitions" ] || continue\n'
+    printf '    exit 0\n'
+    printf 'done\n'
+    printf 'exec %s "$@"\n' "$(command -v awk)"
+} > "$REP_STUB_AWK_MUET/awk"
+chmod +x "$REP_STUB_AWK_MUET/awk"
+if [ -z "$("$REP_STUB_AWK_MUET/awk" 'NR > 2 { print }' /proc/partitions)" ] \
+    && "$REP_STUB_AWK_MUET/awk" 'NR > 2 { print }' /proc/partitions >/dev/null 2>&1; then
+    ok "garde : le faux « awk » muet RÉUSSIT et ne produit rien sur /proc/partitions"
+else
+    ko "garde : le faux « awk » muet RÉUSSIT et ne produit rien sur /proc/partitions" \
+        "le stub a échoué, ou a produit une table — la branche « lue et vide » ne serait pas atteinte"
+fi
+# shellcheck disable=SC2016
+if [ -n "$("$REP_STUB_AWK_MUET/awk" '{ print $1 }' /proc/uptime)" ]; then
+    ok "garde : le faux « awk » muet délègue tout le reste au vrai awk"
+else
+    ko "garde : le faux « awk » muet délègue tout le reste au vrai awk" \
+        "le stub a intercepté une lecture qu'il devait déléguer"
+fi
+
+lancer env "PATH=$REP_STUB_AWK_MUET:$REP_SANS_LSBLK" bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "table de périphériques lue et vide"
+assert_egal "aucun périphérique bloc visible" "$(valeur_ligne_disque "Périphériques")" \
+    "check-disk.sh, table lue et VIDE : l'absence est affirmée — c'est un constat, pas une ignorance"
+assert_absent "$(erreur)" "« awk » a échoué sur /proc/partitions" \
+    "check-disk.sh, table lue et vide : aucun échec d'awk n'est annoncé — awk a réussi"
+assert_egal "1" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh, table lue et vide : le seul avertissement est celui de « lsblk » introuvable"
+
+rm -rf "$REP_STUB_AWK_MUET"
+
+# --- f. La sortie PARTIELLE — la régression la plus probable ----------------
+# « df » et « du » rendent 1 dès qu'UN SEUL point de montage leur résiste, APRÈS
+# avoir écrit tout ce qu'ils ont pu. Le script décide sur le VIDE, pas sur le
+# code. Quelqu'un qui « simplifierait » la gestion du code de retour — un
+# « if ! sortie=… ; then warn ; return ; fi » à la place du contrôle de vide —
+# jetterait cette sortie-là, et aucune autre assertion de ce fichier ne le
+# verrait.
+cat > "$REP_STUB_DISQUE_DF_PARTIEL/df" <<'FAUXDF'
+#!/bin/sh
+echo "Filesystem     Type      Size  Used Avail Use% Mounted on"
+echo "/dev/essai     ext4       10G    9G    1G  90% /essai"
+exit 1
+FAUXDF
+chmod +x "$REP_STUB_DISQUE_DF_PARTIEL/df"
+if "$REP_STUB_DISQUE_DF_PARTIEL/df" -P -T -h >/dev/null 2>&1; then
+    ko "garde : le faux « df » partiel rend un code non nul" "le stub a rendu 0"
+else
+    ok "garde : le faux « df » partiel rend un code non nul"
+fi
+
+lancer env "PATH=$REP_STUB_DISQUE_DF_PARTIEL:$PATH" bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "« df » partiel"
+assert_contient "$(erreur)" "[WARN] « df » n'a pas pu interroger tous les points de montage : le tableau ci-dessous est partiel." \
+    "check-disk.sh, « df » partiel : le caractère partiel est annoncé pour les systèmes de fichiers"
+assert_contient "$(erreur)" "[WARN] « df -i » n'a pas pu interroger tous les points de montage : le tableau ci-dessous est partiel." \
+    "check-disk.sh, « df » partiel : le caractère partiel est annoncé pour les inodes"
+# LES ASSERTIONS DÉCISIVES : la sortie partielle est EXPLOITÉE, pas jetée.
+assert_egal "1" "$(nb_montages "Systèmes de fichiers")" \
+    "check-disk.sh, « df » partiel : le tableau des systèmes de fichiers est AFFICHÉ malgré le code 1"
+assert_egal "1" "$(nb_montages "Inodes")" \
+    "check-disk.sh, « df » partiel : le tableau des inodes est AFFICHÉ malgré le code 1"
+assert_contient "$(section_disque "Systèmes de fichiers")" "/essai" \
+    "check-disk.sh, « df » partiel : la ligne que df a pu écrire est bien lue"
+assert_egal "" "$(valeur_ligne_disque "Occupation")" \
+    "check-disk.sh, « df » partiel : AUCUNE ligne « Occupation : non disponible » — le vide seul décide"
+assert_contient "$(erreur)" "[WARN] Seuil de 85 % atteint — /essai (/dev/essai) : 90 % occupés" \
+    "check-disk.sh, « df » partiel : le seuil est évalué sur les lignes obtenues"
+
+# f.2 — « du » sur « / » sans privilège. Le cas RÉEL, et non un stub : /root et
+# quelques répertoires de /var résistent à un compte ordinaire, et « du » rend 1
+# après avoir calculé tout le reste.
+if [ "$SANS_ROOT_DISPONIBLE" != "true" ]; then
+    saute "check-disk.sh : « du » partiel sans privilège sur « / »" \
+        "aucun lanceur ne parvient à abaisser l'UID sur cet hôte"
+elif "${LANCEUR_SANS_ROOT[@]}" du -x -h --max-depth=1 -- / >/dev/null 2>&1; then
+    saute "check-disk.sh : « du » partiel sans privilège sur « / »" \
+        "« du » réussit ici sans privilège — aucun répertoire ne lui résiste, le cas ne prouverait rien"
+else
+    ok "garde : « du -x » sur « / » rend un code non nul sans privilège"
+    sans_root bash "$CHECK_DISK_SH" --repertoire /
+    invariants_disque "sans privilège, « du » partiel"
+    assert_contient "$(erreur)" "[WARN] « du » n'a pas pu lire tous les sous-répertoires de « / »" \
+        "check-disk.sh sans privilège : le caractère partiel du « du » est annoncé"
+    # L'ASSERTION DÉCISIVE : le classement s'affiche MALGRÉ le [WARN].
+    NB_CLASSEMENT_SANS_ROOT="$(nb_entrees_classement)"
+    if [ "$NB_CLASSEMENT_SANS_ROOT" -ge 1 ]; then
+        ok "check-disk.sh sans privilège : le classement est AFFICHÉ malgré le [WARN] — $NB_CLASSEMENT_SANS_ROOT entrée(s)"
+    else
+        ko "check-disk.sh sans privilège : le classement est AFFICHÉ malgré le [WARN]" \
+            "aucune entrée — la sortie partielle de « du » a été jetée sur son code de retour"
+    fi
+    TOTAL_SANS_ROOT="$(valeur_ligne_disque "Total (ce montage)")"
+    if [ -n "$TOTAL_SANS_ROOT" ] && [ "$TOTAL_SANS_ROOT" != "non disponible" ]; then
+        ok "check-disk.sh sans privilège : le total reste une vraie valeur — « $TOTAL_SANS_ROOT »"
+    else
+        ko "check-disk.sh sans privilège : le total reste une vraie valeur" \
+            "valeur obtenue « $TOTAL_SANS_ROOT »"
+    fi
+    if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+        ok "check-disk.sh sans privilège : le tableau des systèmes de fichiers est produit"
+    else
+        ko "check-disk.sh sans privilège : le tableau des systèmes de fichiers est produit" "tableau vide"
+    fi
+    rm -rf "$LOG_DIR_NOBODY"
+fi
+
+# --- g. Le seuil — ATTEINT, et non dépassé ---------------------------------
+# La comparaison du script est « -ge ». Un « -gt » resterait vert sous tout jeu
+# de données où l'occupation ne tombe pas EXACTEMENT sur le seuil : d'où un faux
+# « df » qui annonce 90 %, et deux appels en regard — --seuil 90 doit avertir,
+# --seuil 91 doit se taire.
+cat > "$REP_STUB_DISQUE_DF_PLEIN/df" <<'FAUXDF'
+#!/bin/sh
+echo "Filesystem     Type      Size  Used Avail Use% Mounted on"
+echo "/dev/essai     ext4       10G    9G    1G  90% /essai"
+exit 0
+FAUXDF
+chmod +x "$REP_STUB_DISQUE_DF_PLEIN/df"
+if "$REP_STUB_DISQUE_DF_PLEIN/df" -P -T -h >/dev/null 2>&1; then
+    ok "garde : le faux « df » à 90 % rend 0"
+else
+    ko "garde : le faux « df » à 90 % rend 0" "le stub a rendu un code non nul"
+fi
+
+lancer env "PATH=$REP_STUB_DISQUE_DF_PLEIN:$PATH" bash "$CHECK_DISK_SH" --seuil 90 --sans-repertoires
+invariants_disque "seuil ATTEINT — 90 % pour un seuil de 90"
+assert_contient "$(erreur)" "[WARN] Seuil de 90 % atteint — /essai (/dev/essai) : 90 % occupés" \
+    "check-disk.sh : une occupation ÉGALE au seuil est signalée — « -ge », et non « -gt »"
+assert_contient "$(erreur)" "[WARN] Seuil de 90 % atteint — /essai (/dev/essai) : 90 % des inodes consommés" \
+    "check-disk.sh : le même seuil vaut pour les inodes, et à égalité"
+
+lancer env "PATH=$REP_STUB_DISQUE_DF_PLEIN:$PATH" bash "$CHECK_DISK_SH" --seuil 91 --sans-repertoires
+invariants_disque "seuil NON atteint — 90 % pour un seuil de 91"
+assert_absent "$(erreur)" "Seuil de 91 % atteint" \
+    "check-disk.sh : une occupation INFÉRIEURE au seuil ne produit aucun avertissement"
+assert_egal "0" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh : sous le seuil, stderr ne porte aucun avertissement"
+
+lancer env "PATH=$REP_STUB_DISQUE_DF_PLEIN:$PATH" bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "seuil par défaut — 90 % pour le défaut de 85"
+assert_contient "$(erreur)" "[WARN] Seuil de 85 % atteint — /essai (/dev/essai) : 90 % occupés" \
+    "check-disk.sh : le seuil par défaut de 85 % s'applique sans qu'on le demande"
+
+# Sur les vrais systèmes de fichiers de cet hôte : un seuil de 1 % avertit
+# forcément, et le code de retour n'en est PAS changé. C'est la décision de la
+# tâche — un diagnostic constate, il ne juge pas.
+lancer bash "$CHECK_DISK_SH" --seuil 1 --sans-repertoires
+assert_code 0 "$CODE" "check-disk.sh --seuil 1 : un seuil atteint ne change PAS le code de retour"
+invariants_disque "--seuil 1 sur les systèmes de fichiers réels"
+assert_contient "$(erreur)" "[WARN] Seuil de 1 % atteint" \
+    "check-disk.sh --seuil 1 : au moins un système de fichiers est signalé"
+NB_WARN_SEUIL_1="$(nb_lignes_contenant '[WARN]')"
+if [ "$NB_WARN_SEUIL_1" -ge 1 ]; then
+    ok "check-disk.sh --seuil 1 : $NB_WARN_SEUIL_1 avertissement(s) émis"
+else
+    ko "check-disk.sh --seuil 1 : au moins un avertissement est émis" "aucun [WARN] sur stderr"
+fi
+
+# --- g bis. L'origine des valeurs, et la préséance -------------------------
+# SRV_DISK_SEUIL et SRV_DISK_REPERTOIRE sont transmises par l'ENVIRONNEMENT et
+# non par un config/server.env écrit pour l'occasion : lib/common.sh charge ce
+# fichier avec « set -a » depuis TASK-015, les deux chemins aboutissent donc à
+# la même variable exportée. Ce qui reste NON PROUVÉ ici est dit au groupe 5.
+lancer env SRV_DISK_SEUIL=50 bash "$CHECK_DISK_SH" --sans-repertoires
+assert_code 0 "$CODE" "check-disk.sh accepte un seuil venu de la configuration"
+assert_egal "50 % (config/server.env)" "$(valeur_ligne_disque "Seuil d'alerte")" \
+    "check-disk.sh : le seuil de la configuration prime sur la valeur par défaut, et son origine est nommée"
+
+lancer env SRV_DISK_SEUIL=50 bash "$CHECK_DISK_SH" --seuil 70 --sans-repertoires
+assert_code 0 "$CODE" "check-disk.sh accepte un seuil de ligne de commande par-dessus la configuration"
+assert_egal "70 % (ligne de commande)" "$(valeur_ligne_disque "Seuil d'alerte")" \
+    "check-disk.sh : la ligne de commande prime sur la configuration, et son origine est nommée"
+
+lancer env SRV_DISK_REPERTOIRE=/usr bash "$CHECK_DISK_SH" --top 2
+assert_code 0 "$CODE" "check-disk.sh analyse le répertoire donné par la configuration"
+assert_egal "/usr (config/server.env)" "$(valeur_ligne_disque "Répertoire analysé")" \
+    "check-disk.sh : le répertoire de la configuration est retenu, et son origine nommée"
+# Et c'est bien /usr qui a été PARCOURU, pas seulement affiché. La ligne
+# « Répertoire » de la section ne peut pas servir ici : « valeur_ligne_disque »
+# la confondrait avec « Répertoire analysé », dont elle est un préfixe. Les
+# chemins du classement, eux, ne mentent pas.
+CHEMINS_HORS_USR=""
+NB_CHEMINS_USR=0
+while IFS= read -r chemin_classe; do
+    [ -n "$chemin_classe" ] || continue
+    NB_CHEMINS_USR=$(( NB_CHEMINS_USR + 1 ))
+    case "$chemin_classe" in
+        /usr/*) ;;
+        *) CHEMINS_HORS_USR="$CHEMINS_HORS_USR $chemin_classe" ;;
+    esac
+done < <(chemins_classement)
+if [ "$NB_CHEMINS_USR" -ge 1 ] && [ -z "$CHEMINS_HORS_USR" ]; then
+    ok "check-disk.sh : c'est bien /usr qui a été parcouru — $NB_CHEMINS_USR sous-répertoire(s), tous sous /usr/"
+else
+    ko "check-disk.sh : c'est bien /usr qui a été parcouru" \
+        "$NB_CHEMINS_USR entrée(s), hors de /usr :${CHEMINS_HORS_USR:- aucune}"
+fi
+
+lancer env SRV_DISK_REPERTOIRE=/usr bash "$CHECK_DISK_SH" --repertoire /etc --top 2
+assert_code 0 "$CODE" "check-disk.sh accepte un répertoire de ligne de commande par-dessus la configuration"
+assert_egal "/etc (ligne de commande)" "$(valeur_ligne_disque "Répertoire analysé")" \
+    "check-disk.sh : la ligne de commande prime sur la configuration pour le répertoire"
+
+# ASSERTION RETOURNÉE — LE SCRIPT A ÉTÉ CORRIGÉ, PAS LE TEST PLIÉ.
+#
+# Ce cas attendait le code 2 pour « SRV_DISK_SEUIL=abc ». Il l'attendait en le
+# dénonçant : le script raisonnait lui-même, en toutes lettres, qu'une valeur
+# héritée de config/server.env « ne reproche rien à la commande tapée » — et
+# n'appliquait ce raisonnement qu'à --repertoire. Un server.env mal saisi
+# privait donc l'appelant de TOUT son tableau de disques pour le seuil, et de
+# rien pour le répertoire. Un diagnostic qui refuse de diagnostiquer.
+#
+# Ce qui a été tranché : UNE SEULE RÈGLE, qui ne dépend plus que de l'ORIGINE.
+#
+#   ligne de commande fautive   [ERROR], code 2 — l'appelant s'est trompé
+#   config/server.env fautif    [WARN], repli, code 0 — la commande était juste
+#
+# Ce que le repli retient diffère d'une valeur à l'autre, et c'est le seul
+# écart : le seuil retombe sur 85 %, qui reste une comparaison utile ; le
+# répertoire ne retombe PAS sur « / » — ce serait parcourir une arborescence que
+# personne n'a demandée — sa section est sautée.
+#
+# L'assertion décisive de ce groupe n'est ni le code ni le message : c'est LE
+# TABLEAU EST PRODUIT. C'était tout l'objet du changement.
+lancer env SRV_DISK_SEUIL=abc bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "seuil de configuration non numérique"
+assert_contient "$(erreur)" "[WARN] « abc » (config/server.env, SRV_DISK_SEUIL) n'est pas un entier :" \
+    "check-disk.sh : le repli nomme la variable ET la valeur refusée"
+assert_contient "$(erreur)" "[WARN] repli sur le seuil par défaut, 85 %." \
+    "check-disk.sh : le repli nomme la valeur RETENUE à la place"
+assert_egal "2" "$(nb_lignes_contenant '[WARN]')" \
+    "check-disk.sh : deux avertissements mesurés pour un seuil de configuration refusé"
+assert_absent "$(erreur)" "[ERROR]" \
+    "check-disk.sh : une valeur de configuration fautive ne produit AUCUNE ligne [ERROR] — la commande tapée était juste"
+assert_egal "85 % (valeur par défaut, SRV_DISK_SEUIL refusé)" "$(valeur_ligne_disque "Seuil d'alerte")" \
+    "check-disk.sh : l'en-tête porte le repli et dit que SRV_DISK_SEUIL a été refusé"
+# L'ASSERTION DÉCISIVE.
+if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+    ok "check-disk.sh : le TABLEAU des systèmes de fichiers est produit malgré le seuil de configuration refusé"
+else
+    ko "check-disk.sh : le TABLEAU des systèmes de fichiers est produit malgré le seuil de configuration refusé" \
+        "tableau vide — le diagnostic refuse encore de diagnostiquer"
+fi
+if [ "$(nb_montages "Inodes")" -ge 1 ]; then
+    ok "check-disk.sh : le tableau des inodes est produit malgré le seuil de configuration refusé"
+else
+    ko "check-disk.sh : le tableau des inodes est produit malgré le seuil de configuration refusé" "tableau vide"
+fi
+
+# Le même repli pour l'autre motif de refus — hors bornes, et non « pas un
+# entier ». Les deux « case » de valider_entier sont ainsi tous deux empruntés
+# par le chemin du repli, et pas seulement par celui du refus.
+lancer env SRV_DISK_SEUIL=0 bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "seuil de configuration hors bornes"
+assert_contient "$(erreur)" "[WARN] « 0 » (config/server.env, SRV_DISK_SEUIL) est hors bornes — attendu un entier de 1 à 100, sans zéro initial :" \
+    "check-disk.sh : un seuil de configuration hors bornes est replié, et la précision est conservée"
+assert_contient "$(erreur)" "[WARN] repli sur le seuil par défaut, 85 %." \
+    "check-disk.sh : le repli d'un seuil hors bornes retient lui aussi 85 %"
+assert_egal "85 % (valeur par défaut, SRV_DISK_SEUIL refusé)" "$(valeur_ligne_disque "Seuil d'alerte")" \
+    "check-disk.sh : l'en-tête porte le repli pour un seuil hors bornes"
+if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+    ok "check-disk.sh : le tableau est produit malgré un seuil de configuration hors bornes"
+else
+    ko "check-disk.sh : le tableau est produit malgré un seuil de configuration hors bornes" "tableau vide"
+fi
+
+# LA PRÉSÉANCE. Une ligne de commande valide reprend la main sur une
+# configuration fautive : il n'y a alors RIEN à replier, et aucun [WARN] de
+# repli ne doit sortir. Sans cette assertion, un script qui avertirait d'abord
+# et lirait la ligne de commande ensuite passerait inaperçu.
+lancer env SRV_DISK_SEUIL=abc bash "$CHECK_DISK_SH" --seuil 70 --sans-repertoires
+invariants_disque "configuration fautive, ligne de commande valide"
+assert_egal "70 % (ligne de commande)" "$(valeur_ligne_disque "Seuil d'alerte")" \
+    "check-disk.sh : la ligne de commande reprend la main sur une configuration fautive"
+assert_absent "$(erreur)" "repli sur le seuil par défaut" \
+    "check-disk.sh : aucun repli n'est annoncé quand la ligne de commande a tranché"
+assert_absent "$(erreur)" "SRV_DISK_SEUIL" \
+    "check-disk.sh : la variable fautive n'est même pas mentionnée — elle n'a jamais servi"
+
+# LA NON-RÉGRESSION DU 2 EN LIGNE DE COMMANDE. Les quatre refus de la section a
+# — « --seuil abc », « --seuil 0 », « --seuil 101 », « --top 0 » — gardent leur
+# code 2, leur unique ligne [ERROR] et leur message au caractère près. Ils sont
+# la moitié que le repli ne doit PAS avoir emportée : un correctif qui aurait
+# replié TOUTES les valeurs fautives, quelle qu'en soit l'origine, les ferait
+# rougir. Ils ne sont pas rejoués ici, ils sont plus haut, et c'est leur place —
+# ce commentaire dit seulement qu'ils bordent ce groupe-ci.
+#
+# « --top » n'a pas de source dans config/server.env, et le script l'écrit :
+# c'est un confort d'affichage, pas une donnée de machine. Son origine est donc
+# toujours « ligne de commande » ou une valeur par défaut valide par
+# construction — il n'y a aucun repli à éprouver de son côté.
+
+# Un répertoire de configuration inutilisable ne prive PAS l'appelant du reste
+# du diagnostic : avertissement, section sautée, code 0.
+lancer env SRV_DISK_REPERTOIRE=/pas/la bash "$CHECK_DISK_SH"
+invariants_disque "répertoire de configuration inexistant"
+assert_contient "$(erreur)" "[WARN] « /pas/la » (config/server.env) n'est pas un répertoire, ou n'est pas accessible :" \
+    "check-disk.sh : un répertoire de configuration inutilisable est signalé, pas refusé"
+assert_contient "$(erreur)" "[WARN] la section des répertoires consommateurs est sautée." \
+    "check-disk.sh : la conséquence est annoncée"
+assert_egal "non disponible" "$(valeur_ligne_disque "Analyse")" \
+    "check-disk.sh : la section des répertoires dégrade en « non disponible »"
+if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+    ok "check-disk.sh : le reste du diagnostic est produit malgré le répertoire inutilisable"
+else
+    ko "check-disk.sh : le reste du diagnostic est produit malgré le répertoire inutilisable" "tableau vide"
+fi
+
+# --- g ter. Le TROISIÈME site de la règle d'origine ------------------------
+# Le refus d'un --repertoire commençant par un tiret ne s'applique plus que si
+# l'origine est la ligne de commande. Aucun cas ne couvrait ce chemin ; il a été
+# jugé avant d'être couvert, et voici le jugement.
+#
+# LE CONTRÔLE EST JUSTE, ET SA RESTRICTION L'EST AUSSI. Sa raison d'être n'a
+# jamais été la sûreté : c'est d'empêcher « --repertoire --tous » d'avaler le
+# jeton argv suivant et de perdre l'option demandée en silence. Une valeur
+# héritée d'une variable d'environnement n'a AUCUN jeton suivant — le piège
+# n'existe pas là. Restait à vérifier que rien en aval ne prend un chemin à
+# tiret pour une option : les deux seuls consommateurs sont « du … -- "$REP" »,
+# dont le « -- » ferme la question, et « awk -v racine="$REP" », où la valeur
+# est le membre droit d'une affectation. Vérifié par exécution ci-dessous, et
+# non par lecture : le second cas fait analyser un répertoire RÉELLEMENT nommé
+# « -x ».
+#
+# g ter.1 — le cas ordinaire : « -x » venu de la configuration n'est qu'un
+# chemin introuvable de plus. Le contrôle suivant s'en charge, sans rendre 2.
+lancer env SRV_DISK_REPERTOIRE=-x bash "$CHECK_DISK_SH"
+invariants_disque "répertoire de configuration commençant par un tiret"
+assert_absent "$(erreur)" "commence par un tiret" \
+    "check-disk.sh : un chemin à tiret venu de la configuration n'est PAS traité en erreur d'usage"
+assert_contient "$(erreur)" "[WARN] « -x » (config/server.env) n'est pas un répertoire, ou n'est pas accessible :" \
+    "check-disk.sh : il est traité comme n'importe quel chemin introuvable de la configuration"
+assert_contient "$(erreur)" "[WARN] la section des répertoires consommateurs est sautée." \
+    "check-disk.sh : la conséquence est la même que pour tout autre chemin introuvable"
+assert_egal "non disponible" "$(valeur_ligne_disque "Analyse")" \
+    "check-disk.sh : la section des répertoires dégrade, le reste est produit"
+if [ "$(nb_montages "Systèmes de fichiers")" -ge 1 ]; then
+    ok "check-disk.sh : le tableau est produit malgré un répertoire de configuration à tiret"
+else
+    ko "check-disk.sh : le tableau est produit malgré un répertoire de configuration à tiret" "tableau vide"
+fi
+
+# g ter.2 — LE CAS QUI TRANCHE. Un répertoire RÉELLEMENT nommé « -x », et le
+# script le parcourt. C'est la seule exécution qui prouve que « -x » traverse
+# tout l'aval du script — « du -- », « awk -v racine= » — sans y être pris pour
+# une option. Sans elle, « ce n'est qu'un chemin » resterait une lecture du code.
+#
+# Le répertoire vit hors de REP_TMP par commodité de « cd », et le harnais s'y
+# déplace dans un SOUS-SHELL : le répertoire courant du fichier de cas n'est
+# jamais changé, et le chemin relatif « -x » ne se résout que là.
+REP_TIRET="$REP_TMP/bac-a-tiret"
+mkdir -p "$REP_TIRET"
+mkdir -p "$REP_TIRET/-x/sous-repertoire-temoin"
+dd if=/dev/zero of="$REP_TIRET/-x/sous-repertoire-temoin/remplissage" bs=1024 count=200 >/dev/null 2>&1
+if [ -d "$REP_TIRET/-x" ]; then
+    ok "garde : un répertoire réellement nommé « -x » a été créé"
+else
+    ko "garde : un répertoire réellement nommé « -x » a été créé" "$REP_TIRET/-x est absent"
+fi
+
+lancer_depuis "$REP_TIRET" env SRV_DISK_REPERTOIRE=-x bash "$CHECK_DISK_SH" --top 5
+invariants_disque "répertoire « -x » réel, venu de la configuration"
+assert_egal "-x (config/server.env)" "$(valeur_ligne_disque "Répertoire analysé")" \
+    "check-disk.sh : « -x » est retenu comme répertoire à analyser"
+assert_absent "$(erreur)" "n'est pas un répertoire" \
+    "check-disk.sh : « -x » existant, aucun repli n'est déclenché"
+TOTAL_TIRET="$(valeur_ligne_disque "Total (ce montage)")"
+if [ -n "$TOTAL_TIRET" ] && [ "$TOTAL_TIRET" != "non disponible" ]; then
+    ok "check-disk.sh : « du -- \"-x\" » a bien mesuré le répertoire — total « $TOTAL_TIRET »"
+else
+    ko "check-disk.sh : « du -- \"-x\" » a bien mesuré le répertoire" \
+        "total obtenu « $TOTAL_TIRET » — le tiret a été pris pour une option quelque part en aval"
+fi
+assert_contient "$(chemins_classement)" "-x/sous-repertoire-temoin" \
+    "check-disk.sh : le classement de « -x » est produit — « awk -v racine=-x » ne s'y est pas trompé non plus"
+
+rm -rf "$REP_TIRET"
+
+# --- h. Les inodes non déclarés --------------------------------------------
+# btrfs, ZFS et certains overlay n'en déclarent pas : « df -i » écrit « - ».
+# Un pourcentage calculé là-dessus donnerait 0 % ou 100 % sur un système de
+# fichiers qui, par construction, ne peut pas en manquer.
+#
+# Le faux « df » est SÉLECTIF : il ne rend « - » que pour l'appel « -i », et un
+# tableau ordinaire pour l'autre. Un stub total ne distinguerait pas les deux
+# sections, et le cas ne dirait plus laquelle a dégradé.
+cat > "$REP_STUB_DISQUE_DF_INODES/df" <<'FAUXDF'
+#!/bin/sh
+for argument in "$@"; do
+    if [ "$argument" = "-i" ]; then
+        echo "Filesystem     Type     Inodes IUsed IFree IUse% Mounted on"
+        echo "/dev/essai     btrfs         -     -     -     - /essai"
+        exit 0
+    fi
+done
+echo "Filesystem     Type      Size  Used Avail Use% Mounted on"
+echo "/dev/essai     btrfs      10G    9G    1G  90% /essai"
+exit 0
+FAUXDF
+chmod +x "$REP_STUB_DISQUE_DF_INODES/df"
+if [ "$("$REP_STUB_DISQUE_DF_INODES/df" -P -T -i -h | awk 'NR == 2 { print $3 }')" = "-" ]; then
+    ok "garde : le faux « df » ne déclare aucun inode pour l'appel « -i »"
+else
+    ko "garde : le faux « df » ne déclare aucun inode pour l'appel « -i »" \
+        "le stub n'a pas rendu « - » en troisième champ"
+fi
+
+# Garde de contraste : sur les vrais systèmes de fichiers de cet hôte, la racine
+# porte un pourcentage d'inodes. Sans elle, le « non disponible » du cas suivant
+# pourrait venir d'ailleurs.
+lancer bash "$CHECK_DISK_SH" --sans-repertoires
+OCCUP_INODES_RACINE="$(occupation_disque "Inodes" "/")"
+case "$OCCUP_INODES_RACINE" in
+    [0-9]*%) ok "garde : sans stub, la racine porte un pourcentage d'inodes — « $OCCUP_INODES_RACINE »" ;;
+    *)       saute "check-disk.sh : contraste du cas « inodes non déclarés »" \
+                "la racine de cet hôte n'en déclare pas non plus — valeur lue « $OCCUP_INODES_RACINE »" ;;
+esac
+
+lancer env "PATH=$REP_STUB_DISQUE_DF_INODES:$PATH" bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "inodes non déclarés"
+assert_contient "$(section_disque "Inodes")" "non disponible (ce système de fichiers ne déclare pas d'inodes)" \
+    "check-disk.sh : un système de fichiers sans inodes affiche « non disponible », jamais un pourcentage faux"
+assert_absent "$(section_disque "Inodes")" "0%" \
+    "check-disk.sh : aucun pourcentage n'est calculé sur un total d'inodes absent"
+# L'autre tableau, lui, reste chiffré : la dégradation est LOCALE à la ligne.
+assert_egal "90%" "$(occupation_disque "Systèmes de fichiers" "/essai")" \
+    "check-disk.sh : le tableau des blocs reste chiffré quand celui des inodes dégrade"
+assert_absent "$(erreur)" "des inodes consommés" \
+    "check-disk.sh : aucun seuil n'est évalué sur un pourcentage d'inodes absent"
+
+# --- h bis. Un pourcentage de BLOCS non déclaré ----------------------------
+# Le pendant du cas précédent, du côté des blocs : « df » écrit « - » dans la
+# colonne « Use% » pour un système de fichiers qui ne compte pas ses blocs — ZFS
+# avec quotas, certains montages FUSE. Le script s'en garde par un
+# « [ -n "$POURCENTAGE_NUMERIQUE" ] » devant la comparaison au seuil.
+#
+# CE CAS EXISTE PARCE QUE LA MUTATION L'A DEMANDÉ. Retirer cette garde ne
+# faisait rougir AUCUNE assertion du groupe : aucun jeu de données n'atteignait
+# la comparaison avec un pourcentage vide. La garde était donc écrite et non
+# vérifiée — et sans elle, « [ : -ge 85 ] » déverse un message brut de bash sur
+# stderr, que l'invariant de dégradation voit.
+REP_STUB_DISQUE_DF_SANSPCT="$REP_TMP/stub-disque-df-sans-pourcentage"
+mkdir -p "$REP_STUB_DISQUE_DF_SANSPCT"
+cat > "$REP_STUB_DISQUE_DF_SANSPCT/df" <<'FAUXDF'
+#!/bin/sh
+echo "Filesystem     Type      Size  Used Avail Use% Mounted on"
+echo "/dev/essai     zfs        10G    9G    1G    - /essai"
+exit 0
+FAUXDF
+chmod +x "$REP_STUB_DISQUE_DF_SANSPCT/df"
+if [ "$("$REP_STUB_DISQUE_DF_SANSPCT/df" -P -T -h | awk 'NR == 2 { print $6 }')" = "-" ]; then
+    ok "garde : le faux « df » ne déclare aucun pourcentage d'occupation"
+else
+    ko "garde : le faux « df » ne déclare aucun pourcentage d'occupation" \
+        "le stub n'a pas rendu « - » en sixième champ"
+fi
+
+lancer env "PATH=$REP_STUB_DISQUE_DF_SANSPCT:$PATH" bash "$CHECK_DISK_SH" --sans-repertoires
+invariants_disque "pourcentage de blocs non déclaré"
+assert_egal "-" "$(occupation_disque "Systèmes de fichiers" "/essai")" \
+    "check-disk.sh : un pourcentage d'occupation non déclaré est recopié tel quel, jamais interprété"
+assert_absent "$(erreur)" "Seuil de 85 % atteint" \
+    "check-disk.sh : aucun seuil n'est évalué sur un pourcentage de blocs absent"
+assert_contient "$(section_disque "Inodes")" "non disponible (ce système de fichiers ne déclare pas d'inodes)" \
+    "check-disk.sh : le tableau des inodes dégrade lui aussi, faute de pourcentage"
+
+rm -rf "$REP_STUB_DISQUE_DF_SANSPCT"
+
+# --- i. Les trois bornes de l'analyse des répertoires ----------------------
+lancer bash "$CHECK_DISK_SH" --top 3
+assert_code 0 "$CODE" "check-disk.sh --top 3 sort en 0"
+assert_egal "3 (ligne de commande)" "$(valeur_ligne_disque "Entrées affichées")" \
+    "check-disk.sh --top 3 rappelle la valeur et son origine"
+NB_TOP3="$(nb_entrees_classement)"
+if [ "$NB_TOP3" -le 3 ] && [ "$NB_TOP3" -ge 1 ]; then
+    ok "check-disk.sh --top 3 borne le classement à 3 entrées — $NB_TOP3 affichée(s)"
+else
+    ko "check-disk.sh --top 3 borne le classement à 3 entrées" "$NB_TOP3 entrée(s) affichée(s)"
+fi
+
+# La profondeur 1 : aucun chemin à deux niveaux sous le répertoire analysé.
+lancer bash "$CHECK_DISK_SH"
+assert_code 0 "$CODE" "check-disk.sh sort en 0 — mesure de la profondeur d'analyse"
+CHEMINS_PROFONDS=""
+while IFS= read -r chemin_classe; do
+    [ -n "$chemin_classe" ] || continue
+    case "${chemin_classe#/}" in
+        */*) CHEMINS_PROFONDS="$CHEMINS_PROFONDS $chemin_classe" ;;
+    esac
+done < <(chemins_classement)
+if [ -z "$CHEMINS_PROFONDS" ]; then
+    ok "check-disk.sh borne l'analyse à la profondeur 1 sous « / »"
+else
+    ko "check-disk.sh borne l'analyse à la profondeur 1 sous « / »" \
+        "chemins de profondeur supérieure :$CHEMINS_PROFONDS"
+fi
+
+# « -x » : aucun point de montage n'est franchi. Le montage témoin est CHOISI
+# dans la liste que le script vient lui-même d'afficher, plutôt que nommé
+# d'avance : sur un hôte qui n'en aurait aucun, le cas se déclare non exécuté au
+# lieu de passer à vide.
+MONTAGE_TEMOIN=""
+while IFS= read -r montage_liste; do
+    [ -n "$montage_liste" ] || continue
+    [ "$montage_liste" != "/" ] || continue
+    case "${montage_liste#/}" in
+        */*) continue ;;
+    esac
+    MONTAGE_TEMOIN="$montage_liste"
+    break
+done < <(printf '%s\n' "$MONTAGES_IDEM_B")
+if [ -z "$MONTAGE_TEMOIN" ]; then
+    saute "check-disk.sh ne franchit aucun point de montage sous « / »" \
+        "cet hôte n'expose aucun montage de premier niveau distinct de « / » — il n'y a rien à ne pas franchir"
+else
+    assert_absent "$(chemins_classement)" "$MONTAGE_TEMOIN" \
+        "check-disk.sh ne franchit pas le point de montage « $MONTAGE_TEMOIN » (option -x)"
+fi
+
+# --sans-repertoires saute la section entière, et le dit.
+lancer bash "$CHECK_DISK_SH" --sans-repertoires
+assert_code 0 "$CODE" "check-disk.sh --sans-repertoires sort en 0"
+assert_egal "aucun (--sans-repertoires)" "$(valeur_ligne_disque "Répertoire analysé")" \
+    "check-disk.sh --sans-repertoires l'annonce dans le rappel des paramètres"
+assert_egal "désactivée (--sans-repertoires)" "$(valeur_ligne_disque "Analyse")" \
+    "check-disk.sh --sans-repertoires saute la section des répertoires"
+assert_absent "$(erreur)" "Analyse de « / » en cours" \
+    "check-disk.sh --sans-repertoires ne lance aucun « du »"
+assert_egal "0" "$(nb_entrees_classement)" \
+    "check-disk.sh --sans-repertoires n'affiche aucune entrée de classement"
+
+# --tous lève le filtre.
+lancer bash "$CHECK_DISK_SH" --tous --sans-repertoires
+assert_code 0 "$CODE" "check-disk.sh --tous sort en 0"
+assert_egal "aucun — tous les systèmes de fichiers (--tous)" "$(valeur_ligne_disque "Filtre")" \
+    "check-disk.sh --tous l'annonce dans le rappel des paramètres"
+NB_FS_TOUS="$(nb_montages "Systèmes de fichiers")"
+if ! df -P -T 2>/dev/null | awk 'NR > 1 && $2 == "tmpfs" { trouve = 1 } END { exit !trouve }'; then
+    saute "check-disk.sh --tous montre les pseudo-systèmes que le filtre écarte" \
+        "cet hôte ne monte aucun tmpfs — le filtre n'a rien à lever"
+else
+    if [ "$NB_FS_TOUS" -gt "$NB_FS_DEFAUT" ]; then
+        ok "check-disk.sh --tous montre plus de systèmes de fichiers que le filtre par défaut — $NB_FS_TOUS contre $NB_FS_DEFAUT"
+    else
+        ko "check-disk.sh --tous montre plus de systèmes de fichiers que le filtre par défaut" \
+            "$NB_FS_TOUS avec --tous, $NB_FS_DEFAUT sans — le filtre n'écarte donc rien"
+    fi
+    assert_contient "$(section_disque "Systèmes de fichiers")" "tmpfs" \
+        "check-disk.sh --tous n'écarte plus les pseudo-systèmes"
+fi
+
+# --- j. Aucune écriture, sur TOUT le groupe --------------------------------
+# Le témoin a été posé à l'ouverture. Une quarantaine d'exécutions plus tard —
+# sous stub, sans privilège, avec des valeurs de configuration — rien ne doit
+# avoir été écrit hors du répertoire de journaux.
+assert_aucune_ecriture "$REP_TMP/temoin-disque-groupe" \
+    "check-disk.sh : AUCUNE des exécutions de ce groupe n'a écrit hors du répertoire de journaux"
+
+rm -rf "$REP_STUB_DISQUE_DF" "$REP_STUB_DISQUE_DU" "$REP_STUB_DISQUE_LSBLK" \
+    "$REP_STUB_DISQUE_AWK" "$REP_STUB_DISQUE_SORT" "$REP_STUB_DISQUE_DF_PARTIEL" \
+    "$REP_STUB_DISQUE_DF_PLEIN" "$REP_STUB_DISQUE_DF_INODES" "$REP_SANS_LSBLK"
 
 # ===================================================================
 # 3. --dry-run — critère 3
@@ -3611,6 +4892,18 @@ saute "configure-timezone.sh : la seconde lecture de /etc/timezone, à la vérif
 # plus le « dirname ». Il ne reste ici qu'une réserve, et elle n'est pas un
 # doublement : sa nature est différente, et la nommer parmi les autres serait la
 # noyer.
+# --- Ce que le groupe 2 bis n'a PAS pu prouver, et pourquoi ----------------
+# TASK-021. Ces quatre lignes valent autant que les assertions vertes : elles
+# disent où la couverture de check-disk.sh s'arrête.
+saute "check-disk.sh : la surcharge par un config/server.env RÉELLEMENT ÉCRIT" \
+    "le groupe 2 bis transmet SRV_DISK_SEUIL et SRV_DISK_REPERTOIRE par l'environnement — même variable, même « set -a » de lib/common.sh, mais le CHARGEMENT du fichier n'est pas emprunté. L'écrire imposerait de créer config/server.env dans le dépôt monté, qui n'est pas un système jetable"
+saute "check-disk.sh : /proc/partitions ILLISIBLE, lsblk absent" \
+    "la seule branche du script qu'aucun montage n'atteint ici — il faudrait remonter /proc, ce qu'un conteneur non privilégié ne permet pas ; « lsblk absent » et « awk en échec » couvrent les deux autres sorties de cette section"
+saute_par_nature "check-disk.sh : « df » suspendu sur un montage réseau injoignable" \
+    "explicitement hors périmètre de TASK-021 (out_of_scope) — le sujet demande « df -l » ou une borne de temps, et l'image de test ne monte ni NFS ni CIFS"
+saute "check-disk.sh : le comportement sur un système de fichiers RÉELLEMENT au-delà du seuil" \
+    "l'occupation de la racine du conteneur est celle de l'hôte et n'est pas pilotable — le franchissement du seuil est éprouvé par un faux « df » à 90 %, jamais sur un disque réellement plein"
+
 saute "update-system.sh:133 — « restant » vide passé à un test arithmétique" \
     "le « || true » empêche le doublement mais laisse une chaîne vide au « -gt 0 » qui suit — réserve d'une autre nature, versée aux points en suspens"
 

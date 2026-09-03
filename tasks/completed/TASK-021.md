@@ -1,7 +1,7 @@
 ---
 id: TASK-021
 title: "Écrire Linux/System/check-disk.sh"
-status: ready
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

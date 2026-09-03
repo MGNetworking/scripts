@@ -41,7 +41,7 @@ de ce que cet ADR a tranché.
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | `completed` | haute | — | hôte | non |
-| [TASK-021](pending/TASK-021.md) | Écrire `Linux/System/check-disk.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-021](completed/TASK-021.md) | Écrire `Linux/System/check-disk.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-022](pending/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-023](pending/TASK-023.md) | Écrire `Linux/System/check-services.sh` | `ready` | moyenne | 020 | conteneur `systemd` | non |
 | [TASK-024](pending/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
@@ -127,12 +127,12 @@ côté ; elles restent non sélectionnables.
 | Entrée | Note |
 |---|---|
 | `manage-users.sh` | atomisée : [TASK-025](pending/TASK-025.md) — **la suppression d'un utilisateur en est exclue**, `userdel -r` détruit un répertoire personnel : tâche distincte à écrire |
-| `check-disk.sh` | atomisée : [TASK-021](pending/TASK-021.md) |
+| `check-disk.sh` | atomisée : [TASK-021](completed/TASK-021.md) |
 | `check-memory.sh` | atomisée : [TASK-022](pending/TASK-022.md) |
 | `check-services.sh` | atomisée : [TASK-023](pending/TASK-023.md) |
 | `reboot-system.sh` | atomisée : [TASK-026](pending/TASK-026.md) |
 | brancher la notification sur la ligne de cron | laissé de côté par [TASK-024](pending/TASK-024.md) : changer la ligne déposée impose de reprendre `configure-cron.sh`, son fichier de cas et son README |
-| `df` sur un montage réseau injoignable | laissé de côté par [TASK-021](pending/TASK-021.md) : un `df` peut y suspendre l'exécution indéfiniment |
+| `df` sur un montage réseau injoignable | laissé de côté par [TASK-021](completed/TASK-021.md) : un `df` peut y suspendre l'exécution indéfiniment |
 
 ### Linux / Security — plan §2
 
@@ -236,6 +236,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-017](completed/TASK-017.md) | Durcir la validation de `--file` dans `configure-swap.sh` | [rapport](reports/TASK-017-report.md) |
 | [TASK-019](completed/TASK-019.md) | Contrôler la nature de la cible de `--file`, pas seulement la forme du chemin | [rapport](reports/TASK-019-report.md) |
 | [TASK-018](completed/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | [rapport](reports/TASK-018-report.md) |
+| [TASK-021](completed/TASK-021.md) | Écrire `Linux/System/check-disk.sh` | [rapport](reports/TASK-021-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
