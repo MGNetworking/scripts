@@ -23,7 +23,23 @@ ORIGINE_CHEMIN="valeur par défaut"
 if [ -f "$SCRIPTS_ROOT/config/server.env" ]; then
     ORIGINE_CHEMIN="config/server.env"
 fi
-NOM_REGLE="$(basename "$REPERTOIRE_LOGS")"
+
+# La lecture est en CONTEXTE DE CONDITION : sous la forme nue, un « basename » en
+# échec fait échouer l'affectation, et le trap ERR de lib/common.sh parle deux
+# fois — dans le sous-shell de la substitution, puis dans le shell principal —
+# sans nommer la cause (TASK-018). Deux causes l'atteignent : un binaire homonyme
+# en tête de PATH, et un LOG_DIR commençant par un tiret, que basename prend pour
+# une option.
+#
+# Seul le DOUBLEMENT est traité ici. La seconde cause pose une autre question —
+# personne ne valide LOG_DIR —, et le remède local « basename -- » ne ferait que
+# la déplacer : la règle logrotate serait alors déposée pour un chemin qui n'a pas
+# de sens. Ce sujet reste ouvert au point n° 6 de docs/points-en-suspens.md.
+if ! NOM_REGLE="$(basename "$REPERTOIRE_LOGS")"; then
+    error "Nom de la règle logrotate indéterminable : « basename » a échoué sur"
+    error "« $REPERTOIRE_LOGS » ($ORIGINE_CHEMIN)."
+    die "Vérifier cette valeur — LOG_DIR — et « basename » dans le PATH."
+fi
 FICHIER_REGLE="/etc/logrotate.d/$NOM_REGLE"
 
 # Groupe propriétaire des journaux. « adm » est le groupe de lecture des

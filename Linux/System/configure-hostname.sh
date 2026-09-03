@@ -126,7 +126,25 @@ valider_nom "$NOUVEAU_NOM"
 require_root
 require_cmd hostname
 
-NOM_ACTUEL="$(hostname)"
+# Lecture en CONTEXTE DE CONDITION. Le « require_cmd hostname » ci-dessus ne
+# dispense de rien : il prouve que la commande existe, pas qu'elle réussit — un
+# faux hostname en tête de PATH la met en échec, et c'est une cause atteignable.
+# Sous la forme nue « NOM_ACTUEL="$(hostname)" », le trap ERR de lib/common.sh
+# parle alors deux fois — dans le sous-shell de la substitution, puis dans le
+# shell principal pour l'affectation — sans nommer la cause. En condition, ni
+# errexit ni le trap n'ont prise (TASK-018).
+#
+# L'échec n'est pas fatal : rien n'a encore été modifié, et un nom courant
+# indéterminable n'empêche pas de poser celui qui est demandé. La valeur porte
+# alors « inconnu » plutôt que la chaîne vide, comme le fait fuseau_actuel dans
+# configure-timezone.sh — le résumé des changements dira « inconnu -> … » au lieu
+# de laisser croire à un nom d'hôte vide.
+if ! NOM_ACTUEL="$(hostname)"; then
+    warn "« hostname » a échoué : le nom d'hôte courant reste indéterminé."
+    warn "Le nom demandé sera appliqué malgré tout — l'opération est sans risque."
+    NOM_ACTUEL="inconnu"
+fi
+
 # Le nom court sert dans /etc/hosts, aux côtés du nom complet.
 NOM_COURT="${NOUVEAU_NOM%%.*}"
 
@@ -225,7 +243,24 @@ if [ "$CHANGEMENT_HOSTS" = "true" ]; then
     # Deux exécutions dans la même seconde produiraient le même nom : la
     # seconde sauvegarde écraserait la première, et l'état d'origine serait
     # perdu. Un suffixe numérique est ajouté tant que le nom est pris.
-    base="/etc/hosts.bak-$(date '+%Y%m%d-%H%M%S')"
+    #
+    # L'horodatage est lu en CONTEXTE DE CONDITION, comme le mktemp plus bas.
+    # Sous la forme nue « base="/etc/hosts.bak-$(date …)" », la substitution est
+    # noyée dans une chaîne mais l'affectation échoue tout autant si « date »
+    # échoue — un binaire homonyme en tête de PATH suffit —, et le trap ERR de
+    # lib/common.sh parle alors deux fois, dans le sous-shell puis dans le shell
+    # principal, sans nommer la cause (TASK-018).
+    #
+    # L'échec est fatal, et c'est voulu : sans horodatage il n'y a pas de nom de
+    # sauvegarde, donc pas de sauvegarde — et /etc/hosts ne se modifie jamais
+    # sans copie préalable.
+    if ! horodatage="$(date '+%Y%m%d-%H%M%S')"; then
+        error "Horodatage impossible à produire : « date » a échoué."
+        error "/etc/hosts n'a pas été modifié, faute de pouvoir le sauvegarder."
+        die "Vérifier « date » dans le PATH, puis relancer."
+    fi
+
+    base="/etc/hosts.bak-$horodatage"
     sauvegarde="$base"
     suffixe=1
     while [ -e "$sauvegarde" ]; do
@@ -238,7 +273,20 @@ if [ "$CHANGEMENT_HOSTS" = "true" ]; then
 
     # Réécriture ligne à ligne plutôt qu'un ajout en fin de fichier : la ligne
     # 127.0.1.1 doit rester unique, sinon la résolution devient imprévisible.
-    temporaire="$(mktemp)"
+    #
+    # L'affectation est placée en CONTEXTE DE CONDITION : une substitution de
+    # commande s'exécute dans un sous-shell qui hérite du « trap ERR » de
+    # lib/common.sh, si bien qu'un mktemp en échec — /tmp plein, monté en lecture
+    # seule, TMPDIR pointant sur un chemin absent — se serait annoncé deux fois,
+    # dans le sous-shell puis dans le shell principal pour l'affectation, sans
+    # qu'aucune des deux lignes ne dise ce qui manquait. En condition, ni errexit
+    # ni le trap n'ont prise : le refus est écrit ici, une seule fois.
+    if ! temporaire="$(mktemp 2>/dev/null)"; then
+        error "Fichier temporaire impossible à créer dans ${TMPDIR:-/tmp}."
+        error "/etc/hosts n'a pas été modifié ; la sauvegarde $sauvegarde reste en place."
+        die "Libérer de la place dans ce répertoire, ou le rendre accessible en écriture."
+    fi
+
     if [ -n "$LIGNE_EXISTANTE" ]; then
         awk -v adresse="$ADRESSE_HOTE" -v remplacement="$LIGNE_HOTE" '
             $1 == adresse && !remplace { print remplacement; remplace = 1; next }
@@ -265,8 +313,15 @@ fi
 # -------------------------------------------------------------------
 # Vérification
 # -------------------------------------------------------------------
-nom_verifie="$(hostname)"
-if [ "$nom_verifie" != "$NOUVEAU_NOM" ]; then
+# Même lecture, même garde qu'au préflight. L'échec n'est pas fatal ici non plus,
+# et pour une raison propre à cette vérification-là : l'écart qu'elle cherche —
+# un nom d'hôte non appliqué — n'est lui-même qu'un avertissement, certains
+# systèmes ne le prenant qu'au redémarrage. Une lecture impossible ne saurait
+# être traitée plus sévèrement que l'écart qu'elle sert à détecter.
+if ! nom_verifie="$(hostname)"; then
+    warn "« hostname » a échoué : la vérification n'a pas pu aboutir."
+    warn "Contrôler à la main que le nom d'hôte est « $NOUVEAU_NOM »."
+elif [ "$nom_verifie" != "$NOUVEAU_NOM" ]; then
     warn "Le nom d'hôte courant est « $nom_verifie » et non « $NOUVEAU_NOM »."
     warn "Certains systèmes ne l'appliquent qu'après redémarrage."
 fi

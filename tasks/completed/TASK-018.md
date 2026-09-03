@@ -1,7 +1,7 @@
 ---
 id: TASK-018
 title: "Supprimer le doublement du trap ERR sur les substitutions de commande"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-017
@@ -19,14 +19,32 @@ scope:
 out_of_scope:
   - lib/common.sh — le trap ERR y est défini, zone protégée. La correction vient des appelants
   - la validation de --file, traitée par TASK-017
-  - toute évolution fonctionnelle des scripts
+  - toute évolution fonctionnelle des scripts, à la seule exception actée ci-dessous
   - les scripts Synology hérités
+amendement_2026_09_03: |
+  Une évolution fonctionnelle est actée : le refus, en code 2, d'un chemin de
+  --file dont le répertoire d'accueil n'existe pas, avec la fonction
+  ancetres_traversables qui diffère ce refus au seul cas d'un ancêtre non
+  traversable.
+
+  Elle est le remède retenu pour le site « df -T » du recensement : le contrôle
+  intercepte la cause d'échec avant que la substitution ne soit atteinte. Le
+  relecteur avait lui-même demandé son déplacement de l'après-require_root vers
+  valider_fichier_swap au moment avant-root, la doctrine du fichier voulant
+  qu'un défaut constatable sans privilège soit reproché en 2.
+
+  Contrepartie assumée, relevée par la relecture : ce contrôle rend
+  inatteignable le cas « df -T en échec sur un répertoire existant », qui est
+  donc déclaré NON EXÉCUTÉ. Une correction du périmètre voit sa preuve affaiblie
+  par une évolution hors périmètre — c'est le prix de l'amendement, et il est
+  consigné plutôt que taire.
 acceptance_criteria:
   - aucun échec survenant dans une substitution de commande ne produit deux fois le message du trap ERR
   - le motif est corrigé partout où il apparaît dans Linux/System, pas seulement sur le cas connu de la ligne 195
   - le code de retour de ces échecs respecte la convention - 2 pour une erreur d'usage, 1 pour un échec d'exécution
-  - aucun comportement fonctionnel n'est modifié
+  - aucun comportement fonctionnel n'est modifié, hors la seule exception actée par l'amendement du 2026-09-03
   - le non-doublement est verrouillé par des assertions qui rougissent sous mutation
+  - aucun site du recensement ne reste en forme nue avec une cause atteignable sans que la raison technique du non-traitement soit écrite
 validation:
   - "tests/run.sh lint"
   - "tests/env/run-in-container.sh -- tests/run.sh integration"

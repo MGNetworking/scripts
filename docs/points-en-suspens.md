@@ -295,3 +295,184 @@ indépendant du dispositif.
 
 **Concerne** `.claude/commands/tache.md`, `tasks/README.md` §6, et la décision
 d'ouvrir ou non un second cycle allégé.
+
+---
+
+## 6. `LOG_DIR` n'est validé par personne
+
+**Soulevé le** 2026-09-02, pendant TASK-018, en recensant les substitutions de
+commande de `Linux/System`.
+
+Les scripts valident les valeurs qu'ils reçoivent — nom d'hôte, fuseau, taille
+de swap, horaire de cron, chemin de `--file`. `LOG_DIR`, lue par `lib/common.sh`
+dans `config/server.env`, ne l'est par aucun d'eux.
+
+Une valeur commençant par un tiret traverse le socle sans bruit : `mkdir -p` y
+échoue dans un `if … 2>/dev/null`, ce qui vide simplement `LOG_FILE`. Elle
+ressort à la ligne 26 de `configure-logging.sh` :
+
+```bash
+NOM_REGLE="$(basename "$REPERTOIRE_LOGS")"
+```
+
+`basename` prend le tiret pour une option, l'affectation échoue, et le `trap ERR`
+parle deux fois — dans le sous-shell puis dans le shell principal.
+
+**Le doublement a été traité le 2026-09-03**, au cinquième tour de TASK-018 :
+l'affectation est passée en contexte de condition, avec un diagnostic qui nomme
+la valeur fautive et son origine. **Le fond ne l'est pas**, et c'est l'objet de
+ce point : personne ne valide `LOG_DIR`. Le remède local (`basename --`) ne
+ferait que déplacer le problème — une règle logrotate serait alors déposée pour
+un chemin qui n'a pas de sens —, et la valeur fautive n'est toujours atteignable
+par aucune ligne de commande : elle suppose un `server.env` écrit à la main.
+
+**Ce qu'il faudrait décider.** Où valider les valeurs de `config/server.env` :
+dans `lib/common.sh` au chargement — mais le socle refuserait alors de démarrer,
+ce qui est lourd —, dans une fonction de vérification appelée par les scripts
+concernés, ou dans un script de contrôle dédié à la configuration.
+
+**Concerne** `LOG_DIR` en premier, et toute variable de `config/server.env`
+qu'un script consomme sans la regarder.
+
+---
+
+## 7. `fuseau_actuel` reste appelée dans une substitution de commande — traité
+
+**Soulevé le** 2026-09-02, pendant TASK-018, deuxième tour — le recensement du
+premier ne les avait pas nommées.
+**Traité le** 2026-09-02 par TASK-018, troisième tour. Le texte ci-dessous est
+conservé tel quel, y compris son arbitrage — que la mesure a démenti. Ce qui a
+été fait est consigné à la fin de la section.
+
+`Linux/System/configure-timezone.sh` appelle `fuseau_actuel` deux fois dans une
+substitution de commande, aux lignes 161 et 210 :
+
+```bash
+FUSEAU_ACTUEL="$(fuseau_actuel)"
+FUSEAU_VERIFIE="$(fuseau_actuel)"
+```
+
+C'est le motif exact que TASK-018 a défait ailleurs : une fonction appelée dans
+une substitution, dont l'échec ferait parler le `trap ERR` deux fois — dans le
+sous-shell puis dans le shell principal pour l'affectation.
+
+**Ce qui rend l'échec improbable, et ce qui ne le rend pas impossible.** Chaque
+branche de la fonction se termine par un `return 0` explicite, et la dernière
+rend `inconnu` plutôt que d'échouer. Mais `errexit` n'attend pas ces `return` :
+un `tr -d '[:space:]' < /etc/timezone` en erreur d'entrée-sortie, ou un
+`readlink -f /etc/localtime | sed …` dont un ancêtre du chemin a disparu, tuent
+le sous-shell avant. Le `[ -r /etc/timezone ]` qui précède ne l'interdit pas —
+il établit l'état à l'instant du test, comme le `[ -f ]` de `configure-cron.sh`,
+qui n'a pas suffi à dispenser du traitement.
+
+**Pourquoi ce n'est pas traité.** Aucune ligne de commande ni aucune variable
+d'environnement n'atteint ces causes : elles supposent une erreur matérielle ou
+une modification de `/etc` pendant l'exécution. La correction — une fonction qui
+renseigne une globale — toucherait deux branches réellement empruntées par le
+profil de test `debian`, dont le repli `/etc/localtime`, sans qu'aucun cas ne
+puisse en éprouver la régression.
+
+**Ce qu'il faudrait décider.** Appliquer le motif partout où il apparaît, y
+compris là où l'échec n'est pas atteignable — au prix de corrections qu'aucun
+test ne verra — ou s'arrêter aux sites dont une cause d'échec s'atteint. Le
+même arbitrage vaut pour le point n° 6 ci-dessus.
+
+**Concerne** `configure-timezone.sh` lignes 161 et 210.
+
+### Ce que le troisième tour de TASK-018 a fait
+
+L'arbitrage ci-dessus reposait sur une prémisse fausse : « chaque branche se
+termine par un `return 0` explicite » était présenté comme ce qui rendait
+l'échec inoffensif. C'est au contraire ce qui le rendait invisible. Sous un `tr`
+en échec, `fuseau_actuel` rendait **0 malgré son échec** — le `return 0` effaçait
+le code du `tr` — et l'appelante recevait une chaîne vide dont elle ne se
+défiait pas : le script appliquait le fuseau et le comparait à cette valeur-là.
+Le défaut n'était donc pas une ligne de trap en trop, mais une décision prise
+sur rien.
+
+La cause était atteignable, contrairement à ce qui est écrit plus haut : un faux
+`tr` en tête de `PATH` suffit, et c'est ce que le cas d'intégration fait.
+
+`fuseau_actuel` renseigne désormais `FUSEAU_ACTUEL`, lit chaque source en
+contexte de condition, dit celle qui a flanché, passe à la suivante, et propage
+son échec quand aucune n'a répondu — avertissement et valeur `inconnu` au
+premier appel, arrêt à la vérification.
+
+**Ce que ce point laisse pour la suite.** L'arbitrage général qu'il posait —
+appliquer le motif jusque là où l'échec n'est pas atteignable, ou s'arrêter aux
+sites dont une cause s'atteint — n'est pas tranché pour autant. Il reste ouvert
+au point n° 6, et la leçon de ce tour-ci est qu'un site est présumé atteignable
+tant qu'on n'a pas cherché la mutation qui l'atteint.
+
+---
+
+## 8. Six affectations restent en forme nue dans `Linux/System` — traité
+
+**Soulevé le** 2026-09-02, pendant TASK-018, quatrième tour, par le recensement
+écrit que les trois tours précédents n'avaient pas produit.
+**Traité le** 2026-09-03 par TASK-018, cinquième tour : les six sites sont
+fermés et le `dirname` est tranché. Le texte ci-dessous est conservé tel quel ;
+ce qui a été fait est consigné à la fin de la section.
+
+Le relevé exhaustif est dans
+[Linux/System/recensement-substitutions.md](../Linux/System/recensement-substitutions.md) :
+54 affectations `var="$(…)"`, chacune avec son verdict. Six restent en forme
+nue avec une cause atteignable — un binaire homonyme en tête de `PATH` —, et
+n'ont pas été traitées parce que le périmètre du tour était borné aux cinq sites
+mesurés par le relecteur :
+
+`configure-hostname.sh:246`, `configure-swap.sh:435`, `:436`, `:743`, `:746`,
+`configure-logging.sh:26` (déjà décrit au point n° 6 ci-dessus).
+
+S'y ajoutent deux réserves d'une autre nature, détaillées dans le recensement :
+le `dirname` laissé nu de `configure-swap.sh:536`, dont la raison écrite couvre
+l'absence de la commande mais pas son échec, et le `restant=` d'`update-system.sh:133`,
+où `|| true` empêche le doublement mais laisse une chaîne vide au test
+arithmétique qui suit.
+
+**Ce qu'il faudrait décider**, et c'est l'arbitrage laissé ouvert par les points
+n° 6 et n° 7 : traiter la forme partout où elle apparaît, ou seulement là où une
+cause s'atteint. Trois tours ont montré qu'une cause jugée inatteignable ne
+l'était pas.
+
+**Reste aussi à mesurer** ce que produit exactement une substitution en échec en
+**position d'argument**. Qu'elle n'interrompe pas le script est établi, et c'est
+ce qui borne le périmètre ; qu'elle n'écrive aucune ligne de trap ne l'est pas —
+le sous-shell d'une substitution héritant du `trap ERR` par `set -E`, une ligne
+orpheline est plausible. Trois lignes de Bash suffisent à trancher.
+
+**Concerne** `Linux/System/recensement-substitutions.md` et les six sites cités.
+
+### Ce que le cinquième tour de TASK-018 a fait
+
+Les six sites sont fermés — `configure-hostname.sh:246`, `configure-swap.sh:435`,
+`:436`, `:743`, `:746`, `configure-logging.sh:26`, numéros du 2026-09-02.
+Cinq sont passés en contexte de condition ; le sixième, la seconde substitution
+`date` de la boucle de désambiguïsation de `configure-swap.sh`, a été **supprimé**
+— l'horodatage est désormais lu une fois et suffixé, comme dans
+`configure-hostname.sh`.
+
+La raison qui figurait en face de chacun — « hors des cinq sites bornés pour ce
+tour » — était un périmètre auto-décrété, pas une raison technique. C'est ce que
+la relecture a nommé un abandon déguisé, et le critère d'acceptation ajouté à la
+tâche le formule désormais : aucun site en forme nue avec une cause atteignable
+sans que la raison technique du non-traitement soit écrite.
+
+**Le `dirname` nu de `configure-swap.sh` est tranché** : il passe en condition
+comme les autres. L'argument qui le dispensait — « l'absence de `dirname` est
+exclue par le fait que le script démarre » — couvre l'absence et non l'échec, et
+ne vaut même pas pour l'absence, `config/server.env` étant chargé par le socle
+*après* les lignes de résolution et pouvant redéfinir `PATH`. L'autre issue —
+acter que la forme nue est admise pour les commandes appelées avant le socle —
+aurait posé une règle que le code contredit à dix-huit endroits. Le raisonnement
+complet est au §11.1 du recensement.
+
+**Ce que ce point laisse pour la suite.** Deux réserves d'une autre nature, qui
+ne sont pas des doublements : la validation de `LOG_DIR`, qui reste entière au
+point n° 6 ci-dessus, et `update-system.sh:133`, où `|| true` laisse une chaîne
+vide au test arithmétique de la ligne suivante.
+
+La mesure attendue sur les substitutions **en position d'argument** avait déjà
+été faite au quatrième tour : trois sondes en conteneur, consignées au §1 du
+recensement. Une substitution en échec y est sans effet — aucune ligne de trap,
+script poursuivi, code 0 — ce qui borne le périmètre à la forme `var="$(…)"`.
