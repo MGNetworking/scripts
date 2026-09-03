@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-020**.
+Prochain identifiant libre : **TASK-027**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) fixe
@@ -40,6 +40,23 @@ de ce que cet ADR a tranché.
 | [TASK-018](completed/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | `completed` | moyenne | 017 | conteneur | non |
 | [TASK-009](completed/TASK-009.md) | Écrire `Linux/System/configure-cron.sh` | `completed` | moyenne | 004 | conteneur | non |
 | [TASK-010](completed/TASK-010.md) | Mettre en place les sous-agents et la commande `/tache` | `completed` | haute | — | hôte | non |
+| [TASK-020](pending/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | `ready` | haute | — | hôte | non |
+| [TASK-021](pending/TASK-021.md) | Écrire `Linux/System/check-disk.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-022](pending/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-023](pending/TASK-023.md) | Écrire `Linux/System/check-services.sh` | `pending` | moyenne | 020 | conteneur `systemd` | non |
+| [TASK-024](pending/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-025](pending/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+
+TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
+fixé par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+décision 16 : l'outillage d'abord, puis la lecture seule, puis ce qui modifie,
+puis le destructif. `human_approval_required: true` ne suspend plus l'exécution
+(décision 2) : il signale ce qui mérite une lecture attentive.
+
+**TASK-023 est la seule à porter `pending` :** elle attend le profil `systemd`
+de TASK-020, sans lequel aucune de ses preuves n'existe. À passer en `ready`
+lorsque TASK-020 est `completed`.
 
 ### Chemin critique
 
@@ -102,13 +119,19 @@ Aucune n'est sélectionnable en l'état.
 
 ### Linux / System — plan §1
 
+**Domaine atomisé le 2026-09-03** — TASK-020 à TASK-026, §1 ci-dessus. Les
+entrées ci-dessous sont conservées pour dire ce que ces tâches ont laissé de
+côté ; elles restent non sélectionnables.
+
 | Entrée | Note |
 |---|---|
-| `manage-users.sh` | création, suppression, clés SSH — destructif, approbation humaine probable |
-| `check-disk.sh` | lecture seule, bonne candidate après TASK-004 |
-| `check-memory.sh` | lecture seule |
-| `check-services.sh` | lecture seule |
-| `reboot-system.sh` | **destructif** — approbation humaine requise |
+| `manage-users.sh` | atomisée : [TASK-025](pending/TASK-025.md) — **la suppression d'un utilisateur en est exclue**, `userdel -r` détruit un répertoire personnel : tâche distincte à écrire |
+| `check-disk.sh` | atomisée : [TASK-021](pending/TASK-021.md) |
+| `check-memory.sh` | atomisée : [TASK-022](pending/TASK-022.md) |
+| `check-services.sh` | atomisée : [TASK-023](pending/TASK-023.md) |
+| `reboot-system.sh` | atomisée : [TASK-026](pending/TASK-026.md) |
+| brancher la notification sur la ligne de cron | laissé de côté par [TASK-024](pending/TASK-024.md) : changer la ligne déposée impose de reprendre `configure-cron.sh`, son fichier de cas et son README |
+| `df` sur un montage réseau injoignable | laissé de côté par [TASK-021](pending/TASK-021.md) : un `df` peut y suspendre l'exécution indéfiniment |
 
 ### Linux / Security — plan §2
 
@@ -174,8 +197,8 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 
 | Entrée | Source | Note |
 |---|---|---|
-| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 15 : script de notification vers `ntfy` ou webhook. À atomiser dans `Linux/System` |
-| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4 |
+| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 15 : script de notification vers `ntfy` ou webhook. **Atomisée** : [TASK-024](pending/TASK-024.md) |
+| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4. **Atomisée** : [TASK-020](pending/TASK-020.md) |
 | Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | **ouvert** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décisions 1 à 4 : fusion et push par l'agent, ouverture des tâches déléguée, point d'étape par domaine |
 | Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | **autorisé en permanence** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 5 : mode léger pour les scripts en lecture seule, relecteur obligatoire dès qu'un script écrit |
 | Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
