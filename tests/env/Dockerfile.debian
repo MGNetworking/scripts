@@ -8,8 +8,10 @@
 # Volontairement minimale : on la complète au fil des besoins plutôt que de tout
 # embarquer d'avance. Chaque paquet ajouté doit avoir une raison écrite ici.
 #
-# Le profil « systemd » (image privilégiée avec /sbin/init, pour systemctl,
-# timedatectl et hostnamectl) est une image distincte, non encore écrite.
+# Cette image n'a pas d'init : la commande demandée y est le PID 1, et
+# systemctl, timedatectl et hostnamectl n'y répondent donc pas. Les cas qui en
+# ont besoin relèvent du profil « systemd » — image distincte, privilégiée,
+# démarrée sur /sbin/init : tests/env/Dockerfile.systemd.
 #
 # Construction et usage : voir tests/env/run-in-container.sh et tests/README.md.
 

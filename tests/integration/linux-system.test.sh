@@ -3553,13 +3553,25 @@ fi
 # ===================================================================
 # Ces lignes ne sont pas des cas manqués : ce sont des cas dont on sait qu'ils
 # ne peuvent pas être joués ici. Les taire ferait croire à une couverture
-# complète. Ils attendent le profil « container-systemd ».
+# complète.
 titre "5. Hors de portée de cet environnement"
 
-saute "configure-timezone.sh appliquant le fuseau par timedatectl" \
-    "le profil debian n'a pas systemd — seul le repli /etc/localtime a été éprouvé"
-saute "configure-hostname.sh changeant réellement le nom de la machine" \
-    "hostnamectl absent et « hostname <nom> » exige CAP_SYS_ADMIN, refusé au conteneur"
+# DEUX SAUTS ONT DISPARU D'ICI, ET C'EST UNE PREUVE QUI A PRIS LEUR PLACE.
+#
+# « configure-timezone.sh appliquant le fuseau par timedatectl » et
+# « configure-hostname.sh changeant réellement le nom de la machine »
+# attendaient le profil « systemd » depuis ADR-0001. TASK-020 l'a construit —
+# tests/env/Dockerfile.systemd — et les deux cas sont désormais EXÉCUTÉS, aux
+# groupes 3 et 4 de tests/environment/systemd.test.sh :
+#
+#   tests/env/run-in-container.sh --profil systemd -- tests/run.sh environment
+#
+# Ils ne sont pas rejoués ici, et ne doivent pas l'être : ce niveau reste
+# l'affaire du profil « debian », où plusieurs assertions tiennent PRÉCISÉMENT
+# parce que systemd est absent — le repli /etc/localtime du groupe 4 ter, les
+# décomptes de lignes de stderr, la garde « timedatectl répondrait » du même
+# groupe. Les lancer sous un init les rendrait rouges sans qu'aucun défaut
+# n'existe.
 saute "configure-swap.sh créant, activant et inscrivant un fichier d'échange" \
     "swapon exige CAP_SYS_ADMIN, refusé au conteneur non privilégié"
 saute "update-system.sh appliquant réellement apt-get upgrade" \
