@@ -21,6 +21,20 @@ réparer — et un test « réparé » ne prouve plus rien. Tu constates, tu rap
 tâche, une par une, telles qu'elles sont écrites. Note le code de retour de
 chacune.
 
+**Lance-les telles quelles, mais ne LIS pas leur sortie en entier.** Le harnais
+imprime une ligne `[SUCCESS]` par assertion : une passe complète des six
+validations d'une tâche pèse **~20 300 jetons**, dont cinq lignes décident.
+Filtre à la lecture, jamais à l'exécution :
+
+```bash
+<la commande exacte de la tâche> 2>&1 | grep -E "Bilan|ÉCHEC|Validation :"
+echo "CODE=${PIPESTATUS[0]}"
+```
+
+Le code vient de `PIPESTATUS[0]` : le tube ne le maquille pas, et la commande
+lancée reste **mot pour mot** celle que la tâche inscrit. Déroule la sortie
+entière seulement autour d'un échec.
+
 **2. Les critères d'acceptation sont satisfaits.** Reprends-les un par un.
 Pour chacun : satisfait, non satisfait, ou non vérifiable — et sur quelle preuve
 tu te fondes.

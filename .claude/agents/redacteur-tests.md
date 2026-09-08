@@ -12,8 +12,28 @@ Tu écris les tests des scripts de la bibliothèque MGNetworking.
 1. lis la tâche : ses `acceptance_criteria` sont la liste de ce qu'il faut
    prouver, et son champ `validation` dit par quelles commandes ;
 2. lis le script à tester, entièrement ;
-3. lis `tests/README.md` : niveaux, codes de retour, conventions ;
-4. lis `tests/lint.sh` comme modèle de style.
+3. lis `tests/README.md` **par sections, jamais en entier** — voir ci-dessous ;
+4. lis `tests/lib/assert.sh` : les assertions et les trois natures de saut ;
+5. lis le fichier de cas d'un script comparable, comme modèle de style.
+
+### `tests/README.md` se lit par sections
+
+Ce fichier fait **84 Ko**. Le lire en entier coûte environ 21 000 jetons, dont
+les quatre cinquièmes ne te concernent pas.
+
+Repère d'abord les sections — `grep -n '^## ' tests/README.md` — puis lis avec
+`offset` et `limit` :
+
+| Section | Pour toi |
+|---|---|
+| §1 Niveaux | **la sous-section de TON niveau seulement**, pas les cinq |
+| §2 Codes de retour | **toujours** — 0, 1, 3, 4 et l'ordre des gardes du bilan |
+| §3 Analyse statique | seulement si tu touches au lint |
+| §4 Environnement conteneurisé | seulement si tu doutes du lanceur |
+| §5 Écrire un test | **toujours** |
+
+Le même principe vaut pour tout document de plus de 20 Ko — les README de
+domaine en particulier.
 
 ## Ce que tu prouves
 
@@ -39,6 +59,28 @@ Par ordre d'importance :
   fautif, le test échoue et tu le signales. C'est le but ;
 - **tu ne neutralises jamais une assertion.** Ni `|| true`, ni `set +e`, ni
   assertion commentée. Un test qui gêne est un test qui a trouvé quelque chose.
+
+## Filtre tes validations — mesuré, et c'est le premier poste de coût
+
+Le harnais imprime **une ligne `[SUCCESS]` par assertion**. Une seule exécution
+de `tests/run.sh environment` en conteneur pèse **35 861 octets, soit ~9 000
+jetons, dont 337 lignes de succès** — alors que **cinq lignes** suffisent à
+décider. Une passe complète des six validations d'une tâche coûte **~20 300
+jetons** de sortie brute.
+
+Ne lis donc jamais une validation en entier. Capture le code, filtre le reste :
+
+```bash
+tests/env/run-in-container.sh --profil systemd -- tests/run.sh environment 2>&1 \
+  | grep -E "Bilan|ÉCHEC|Validation :"; echo "CODE=${PIPESTATUS[0]}"
+```
+
+`grep` ne change **rien** au verdict : le code vient de `PIPESTATUS[0]`, pas du
+tube. Ce que tu perds, ce sont les lignes vertes ; ce que tu gardes, ce sont les
+bilans chiffrés et **tous** les échecs.
+
+Ne déroule la sortie complète que lorsqu'un cas rougit, et alors seulement autour
+de lui — `grep -B3 -A6 "ÉCHEC"`.
 
 ## Conventions
 

@@ -688,3 +688,86 @@ lui-même reste ouvert.
 
 **Concerne** `Linux/System/recensement-substitutions.md` et le paragraphe qui
 l'introduit dans `Linux/System/README.md`.
+
+---
+
+## 14. Le coût mécanique de la délégation : lectures entières et sorties brutes
+
+**Soulevé le** 2026-09-08, au terme de TASK-023, par Maxime.
+**Partiellement traité le jour même** — voir « Ce qui a été fait » plus bas.
+
+Le [point 5](#5-le-coût-du-dispositif-agentique--tranché) a tranché la
+**stratégie** : cycle léger pour ce qui ne modifie rien, rapport court par
+défaut. Il nomme le démarrage à froid comme source de coût, mais **ne l'a jamais
+mesuré**, et n'a rien proposé pour le borner.
+
+TASK-023 a consommé **≈ 1 156 000 jetons en sous-agents**, contre ~330 000 de
+moyenne sur les dix premières tâches. La mesure de l'écart a fait apparaître un
+gaspillage d'une nature que le point 5 ne couvre pas : non pas *trop d'étapes*,
+mais *trop de matière lue à chaque étape*.
+
+### Ce qui a été mesuré
+
+| Fait | Mesure |
+|---|---|
+| `tests/README.md` | **84 Ko ≈ 21 000 jetons**. `redacteur-tests` avait ordre de le lire, sans restriction. §1 et §4 pèsent 1 135 lignes sur 1 494 et ne le concernent pas |
+| `Linux/System/README.md` | **45 Ko ≈ 11 000 jetons**, lu en entier pour en modifier trois lignes |
+| une exécution de `tests/run.sh environment` en conteneur | **35 861 octets ≈ 9 000 jetons**, dont **337 lignes `[SUCCESS]`** — une par assertion. **Cinq lignes** suffisent à décider |
+| une passe complète des six validations d'une tâche | **81 179 octets ≈ 20 300 jetons** de sortie brute |
+
+Le relecteur joue cette passe intégralement, et le rédacteur de tests trois ou
+quatre fois par appel. Sur TASK-023, ces deux postes seuls représentent
+**≈ 210 000 jetons**, soit 18 % du total, sans qu'aucune décision n'en dépende.
+
+**Le poste grandit avec le dépôt, et c'est le point.** La sortie du harnais est
+proportionnelle au nombre d'assertions : `check-services.test.sh` en a ajouté 286
+d'un coup. Chaque fichier de cas futur renchérit toutes les exécutions de tous
+les agents qui suivront.
+
+### Ce qui a été fait
+
+Les trois définitions de `.claude/agents/` ont été corrigées — autorisation
+permanente d'ADR-0003, §5 d'`AGENTS.md` : « l'agent les fait évoluer quand
+l'usage révèle une règle mal formulée ».
+
+- **`redacteur-tests`** : lit `tests/README.md` **par sections**, avec le tableau
+  de celles qui le concernent, et **filtre la sortie de ses validations** par
+  `grep -E "Bilan|ÉCHEC|Validation :"`, le code venant de `PIPESTATUS[0]` ;
+- **`relecteur`** : lance les commandes **mot pour mot** telles que la tâche les
+  inscrit, mais n'en lit plus la sortie entière ;
+- **`redacteur-script`** : lit le README de domaine par sections.
+
+Économie attendue : **~200 000 jetons par tâche** de ce gabarit, sans qu'aucune
+commande de validation change ni qu'aucun verdict soit filtré — `grep` porte sur
+la *lecture*, jamais sur l'*exécution*, et laisse passer **tous** les échecs.
+
+### Ce qui reste ouvert
+
+**`tests/README.md` fait 84 Ko.** C'est le document le plus lourd du dépôt,
+devant `Linux/System/README.md`. Le lire par sections traite le symptôme ; sa
+taille reste un obstacle pour un humain comme pour un agent. Le scinder — un
+fichier par niveau, `tests/README.md` réduit à l'index et aux codes de retour —
+est une décision de structure, avec des liens à reprendre dans tout le dépôt.
+Elle n'a pas été prise.
+
+### Une piste explicitement écartée, et pourquoi
+
+**Un mode silencieux dans `tests/lib/assert.sh`** — un `ok()` qui n'imprimerait
+plus rien sous `MGNET_TEST_SILENCIEUX=1` — donnerait la même économie de façon
+garantie, au lieu de dépendre de la mémoire de chaque agent.
+
+Il n'a pas été retenu, pour deux raisons :
+
+- `assert.sh` est chargé par **tous** les fichiers de cas du dépôt : une
+  régression y serait globale, exactement comme pour `lib/common.sh` ;
+- le harnais imprime chaque succès **délibérément**. `tests/README.md` le pose en
+  principe : « un saut silencieux serait un faux vert ». Rendre le harnais muet
+  pour économiser des jetons échangerait sa valeur cardinale contre du coût, et
+  le `grep` obtient déjà 85 % de l'économie sans y toucher.
+
+Si l'économie par `grep` se révélait mal tenue à l'usage — un agent qui oublie,
+tâche après tâche — la question se reposera. Elle devra alors être tranchée
+comme une modification de zone protégée, pas improvisée.
+
+**Concerne** `.claude/agents/*.md`, `tests/README.md`, et toute tâche future
+dont le fichier de cas ajoute des assertions en nombre.
