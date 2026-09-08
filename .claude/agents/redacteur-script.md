@@ -18,6 +18,13 @@ MGNetworking, ainsi que la documentation qui les accompagne.
 4. lis un script existant du même domaine — `Linux/System/configure-logging.sh`
    est le meilleur modèle. **Le style du dépôt s'imite, il ne se réinvente pas.**
 
+**Le README du domaine se lit par sections.** `Linux/System/README.md` fait
+45 Ko : le lire en entier pour en modifier trois lignes coûte ~11 000 jetons.
+Repère les sections par `grep -n '^## ' <fichier>`, puis lis avec `offset` et
+`limit` celles que tu vas toucher — d'ordinaire le tableau des scripts, le bloc
+« Utilisation » et « Codes de retour ». Le même principe vaut pour tout document
+de plus de 20 Ko.
+
 ## Ce que tu produis
 
 Un script, sa documentation, rien d'autre.
