@@ -50,7 +50,7 @@ de ce que cet ADR a tranché.
 | [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](pending/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-029](pending/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `ready` | haute | — | conteneur `systemd` | **oui** |
-| [TASK-031](pending/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](pending/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-034](pending/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-030](pending/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `pending` | moyenne | 029 | conteneur `systemd` | **oui** |
@@ -112,6 +112,13 @@ l'image. C'est la transposition du faux `curl` retenu par TASK-024.
 `TASK-029` ouvre réellement le domaine : elle crée l'arborescence, le
 `Docker/README.md` unique — plan §13 — et le bloc « Architecture » du README
 racine.
+
+**[ADR-0004](../docs/agent/decisions/ADR-0004-sobriete.md) a changé la façon
+d'écrire, le 2026-09-13, pendant TASK-031** : un script vise 150 lignes, un
+fichier de cas aussi, un fichier de tâche 30, et l'agent écrit lui-même au lieu
+de déléguer à `redacteur-script` et `redacteur-tests`. Les huit fichiers de
+tâche Docker restants comptent de 190 à 295 lignes — ils restent justes et
+exécutables, mais ils ne servent pas de modèle de longueur.
 
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
 ni sa configuration n'apparaissent dans un script. `create-network.sh` prend le
@@ -337,6 +344,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-018](completed/TASK-018.md) | Supprimer le doublement du `trap ERR` sur les substitutions de commande | [rapport](reports/TASK-018-report.md) |
 | [TASK-021](completed/TASK-021.md) | Écrire `Linux/System/check-disk.sh` | [rapport](reports/TASK-021-report.md) |
 | [TASK-027](completed/TASK-027.md) | Rendre le démon Docker disponible sans intervention humaine | [rapport](reports/TASK-027-report.md) |
+| [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | [rapport](reports/TASK-031-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |

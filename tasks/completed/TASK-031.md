@@ -1,7 +1,7 @@
 ---
 id: TASK-031
 title: "Écrire Docker/Diagnostics/check-docker.sh"
-status: ready
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian
