@@ -1,7 +1,7 @@
 ---
 id: TASK-029
 title: "Écrire Docker/Installation/install-docker.sh"
-status: ready
+status: completed
 priority: high
 depends_on: []
 environment: container-systemd

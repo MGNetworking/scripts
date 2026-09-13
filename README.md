@@ -9,9 +9,9 @@ configuration et de maintenance d'infrastructure.
 ## Architecture
 
 ```text
-Linux/       System (7 scripts) | Security | Docker | K3s
+Linux/       System (10 scripts) | Security | K3s
 Kubernetes/  Installation | Configuration | Maintenance   (à venir)
-Docker/      Installation | Maintenance | Cleanup   (à venir)
+Docker/      Installation | Configuration | Maintenance | Cleanup | Diagnostics
 Synology/    Plex | Administration
 lib/         fonctions communes (common.sh)
 config/      server.env (la machine) + un <contexte>.env par application
@@ -36,6 +36,7 @@ cluster quelle que soit son origine.
 | [`Linux/System/check-disk.sh`](Linux/System/check-disk.sh) | diagnostic de stockage : systèmes de fichiers, inodes, périphériques, répertoires consommateurs |
 | [`Linux/System/check-memory.sh`](Linux/System/check-memory.sh) | diagnostic mémoire : mémoire vive, fichier d'échange, processus consommateurs |
 | [`Linux/System/check-services.sh`](Linux/System/check-services.sh) | diagnostic des services systemd : services actifs, services en échec, vérification d'un service nommé |
+| [`Docker/Installation/install-docker.sh`](Docker/Installation/install-docker.sh) | installe Docker Engine, containerd, Buildx et le plugin Compose depuis les dépôts officiels |
 | [`Docker/Diagnostics/check-docker.sh`](Docker/Diagnostics/check-docker.sh) | diagnostic d'un environnement Docker : client et plugins, socket, service, démon, stockage — en lecture seule |
 | [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
 | [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |

@@ -1,7 +1,7 @@
 ---
 id: TASK-030
 title: "Écrire Docker/Configuration/configure-docker.sh"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-029
