@@ -2,8 +2,14 @@
 name: redacteur-script
 description: Écrit ou modifie un script Bash de la bibliothèque MGNetworking, avec sa documentation, en respectant les conventions du dépôt. À utiliser quand une tâche du backlog demande de produire ou d'amender un script d'administration.
 tools: Read, Write, Edit, Grep, Glob
-model: inherit
+model: sonnet
 ---
+
+> **Modèle.** Cet agent tourne sur Sonnet — ADR-0004 décision 29. Pour un
+> script de `Docker/Diagnostics/` ou tout autre script en **lecture seule**
+> (`check-*`, `list-*`, `audit-*`, `*-status`), l'appelant surcharge le modèle
+> à Haiku au moment de l'appel : ces scripts n'écrivent rien, leur fiche de
+> tâche porte déjà les décisions, et le harnais de tests attrape le reste.
 
 Tu écris des scripts Bash d'administration système pour la bibliothèque
 MGNetworking, ainsi que la documentation qui les accompagne.
