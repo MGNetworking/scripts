@@ -32,11 +32,39 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 
 | Script | Rôle | Privilège | Modifie |
 |---|---|---|---|
+| [`Installation/install-docker.sh`](Installation/install-docker.sh) | pose Engine, CLI, containerd, Buildx et Compose depuis les dépôts officiels | root | **oui** |
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
 
+## Ordre d'utilisation
+
 ```bash
-./Docker/Diagnostics/check-docker.sh
+./Docker/Diagnostics/check-docker.sh          # que porte cette machine ?
+./Docker/Installation/install-docker.sh --dry-run
+./Docker/Installation/install-docker.sh --yes
+./Docker/Diagnostics/check-docker.sh          # et maintenant ?
 ```
+
+### `install-docker.sh`
+
+Écrit `/etc/apt/keyrings/docker.asc` et `/etc/apt/sources.list.d/docker.list`,
+installe les cinq paquets officiels, active et démarre le service.
+
+Le nom de code de la suite apt est lu dans `/etc/os-release` : aucun n'est écrit
+en dur, sans quoi le script mentirait au premier Debian suivant. Si le dépôt ne
+publie pas encore cette suite, `apt-get update` échoue, le fichier de dépôt est
+**retiré** et le script rend 1 — il ne laisse pas un apt cassé derrière lui.
+
+Une installation déjà en place est constatée et rend 0 : rien n'est réinstallé,
+écrasé ni supprimé. Les paquets en conflit (`docker.io`, `podman-docker`,
+`containerd`…) ne sont retirés qu'après confirmation explicite.
+
+Hors terminal, `--yes` est obligatoire : sans lui le script s'arrête **avant**
+de poser sa question plutôt que de mourir sur un `read` impossible.
+
+N'ajoute personne au groupe `docker` : donner le démon à un compte non
+privilégié équivaut à donner root, cela se décide à part.
+
+### `check-docker.sh`
 
 Codes : `0` le client est présent et le démon répond — `1` client absent, démon
 injoignable, socket interdit ou délai dépassé — `2` option inconnue.
@@ -53,6 +81,9 @@ plus ne fige pas le diagnostic.
 
 ## Risques
 
-Aucun script de ce domaine n'est encore destructif. Quand `Cleanup/` arrivera,
-les volumes seront exclus du nettoyage général par défaut : ils portent les
-données.
+`install-docker.sh` modifie le système : il écrit deux fichiers dans `/etc/apt`,
+installe cinq paquets et active un service. Il ne retire rien sans confirmation
+explicite, et `--dry-run` montre tout cela sans rien écrire.
+
+Quand `Cleanup/` arrivera, les volumes seront exclus du nettoyage général par
+défaut : ils portent les données.
