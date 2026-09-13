@@ -2,8 +2,14 @@
 name: redacteur-tests
 description: Écrit les tests d'un script de la bibliothèque MGNetworking — syntaxe, préflight, dry-run, idempotence — et les branche sur tests/run.sh. À utiliser après la rédaction d'un script, ou quand une tâche demande de couvrir du code existant.
 tools: Read, Write, Edit, Grep, Glob, Bash
-model: inherit
+model: sonnet
 ---
+
+> **Modèle.** Cet agent tourne sur Sonnet — ADR-0004 décision 29. Pour un
+> script de `Docker/Diagnostics/` ou tout autre script en **lecture seule**
+> (`check-*`, `list-*`, `audit-*`, `*-status`), l'appelant surcharge le modèle
+> à Haiku au moment de l'appel : ces scripts n'écrivent rien, leur fiche de
+> tâche porte déjà les décisions, et le harnais de tests attrape le reste.
 
 Tu écris les tests des scripts de la bibliothèque MGNetworking.
 

@@ -106,3 +106,39 @@ décidera s'il veut y reporter ces quatre décisions.
 `Docker/Diagnostics/`. C'était une infraction à `AGENTS.md` §5. Les
 modifications sont justes et ont été conservées, mais elles auraient dû être
 demandées.
+
+## Décision 29 — Un modèle par famille de travail
+
+Ajoutée le 2026-09-14. Tarifs Anthropic relevés ce jour, par million de jetons :
+Opus 5 à 5 $ en entrée et 25 $ en sortie, Sonnet 5 à 2 $ / 10 $, Haiku 4.5 à
+1 $ / 5 $ — soit 2,5 fois et 5 fois moins cher qu'Opus.
+
+| Travail | Modèle | Où c'est réglé |
+|---|---|---|
+| Écrire un script depuis une fiche détaillée | Sonnet | `model: sonnet` dans `.claude/agents/redacteur-script.md` |
+| Écrire un fichier de cas | Sonnet | `.claude/agents/redacteur-tests.md` |
+| Relire un travail terminé | Sonnet | `.claude/agents/relecteur.md` |
+| **Script en lecture seule** — `check-*`, `list-*`, `audit-*`, `*-status` | **Haiku** | surcharge du modèle **à l'appel** de l'agent |
+| Atomiser un domaine en tâches | Opus | `model: inherit` dans `.claude/agents/redacteur-tache.md` |
+| Arbitrer une frontière, écrire un ADR, diagnostiquer un échec non trivial | Opus | l'agent principal |
+
+Le clivage n'est pas la difficulté apparente mais **l'endroit où se prend la
+décision**. Quand la fiche de tâche porte déjà les décisions et que le harnais
+de tests attrape les erreurs, écrire le script est une exécution de
+spécification — Sonnet suffit, Haiku suffit même pour un diagnostic qui n'écrit
+rien. Quand la décision reste à prendre — une frontière d'arborescence, un
+abandon de section, un diagnostic dont deux tentatives ont échoué —, c'est Opus.
+
+Trois faits de TASK-029 et TASK-031 étayent ce partage :
+
+- `[ -t 0 ]` avant `confirm` n'a pas été trouvé, il a été **lu** dans les
+  `implementation_notes` de TASK-029 ;
+- le défaut de Buildx — `${REP%% *}` affichant `github.com/docker/buildx` au lieu
+  de la version — a été trouvé par **le fichier de cas**, pas par le modèle ;
+- les trois SC2015 ont été trouvés par **`shellcheck` dans le conteneur**, et
+  restaient invisibles sur l'hôte où il n'est pas installé.
+
+**L'ordre des économies reste celui-ci : d'abord moins d'appels, ensuite des
+modèles moins chers.** Les deux agents d'atomisation du 2026-09-13 ont consommé
+280 000 jetons ; les passer en Sonnet aurait divisé leur coût par 2,5, ne pas les
+lancer l'a divisé bien davantage — décision 27.
