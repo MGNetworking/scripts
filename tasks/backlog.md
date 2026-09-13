@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-029**.
+Prochain identifiant libre : **TASK-038**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) fixe
@@ -49,6 +49,15 @@ de ce que cet ADR a tranché.
 | [TASK-025](pending/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](pending/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `ready` | haute | — | conteneur `debian` | non |
+| [TASK-029](pending/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `ready` | haute | — | conteneur `systemd` | **oui** |
+| [TASK-031](pending/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-033](pending/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-034](pending/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-030](pending/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `pending` | moyenne | 029 | conteneur `systemd` | **oui** |
+| [TASK-032](pending/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | `pending` | moyenne | 029 | conteneur `systemd` | **oui** |
+| [TASK-035](pending/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `pending` | moyenne | 029 | conteneur `debian` | **oui** |
+| [TASK-036](pending/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `pending` | moyenne | 029 | conteneur `systemd` | **oui** |
+| [TASK-037](pending/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `pending` | haute | 034 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
@@ -66,6 +75,53 @@ Restent **trois tâches** au domaine — TASK-024, TASK-025 et TASK-026 —, tou
 `ready`, indépendantes entre elles, et toutes sur le profil `debian`. Ce sont
 celles qui écrivent sur le système : elles relèvent du **cycle complet**,
 relecteur obligatoire (ADR-0003, décision 5).
+
+---
+
+**TASK-029 à TASK-037 atomisent le domaine `Docker`** — plan §8 à §10, atomisé
+le 2026-09-13 en deux lots, le domaine dépassant les sept scripts qu'un lot
+unique admet.
+
+Le domaine **passe devant `Linux/Security`**, que l'ADR-0003 décision 16 plaçait
+avant lui. Décision de Maxime, prise le 2026-09-13 : le premier serveur à servir
+doit héberger une application conteneurisée derrière un reverse proxy, sans
+Kubernetes. L'ordre des domaines n'est pas abrogé, il est devancé une fois.
+
+Ordre retenu au sein du domaine :
+
+```text
+TASK-031 ── TASK-033 ── TASK-034      lecture seule, aucune dépendance
+     check      list       disk        s'éprouvent avec un faux « docker »
+                                   │
+TASK-029 ─────────────────────────┘    installe le moteur, ouvre le domaine
+     │
+     ├── TASK-030  configure le démon
+     ├── TASK-032  crée le réseau partagé
+     ├── TASK-035  met à jour les images d'un projet
+     └── TASK-036  met à jour le moteur
+                   │
+                   TASK-037  nettoie — destructif, dépend de TASK-034
+```
+
+Les trois diagnostics passent en premier : ils ne dépendent de rien, ne modifient
+rien, et **installent le montage sur lequel tout le domaine repose** — un faux
+`docker` en tête de `PATH`. Le conteneur de test n'a pas de démon Docker et n'en
+aura pas : on n'installe pas Docker dans Docker, et aucun paquet n'est ajouté à
+l'image. C'est la transposition du faux `curl` retenu par TASK-024.
+
+`TASK-029` ouvre réellement le domaine : elle crée l'arborescence, le
+`Docker/README.md` unique — plan §13 — et le bloc « Architecture » du README
+racine.
+
+**Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
+ni sa configuration n'apparaissent dans un script. `create-network.sh` prend le
+nom du réseau en argument ; il ignore que ce réseau servira un reverse proxy.
+
+Deux conséquences documentaires de cette atomisation : `Linux/Docker` — plan §3 —
+est **abandonnée**, son préflight étant absorbé par `install-docker.sh` ; et
+`docker-status.sh` / `docker-info.sh` **disparaissent** au profit de
+`check-docker.sh` et `list-containers.sh`, qui couvrent leur contenu sans
+enfreindre la frontière de lecture seule de `Docker/Diagnostics/`.
 
 **[TASK-028](pending/TASK-028.md) passe devant elles.** Elle n'appartient pas au
 chantier des scripts : c'est une dette d'une ligne, ouverte par TASK-021, qui
@@ -162,9 +218,13 @@ côté ; elles restent non sélectionnables.
 | `audit-ports.sh` | lecture seule |
 | `security-check.sh` | lecture seule, destiné à cron |
 
-### Linux / Docker — plan §3
+### Linux / Docker — plan §3 — abandonnée
 
 `prepare-docker-host.sh`, `configure-docker-host.sh`, `verify-docker-host.sh`.
+
+**Abandonnée le 2026-09-13** : le préflight d'`install-docker.sh` couvre le même
+besoin, et l'ordre d'installation de `CLAUDE.md` le lui impose déjà. Deux scripts
+à tenir d'accord pour une vérification unique — voir plan §3.
 
 ### Linux / K3s — plan §4
 
@@ -185,14 +245,37 @@ Maintenance : `cluster-status.sh`, `diagnostics.sh`, `pods-status.sh`,
 
 ### Docker — plan §8 à §10
 
-Installation : `install-docker.sh`, `verify-docker.sh`.
+**Domaine atomisé le 2026-09-13** — TASK-029 à TASK-037, §1 ci-dessus. Neuf
+tâches couvrent le chantier prioritaire : installer le moteur, le configurer, le
+diagnostiquer, créer un réseau d'infrastructure partagé entre projets Compose
+indépendants, inventorier les conteneurs, mesurer le stockage, mettre à jour les
+images d'un projet puis le moteur lui-même, et nettoyer ce qui ne sert plus.
 
-Maintenance : `docker-status.sh`, `docker-info.sh`, `update-images.sh`,
-`restart-container.sh`, `container-logs.sh`, `inspect-container.sh`.
+Le domaine **ne connaît aucune application** : ni son nom, ni son fichier
+Compose, ni sa configuration. Il fournit les primitives ; les projets applicatifs
+portent leur propre cycle de vie.
 
-Cleanup : `cleanup-images.sh`, `cleanup-containers.sh`, `cleanup-networks.sh`,
-`cleanup-volumes.sh`, `docker-cleanup.sh` — **tout ce domaine est destructif**,
-`--dry-run` obligatoire, approbation humaine requise.
+Restent en index, non atomisés :
+
+| Script | Dossier | Note |
+|---|---|---|
+| `verify-docker.sh` | `Installation/` | valide une installation qu'on vient de faire, quand `check-docker.sh` diagnostique une machine qu'on découvre |
+| `restart-container.sh` | `Maintenance/` | jamais sur un workload géré par Kubernetes |
+| `container-logs.sh` | `Maintenance/` | lecture seule malgré son dossier |
+| `inspect-container.sh` | `Maintenance/` | sans afficher automatiquement les secrets |
+| `list-images.sh` | `Diagnostics/` | dépôt, étiquette, identifiant, date, taille, usage |
+| `cleanup-images.sh` | `Cleanup/` | **destructif** — distinguer `dangling` d'`unused` |
+| `cleanup-containers.sh` | `Cleanup/` | **destructif** |
+| `cleanup-networks.sh` | `Cleanup/` | **destructif** — épargner les réseaux d'infrastructure déclarés |
+| `cleanup-volumes.sh` | `Cleanup/` | **hautement destructif** — les volumes portent les données |
+
+`docker-cleanup.sh` (TASK-037) orchestre les nettoyages sans les remplacer : il
+exclut les volumes par défaut, et aucune suppression automatique de volume ne
+sera introduite sans justification explicite.
+
+`docker-status.sh` et `docker-info.sh`, que le plan prévoyait en `Maintenance/`,
+**disparaissent** : `check-docker.sh` et `list-containers.sh`, en `Diagnostics/`,
+couvrent leur contenu et respectent la frontière de lecture seule.
 
 ### Synology — plan §11 et §12
 

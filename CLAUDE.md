@@ -30,9 +30,9 @@ Y verser tout nouveau point plutôt que de dévier du travail en cours.
 ## Arborescence cible
 
 ```text
-Linux/       System | Security | Docker | K3s
+Linux/       System | Security | K3s
 Kubernetes/  Installation | Configuration | Maintenance
-Docker/      Installation | Maintenance | Cleanup
+Docker/      Installation | Configuration | Maintenance | Cleanup | Diagnostics
 Synology/    Plex | Administration
 lib/         fonctions communes (common.sh)
 config/      server.env (la machine) + un <contexte>.env par application
@@ -47,6 +47,10 @@ ou équivalent.
 Frontière `Linux/K3s/` ↔ `Kubernetes/` : si le script survivrait au remplacement
 de K3s par un cluster managé, il va dans `Kubernetes/` ; sinon dans `Linux/K3s/`,
 qui reste plat.
+
+Frontière `Docker/Diagnostics/` ↔ le reste de `Docker/` : `Diagnostics/` est en
+lecture seule, sans exception. Un script qui modifie quoi que ce soit sur la
+machine n'y a pas sa place, même si sa sortie ressemble à un rapport.
 
 ## Conventions de script
 

@@ -292,30 +292,21 @@ Contrôler notamment SSH, firewall, utilisateurs privilégiés, ports, services 
 
 ---
 
-# 3. Linux / Docker
+# 3. Linux / Docker — abandonnée
 
-Responsabilité : intégration de Docker avec le système Linux.
+Cette couche prévoyait `prepare-docker-host.sh`, `configure-docker-host.sh` et
+`verify-docker-host.sh` : architecture, kernel, disque et mémoire, puis groupe
+`docker`, répertoires de données et permissions.
 
-```text
-Linux/Docker/
-├── prepare-docker-host.sh
-├── configure-docker-host.sh
-└── verify-docker-host.sh
-```
+**Abandonnée le 2026-09-13.** Le préflight d'`install-docker.sh` couvre le même
+besoin — l'ordre d'installation imposé par [CLAUDE.md](../CLAUDE.md) le lui
+demande déjà : OS, architecture, ressources, dépendances, conflits. Une couche
+Linux distincte aurait fait vérifier deux fois les mêmes conditions, par deux
+scripts qu'il aurait fallu tenir d'accord.
 
-### `prepare-docker-host.sh`
-
-Vérifier architecture, kernel, disque, mémoire, dépendances et configuration nécessaires à Docker.
-
-### `configure-docker-host.sh`
-
-Configurer les éléments Linux nécessaires : groupe `docker`, répertoires de données, permissions et éventuels paramètres système.
-
-### `verify-docker-host.sh`
-
-Vérifier que l'hôte Linux est prêt à utiliser Docker.
-
-> Cette couche prépare Linux. L'installation et la maintenance de Docker restent dans `Docker/`.
+La frontière `Linux/` ↔ `Docker/` reste valable pour tout le reste : elle cesse
+seulement de justifier trois scripts dont le contenu tient dans un préflight. Le
+numéro de section est conservé pour ne pas rompre les renvois.
 
 ---
 
@@ -542,11 +533,52 @@ préflight
 → test
 ```
 
+Installe le moteur, le CLI, `containerd`, Buildx et le plugin Compose par les
+dépôts officiels. Le préflight porte aussi ce que la section 3 abandonnée
+prévoyait : architecture, kernel, disque, mémoire.
+
 Ne jamais supprimer une installation existante sans confirmation.
 
 ### `verify-docker.sh`
 
-Vérifier daemon, version, permissions, stockage, réseau et exécution d'un conteneur de test.
+Vérifier daemon, version, permissions, stockage, réseau et exécution d'un
+conteneur de test. Lecture seule.
+
+---
+
+# 8 bis. Docker / Configuration
+
+Responsabilité : configuration du moteur et des ressources d'infrastructure
+partagées entre projets.
+
+```text
+Docker/Configuration/
+├── configure-docker.sh
+└── create-network.sh
+```
+
+### `configure-docker.sh`
+
+Écrire `/etc/docker/daemon.json` de manière idempotente : rotation des journaux
+de conteneurs en premier lieu, afin qu'aucun conteneur ne fasse croître le disque
+sans borne. Valider la configuration avant de l'appliquer, et ne redémarrer le
+démon que si elle a réellement changé.
+
+Les valeurs propres à la machine viennent de `config/server.env`.
+
+### `create-network.sh`
+
+Créer un réseau Docker nommé, indépendant de tout fichier Compose, afin que
+plusieurs projets Compose distincts puissent se joindre sur un même réseau :
+
+```text
+Compose applicatif ───┐
+                      ├── réseau externe partagé
+Compose reverse proxy ┘
+```
+
+Le nom est un argument, jamais une valeur codée en dur pour une application
+donnée. Idempotent : un réseau déjà présent et conforme n'est pas recréé.
 
 ---
 
@@ -556,27 +588,27 @@ Responsabilité : administration courante de Docker standalone.
 
 ```text
 Docker/Maintenance/
-├── docker-status.sh
-├── docker-info.sh
+├── update-docker.sh
 ├── update-images.sh
 ├── restart-container.sh
 ├── container-logs.sh
 └── inspect-container.sh
 ```
 
-### `docker-status.sh`
+### `update-docker.sh`
 
-Afficher containers, images, volumes et networks.
-
-### `docker-info.sh`
-
-Afficher version, daemon, stockage et informations importantes.
+Mettre à jour le moteur et ses composants — Engine, CLI, `containerd`, Buildx,
+Compose — selon ce que le socle a réellement installé. Vérifier l'état avant et
+après. Ne touche pas aux images applicatives.
 
 ### `update-images.sh`
 
-Mettre à jour des images de manière contrôlée.
+Mettre à jour les images d'un projet désigné explicitement, jamais de tous les
+projets de la machine par défaut. Distinguer la récupération d'une image du
+redéploiement d'un service, et préserver les données persistantes.
 
-> Ne pas utiliser ces scripts pour modifier directement les workloads gérés par Kubernetes.
+> Ne pas utiliser ces scripts pour modifier directement les workloads gérés par
+> Kubernetes.
 
 ### `restart-container.sh`
 
@@ -588,7 +620,48 @@ Simplifier l'accès aux logs.
 
 ### `inspect-container.sh`
 
-Afficher image, ports, mounts, réseaux et état sans afficher automatiquement les secrets.
+Afficher image, ports, mounts, réseaux et état sans afficher automatiquement les
+secrets.
+
+---
+
+# 9 bis. Docker / Diagnostics
+
+Responsabilité : lecture seule. Aucun script de ce dossier ne modifie l'état de
+la machine.
+
+```text
+Docker/Diagnostics/
+├── check-docker.sh
+├── list-containers.sh
+├── list-images.sh
+└── docker-disk-usage.sh
+```
+
+### `check-docker.sh`
+
+Constater qu'un serveur possède un environnement Docker exploitable : présence et
+version de Docker, état du service et du démon, versions de Compose et de Buildx,
+répertoire et pilote de stockage.
+
+`verify-docker.sh` valide une installation qu'on vient de faire ;
+`check-docker.sh` diagnostique une machine qu'on découvre. Les deux restent
+séparés.
+
+### `list-containers.sh`
+
+Nom, image, état, ports, réseaux et identifiant des conteneurs. Les conteneurs
+actifs par défaut, les conteneurs arrêtés sur demande.
+
+### `list-images.sh`
+
+Dépôt, étiquette, identifiant, date de création, taille et statut d'utilisation
+lorsque Docker le fournit.
+
+### `docker-disk-usage.sh`
+
+Consommation de stockage, distinguant images, conteneurs, volumes et cache de
+build, et l'espace récupérable lorsque Docker le fournit.
 
 ---
 
@@ -598,28 +671,12 @@ Responsabilité : récupération des ressources Docker inutilisées.
 
 ```text
 Docker/Cleanup/
+├── docker-cleanup.sh
 ├── cleanup-images.sh
 ├── cleanup-containers.sh
 ├── cleanup-networks.sh
-├── cleanup-volumes.sh
-└── docker-cleanup.sh
+└── cleanup-volumes.sh
 ```
-
-### `cleanup-images.sh`
-
-Identifier et supprimer les images inutilisées.
-
-### `cleanup-containers.sh`
-
-Supprimer les conteneurs arrêtés.
-
-### `cleanup-networks.sh`
-
-Supprimer les réseaux inutilisés.
-
-### `cleanup-volumes.sh`
-
-Opération très sensible. Afficher les volumes inutilisés et demander confirmation avant toute suppression.
 
 ### `docker-cleanup.sh`
 
@@ -631,6 +688,35 @@ Containers arrêtés : ...
 Networks inutilisés : ...
 Volumes inutilisés : ...
 ```
+
+`--dry-run` obligatoire, confirmation avant toute suppression réelle, et aucune
+suppression d'une ressource en cours d'utilisation.
+
+**Les volumes sont exclus par défaut.** Ils portent les données ; un nettoyage
+général ne les emporte jamais sans une intention explicitement exprimée.
+
+Nommé ainsi par [ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+décision 15, qui en fait l'un des appelants de `notify-failure.sh`.
+
+### `cleanup-images.sh`
+
+Identifier et supprimer les images inutilisées, en distinguant les images
+`dangling` des images simplement inutilisées — la seconde catégorie est bien plus
+large, et les confondre détruit des images qu'on voulait garder.
+
+### `cleanup-containers.sh`
+
+Supprimer les conteneurs arrêtés.
+
+### `cleanup-networks.sh`
+
+Supprimer les réseaux inutilisés. Les réseaux d'infrastructure déclarés en
+configuration ne sont jamais supprimés par défaut.
+
+### `cleanup-volumes.sh`
+
+Opération très sensible. Afficher les volumes inutilisés et demander confirmation
+avant toute suppression.
 
 ---
 
@@ -708,6 +794,20 @@ Docker/README.md
 Kubernetes/README.md
 Synology/README.md
 ```
+
+**Au domaine, pas au sous-dossier.** Le dépôt porte aujourd'hui
+`Linux/System/README.md` et `Synology/Plex/README.md` : le README y est descendu
+d'un cran parce que `Linux/` réunit des sous-domaines sans rapport entre eux —
+préparer l'OS, le sécuriser, poser K3s.
+
+`Docker/` est l'inverse : ses cinq dossiers sont les facettes d'un même moteur, et
+l'ordre d'utilisation traverse les dossiers — on installe, on configure, puis on
+diagnostique. Un README par dossier découperait cet ordre en cinq morceaux dont
+aucun ne se tient seul, et deux d'entre eux n'auraient qu'un script à décrire.
+
+**Un seul `Docker/README.md`** donc, créé par la première tâche du domaine qui
+s'exécute, complété d'une ligne de tableau par chacune des suivantes. Fixé le
+2026-09-13 pour que la question ne se rouvre pas à chaque tâche.
 
 Chaque README documente :
 
@@ -887,13 +987,38 @@ diagnostics.sh
 backup-resources.sh
 ```
 
-## Phase 3 — Docker
+## Phase 3 — Docker — en cours
+
+**Avancée devant la phase 2 le 2026-09-13**, à la demande de Maxime : le premier
+serveur à servir doit héberger une application conteneurisée derrière un reverse
+proxy, sans Kubernetes. L'ordre ci-dessus reste celui du plan ; cette phase le
+devance sans le remplacer.
 
 ```text
 Docker/Installation/
+Docker/Configuration/
 Docker/Maintenance/
 Docker/Cleanup/
+Docker/Diagnostics/
 ```
+
+Neuf tâches prioritaires — sections 8 à 10 — dans l'ordre :
+
+```text
+install-docker.sh → configure-docker.sh → check-docker.sh → create-network.sh
+       ├── list-containers.sh
+       └── docker-disk-usage.sh
+              → update-images.sh → update-docker.sh → docker-cleanup.sh
+```
+
+Le domaine ne connaît aucune application déployée : ni son nom, ni son fichier
+Compose, ni sa configuration. Il fournit les primitives, les projets applicatifs
+portent leur propre cycle de vie.
+
+La phase est terminée lorsqu'un serveur Linux supporté peut, de bout en bout :
+installer Docker, le configurer, le vérifier, créer un réseau partagé,
+inventorier ses conteneurs, diagnostiquer son stockage, mettre à jour les images
+d'un projet, mettre à jour le moteur, puis nettoyer ce qui ne sert plus.
 
 ## Phase 4 — Synology
 
