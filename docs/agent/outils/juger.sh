@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# juger.sh — juge automatique d'une fiche (ADR-0005 décision 32).
+# juger.sh — juge automatique d'une fiche (ADR-0006 décision 40).
 #
 # Lance, dans le conteneur de test, shellcheck sur les .sh du périmètre de la
 # fiche, puis son fichier de cas. Aucun jeton.

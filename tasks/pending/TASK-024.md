@@ -5,9 +5,7 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
-niveau: N2
-executor: deepseek-flash
-effort: low
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer le script de notification appelé lorsqu'un script planifié échoue. Il

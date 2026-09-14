@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# lancer-agent.sh — fait exécuter une tâche par un agent (ADR-0006).
+#
+# L'agent est une instance de Claude Code, sans interface, pilotée par le modèle
+# de son profil (docs/agent/profils/<profil>.env). Il travaille dans une copie
+# séparée du dépôt (git worktree) sur la branche agent/<TASK>, et n'y fait que
+# ce que permet docs/agent/profils/agent-settings.json.
+#
+# Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]
+#   Le fichier de retours, facultatif, porte les défauts relevés par la
+#   relecture : l'agent les corrige au lieu de repartir de zéro.
+# Codes : celui de l'agent (0 terminé) — 2 usage ou prérequis manquant.
+set -Eeuo pipefail
+
+ici="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+racine="$(cd "$ici/../../.." && pwd)"
+profil="${1:-}" tache="${2:-}" retours="${3:-}"
+
+usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]" >&2; exit 2; }
+if [ ! -f "$ici/../profils/$profil.env" ] || [[ ! "$tache" =~ ^TASK-[0-9]{3}$ ]]; then usage; fi
+[ -f "$racine/tasks/active/$tache.md" ] || { echo "tasks/active/$tache.md absent : l'orchestrateur active la fiche avant." >&2; exit 2; }
+if [ -n "$retours" ] && [ ! -f "$retours" ]; then
+    echo "Fichier de retours introuvable : $retours" >&2; exit 2
+fi
+command -v claude >/dev/null || { echo "claude introuvable dans le PATH." >&2; exit 2; }
+
+# Le profil ne définit que trois variables ; lu ligne à ligne, jamais exécuté.
+ADRESSE="" MODELE="" VARIABLE_CLE=""
+while IFS='=' read -r cle valeur; do
+    case "$cle" in ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;; esac
+done < "$ici/../profils/$profil.env"
+[ -n "$MODELE" ] || { echo "Profil $profil : MODELE vide." >&2; exit 2; }
+
+# Environnement de l'agent. Profil sans adresse : l'abonnement Claude, rien à régler.
+env_agent=(env -u ANTHROPIC_BASE_URL -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN)
+if [ -n "$ADRESSE" ]; then
+    [ -n "${!VARIABLE_CLE:-}" ] || { echo "Profil $profil : la variable $VARIABLE_CLE est vide." >&2; exit 2; }
+    env_agent+=("ANTHROPIC_BASE_URL=$ADRESSE" "ANTHROPIC_API_KEY=${!VARIABLE_CLE}"
+        "ANTHROPIC_MODEL=$MODELE" "ANTHROPIC_DEFAULT_HAIKU_MODEL=$MODELE"
+        "ANTHROPIC_DEFAULT_SONNET_MODEL=$MODELE" "ANTHROPIC_DEFAULT_OPUS_MODEL=$MODELE")
+fi
+
+# Copie séparée, hors du dépôt pour que le lint ne la parcoure pas.
+copie="$(dirname "$racine")/$(basename "$racine")-agents/$tache"
+if [ ! -d "$copie" ]; then
+    mkdir -p "$(dirname "$copie")"
+    if git -C "$racine" rev-parse -q --verify "agent/$tache" >/dev/null; then
+        git -C "$racine" worktree add -q "$copie" "agent/$tache"
+    else
+        git -C "$racine" worktree add -q -b "agent/$tache" "$copie" master
+    fi
+fi
+
+consigne="/executer-tache $tache"
+if [ -n "$retours" ]; then
+    cp "$retours" "$copie/RETOURS-$tache.md"
+    consigne="$consigne RETOURS-$tache.md"
+fi
+
+echo "AGENT  $profil ($MODELE) sur $tache, dans $copie"
+debut=$(date +%s)
+code=0
+sortie="$(cd "$copie" && "${env_agent[@]}" claude -p "$consigne" \
+    --model "$MODELE" \
+    --setting-sources project \
+    --settings "$ici/../profils/agent-settings.json" \
+    --strict-mcp-config \
+    --permission-mode acceptEdits \
+    --output-format json)" || code=$?
+rm -f "$copie/RETOURS-$tache.md"
+
+# Relevé : une ligne par lancement. Le coût se calcule au tarif du profil,
+# pas au total_cost_usd de Claude Code, qui applique les prix Anthropic.
+journal="$racine/docs/agent/mesures/agents.tsv"
+[ -f "$journal" ] || printf 'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\n' > "$journal"
+node -e '
+    const [sortie, ...champs] = process.argv.slice(1);
+    let j = {}; try { j = JSON.parse(sortie); } catch {}
+    const u = j.usage || {};
+    const cache = (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+    const [date, tache, profil, modele, duree, code] = champs;
+    console.log([date, tache, profil, modele, j.num_turns ?? "?", u.input_tokens ?? "?", cache,
+                 u.output_tokens ?? "?", duree, code].join("\t"));
+    console.error(j.result || "(aucune réponse lisible de l’agent)");
+' "$sortie" "$(date '+%F %T')" "$tache" "$profil" "$MODELE" "$(( $(date +%s) - debut ))" "$code" >> "$journal"
+
+tail -1 "$journal"
+exit "$code"

@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash docs/agent/outils/juger.sh:*)",
+      "Bash(bash tests/env/run-in-container.sh:*)",
+      "Bash(bash -n:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Read(config/*.env)",
+      "Read(**/.env)",
+      "Edit(CLAUDE.md)",
+      "Edit(AGENTS.md)",
+      "Edit(lib/**)",
+      "Edit(config/*.env)",
+      "Edit(tasks/**)",
+      "Edit(docs/**)",
+      "Edit(.claude/**)",
+      "Edit(**/README.md)",
+      "Bash(git push:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git worktree:*)",
+      "WebFetch",
+      "WebSearch",
+      "Agent"
+    ]
+  }
+}

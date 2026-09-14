@@ -5,9 +5,7 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
-niveau: N1
-executor: deepseek-flash
-effort: low
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer le relevé de consommation de stockage de Docker, en lecture seule,

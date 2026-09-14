@@ -6,9 +6,7 @@ priority: medium
 depends_on:
   - TASK-029
 environment: container-debian
-niveau: N2
-executor: deepseek-flash
-effort: low
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer la récupération des images d'un projet Compose désigné explicitement en

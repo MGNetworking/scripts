@@ -1,4 +1,0 @@
-date	fiche	modele	type	entree	entree_cache	sortie	duree_s
-2026-09-14T12:52:40.351Z	tasks/active/TASK-030.md	deepseek-flash	generation/defaut/plafond-65536-atteint	18232	0	65536	260.8
-2026-09-14T12:56:52.225Z	tasks/active/TASK-030.md	deepseek-flash	generation/low/stop	18232	0	55920	195.3
-2026-09-14T13:04:02.311Z	tasks/active/TASK-030.md	deepseek-flash	correction/low/stop	22356	8832	51929	186.3

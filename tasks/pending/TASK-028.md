@@ -5,8 +5,7 @@ status: ready
 priority: high
 depends_on: []
 environment: container-debian
-niveau: N4
-executor: opus
+agent: orchestrateur
 human_approval_required: false
 objective: |
   Rendre la commande de référence du dépôt verte de nouveau. Une directive
