@@ -52,7 +52,9 @@ orchestrateur : juger.sh relancé ─► périmètre ─► tests figés ─► 
 ```
 
 Le parallélisme — plusieurs agents à la fois — n'est ouvert qu'après trois tâches
-passées sans incident dans ce circuit.
+passées sans incident dans ce circuit, **et** une fois les exécutions concurrentes du harnais maîtrisées
+(registre TASK-039, A06) : aujourd'hui, deux lancements simultanés faussent les
+contrôles « aucun conteneur résiduel » de TASK-002.
 
 ---
 

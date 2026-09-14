@@ -648,14 +648,10 @@ assert_contient "$aide" "-h, --help" "l'aide documente --help"
 # verrait — c'est exactement ce qui s'est produit quand « unité non chargée » y
 # est entrée.
 #
-# Deux des sept sont PROUVÉES ailleurs dans ce fichier : « état inétablissable »
+# Trois des sept sont PROUVÉES ailleurs dans ce fichier : « état inétablissable »
 # au groupe 4.4 sur « --service @ », « service en échec » au groupe 7 sur une
-# unité fabriquée. UNE SEULE NE L'EST PAS — « unité non chargée » : l'atteindre
-# demanderait une seconde unité déposée dans /etc/systemd/system, portant une
-# faute qui fasse échouer son chargement, et un second chemin de restitution.
-# Elle n'est donc éprouvée ici QUE comme ligne d'aide. Elle est DÉCLARÉE au
-# groupe 8, avec sa mesure, pour qu'elle pèse au bilan plutôt que de reposer sur
-# ce seul commentaire.
+# unité fabriquée, « unité non chargée » au groupe 7 bis sur une unité invalide
+# (TASK-039, A31).
 assert_contient "$aide" "une seule vaut 0, les six autres valent 1" \
     "l'aide annonce le compte exact des issues — une en 0, six en 1"
 assert_contient "$aide" "service actif       l'unité est chargée et active                     code 0" \
@@ -1560,6 +1556,32 @@ UNITE_FABRIQUEE
     fi
 fi
 
+# 7 bis — la septième issue de --service, « unité non chargée » (TASK-039, A31).
+# Une unité au contenu invalide donne LoadState=bad-setting. Elle est retirée, et
+# son retrait vérifié, avant la restitution du §9.
+titre "7 bis. Une unité non chargée"
+
+if [ "$MODIFIANT" != "oui" ]; then
+    saute_modifiant "check-services.sh rend 1 sur une unité non chargée, avec un message distinct"
+else
+    UNITE_INVALIDE="mgnet-test-invalide.service"
+    FICHIER_UNITE_INVALIDE="/etc/systemd/system/$UNITE_INVALIDE"
+    printf '%%%% ceci n est pas une unite
+' > "$FICHIER_UNITE_INVALIDE"
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    if [ "$(champ_unite "$UNITE_INVALIDE" LoadState)" != "bad-setting" ]; then
+        saute_indisponible "check-services.sh rend 1 sur une unité non chargée, avec un message distinct"             "systemd n'a pas classé l'unité invalide en « bad-setting » : $(champ_unite "$UNITE_INVALIDE" LoadState)"
+    else
+        lancer bash "$CHECK_SERVICES_SH" --service "$UNITE_INVALIDE"
+        assert_code 1 "$CODE" "check-services.sh rend 1 sur une unité NON CHARGÉE"
+        assert_contient "$(erreur)" "Unité non chargée : « $UNITE_INVALIDE »"             "unité non chargée : le message dit la cause et nomme l'unité"
+        assert_contient "$(erreur)" "bad-setting" "unité non chargée : le message cite LoadState"
+    fi
+    rm -f "$FICHIER_UNITE_INVALIDE"
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    assert_egal "not-found" "$(champ_unite "$UNITE_INVALIDE" LoadState)"         "retrait : l'unité invalide n'est plus connue de systemd"
+fi
+
 # ===================================================================
 # 8. Hors de portée de cet environnement
 # ===================================================================
@@ -1581,18 +1603,6 @@ saute_par_nature "les branches dégradées des deux « list-units » de l'invent
 # comportent —, pas une limite de nature. Une autre image, un autre verdict.
 saute "l'état « degraded » et le nombre d'unités en échec de l'image" \
     "getty@tty1.service part en boucle de redémarrage et bascule seul en « failed » au bout de deux à trois secondes — ou pas : trois lancements de la même image ont donné « running » puis « degraded » puis « running », ce dernier avec zéro unité en échec. Aucune assertion ne peut porter là-dessus. Le cas déterministe est le groupe 7, sur une unité fabriquée"
-
-# Saut NEUTRE lui aussi, et pour la même raison : ce cas EST atteignable avec le
-# vrai systemctl. Ce qui l'écarte est une décision de PÉRIMÈTRE, pas une limite
-# de nature — « saute_par_nature » serait ici une signature mensongère, au sens
-# que tests/lib/assert.sh donne à ce mot.
-#
-# Sans cette ligne, les sept issues de --service assertées au groupe 1.1 se
-# liraient comme sept comportements prouvés, alors que six seulement le sont :
-# le groupe 8 pose lui-même que taire un cas non prouvé ferait croire à une
-# couverture complète.
-saute "la septième issue de --service — « unité non chargée »" \
-    "elle EST atteignable avec le vrai systemctl. MESURÉ dans le conteneur du profil systemd : un fichier d'unité au contenu invalide déposé dans /etc/systemd/system, suivi d'un « systemctl daemon-reload », donne « LoadState=bad-setting », et « --service » rend alors 1 avec « Unité non chargée : « … » — LoadState vaut « bad-setting » ». Ce qui l'écarte est une décision de périmètre : l'éprouver demanderait une SECONDE unité fabriquée et un second chemin de restitution avant que systemd.test.sh ne tourne, et aucun critère d'acceptation de TASK-023 ne l'exige. La ligne d'aide qui la documente est assertée au groupe 1.1 ; son message d'exécution, lui, n'est pas éprouvé"
 
 # ===================================================================
 # 9. Restitution vérifiée, et nettoyage

@@ -1376,20 +1376,20 @@ fi
 # complète.
 titre "9. Hors de portée de cet environnement"
 
-saute "cron exécutant réellement la tâche à l'heure dite" \
+saute_par_nature "cron exécutant réellement la tâche à l'heure dite" \
     "le profil debian n'a pas d'init — le démon n'est pas lancé, aucun passage n'a lieu"
-saute "le bit d'exécution réel de update-system.sh dans le dépôt" \
+saute_par_nature "le bit d'exécution réel de update-system.sh dans le dépôt" \
     "le montage Docker Desktop expose tous les fichiers en 0777 : « test -x » y répond toujours oui, quel que soit le mode enregistré par git"
 # Le profil « systemd » EXISTE désormais — tests/env/Dockerfile.systemd, écrit
 # par TASK-020 — mais il n'y suffit pas : cron n'est pas dans cette image, qui
 # n'embarque aucun service applicatif par construction. La raison de ce saut a
 # donc changé de nature, elle n'a pas disparu. La même réserve est portée, sous
 # l'init réel, par tests/environment/systemd.test.sh §5.
-saute "le rechargement de la planification par cron après dépôt" \
+saute_par_nature "le rechargement de la planification par cron après dépôt" \
     "exige un démon cron EN SERVICE : le profil « systemd » fournit l'init, mais son image n'embarque pas cron — l'y ajouter est une décision d'image, hors du périmètre de TASK-020"
-saute "le refus de cron devant un fichier au nom pointé ou exécutable" \
+saute_par_nature "le refus de cron devant un fichier au nom pointé ou exécutable" \
     "exige un démon cron en service : le script prévient ces deux cas, mais le rejet lui-même n'est observable que par cron"
-saute "un chemin de dépôt contenant une espace ou un « % »" \
+saute_par_nature "un chemin de dépôt contenant une espace ou un « % »" \
     "exige de recopier le dépôt sous un tel chemin — le montage /depot n'en comporte pas, et la garde est testée par lecture seule"
 
 # ===================================================================

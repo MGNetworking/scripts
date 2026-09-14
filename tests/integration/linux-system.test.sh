@@ -4854,11 +4854,11 @@ titre "5. Hors de portée de cet environnement"
 # décomptes de lignes de stderr, la garde « timedatectl répondrait » du même
 # groupe. Les lancer sous un init les rendrait rouges sans qu'aucun défaut
 # n'existe.
-saute "configure-swap.sh créant, activant et inscrivant un fichier d'échange" \
+saute_par_nature "configure-swap.sh créant, activant et inscrivant un fichier d'échange" \
     "swapon exige CAP_SYS_ADMIN, refusé au conteneur non privilégié"
-saute "update-system.sh appliquant réellement apt-get upgrade" \
+saute_par_nature "update-system.sh appliquant réellement apt-get upgrade" \
     "exclu par TASK-004 : l'image n'a aucun paquet obsolète, la mise à jour n'apprendrait rien"
-saute "configure-logging.sh sur un système sans le groupe « adm »" \
+saute_par_nature "configure-logging.sh sur un système sans le groupe « adm »" \
     "l'image Debian le fournit toujours — la branche GROUPE_LOGS=root reste sans preuve"
 
 # Les sites de TASK-018 dont la CAUSE D'ÉCHEC n'est pas atteignable depuis une
@@ -4878,15 +4878,15 @@ saute "configure-logging.sh sur un système sans le groupe « adm »" \
 # Une correction rendue invérifiable par une autre correction du même diff ne
 # peut pas s'auto-certifier hors d'atteinte. Le saut neutre dit ce qu'on sait :
 # le cas n'a pas tourné, et il n'est pas compté comme réussi.
-saute "configure-swap.sh : df -T en échec sur un répertoire EXISTANT" \
+saute_par_nature "configure-swap.sh : df -T en échec sur un répertoire EXISTANT" \
     "le contrôle de répertoire ajouté par TASK-018 intercepte le seul cas atteignable — les cas a, b et b bis du groupe 3 quater éprouvent ce contrôle, pas la mise en condition de df ; faire échouer df sur un répertoire existant demanderait de démonter un système de fichiers sous les pieds du script"
-saute "configure-swap.sh : df -BM en échec sur le calcul d'espace libre" \
+saute_par_nature "configure-swap.sh : df -BM en échec sur le calcul d'espace libre" \
     "le même contrôle le précède, et le répertoire a déjà servi à df -T quelques lignes plus haut — aucune ligne de commande n'atteint cet échec"
 saute_par_nature "configure-swap.sh : /proc/swaps illisible avant swapoff" \
     "ce chemin exige un swap ACTIF sur la cible — swapon exige CAP_SYS_ADMIN, refusé au conteneur — et un /proc rendu illisible en cours d'exécution"
 saute_par_nature "configure-swap.sh : /proc/meminfo illisible avant swapoff" \
     "même chemin et même condition que /proc/swaps ci-dessus"
-saute "configure-timezone.sh : la seconde lecture de /etc/timezone, à la vérification" \
+saute_par_nature "configure-timezone.sh : la seconde lecture de /etc/timezone, à la vérification" \
     "l'atteindre demanderait un tr qui échoue à la vérification seulement, après avoir réussi à la mise en cohérence — le stub du groupe 4 ter échoue aux deux et le script meurt à la première"
 
 # Le cinquième tour a FERMÉ les six sites que le quatrième laissait en forme nue,
@@ -4896,17 +4896,17 @@ saute "configure-timezone.sh : la seconde lecture de /etc/timezone, à la vérif
 # --- Ce que le groupe 2 bis n'a PAS pu prouver, et pourquoi ----------------
 # TASK-021. Ces quatre lignes valent autant que les assertions vertes : elles
 # disent où la couverture de check-disk.sh s'arrête.
-saute "check-disk.sh : la surcharge par un config/server.env RÉELLEMENT ÉCRIT" \
+saute_par_nature "check-disk.sh : la surcharge par un config/server.env RÉELLEMENT ÉCRIT" \
     "le groupe 2 bis transmet SRV_DISK_SEUIL et SRV_DISK_REPERTOIRE par l'environnement — même variable, même « set -a » de lib/common.sh, mais le CHARGEMENT du fichier n'est pas emprunté. L'écrire imposerait de créer config/server.env dans le dépôt monté, qui n'est pas un système jetable"
-saute "check-disk.sh : /proc/partitions ILLISIBLE, lsblk absent" \
+saute_par_nature "check-disk.sh : /proc/partitions ILLISIBLE, lsblk absent" \
     "la seule branche du script qu'aucun montage n'atteint ici — il faudrait remonter /proc, ce qu'un conteneur non privilégié ne permet pas ; « lsblk absent » et « awk en échec » couvrent les deux autres sorties de cette section"
 saute_par_nature "check-disk.sh : « df » suspendu sur un montage réseau injoignable" \
     "explicitement hors périmètre de TASK-021 (out_of_scope) — le sujet demande « df -l » ou une borne de temps, et l'image de test ne monte ni NFS ni CIFS"
-saute "check-disk.sh : le comportement sur un système de fichiers RÉELLEMENT au-delà du seuil" \
+saute_par_nature "check-disk.sh : le comportement sur un système de fichiers RÉELLEMENT au-delà du seuil" \
     "l'occupation de la racine du conteneur est celle de l'hôte et n'est pas pilotable — le franchissement du seuil est éprouvé par un faux « df » à 90 %, jamais sur un disque réellement plein"
 
-saute "update-system.sh:133 — « restant » vide passé à un test arithmétique" \
-    "le « || true » empêche le doublement mais laisse une chaîne vide au « -gt 0 » qui suit — réserve d'une autre nature, versée aux points en suspens"
+saute_par_nature "update-system.sh:133 — « restant » vide passé à un test arithmétique" \
+    "inatteignable : « grep -c » imprime 0 même quand il échoue, « restant » n'est jamais vide (vérifié par TASK-039, A30)"
 
 # ===================================================================
 # Nettoyage
