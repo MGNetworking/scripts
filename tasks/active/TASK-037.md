@@ -1,12 +1,12 @@
 ---
 id: TASK-037
 title: "Écrire Docker/Cleanup/docker-cleanup.sh"
-status: ready
+status: in_progress
 priority: high
 depends_on:
   - TASK-034
 environment: container-debian
-agent: sonnet
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer l'orchestrateur de nettoyage des ressources Docker inutilisées. Il
