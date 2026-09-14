@@ -1,6 +1,6 @@
 # Recensement des substitutions de commande — `Linux/System`
 
-Relevé exhaustif des affectations de la forme `var="$(…)"` des sept scripts du
+Relevé exhaustif des affectations de la forme `var="$(…)"` des dix scripts du
 domaine, avec pour chacune un verdict et sa raison — **y compris celles qui ne
 sont pas traitées**.
 
@@ -251,13 +251,34 @@ alors que `…-<nouvel horodatage>` était libre.
 |---|---|---|---|
 | 12 | `_dir="$(cd … && pwd)"` | sans objet | avant le chargement du socle |
 | 13 | `_dir="$(dirname "$_dir")"` | sans objet | idem |
-| 38 | `if ! NOM_REGLE="$(basename …)"` | **traité** | fermé au cinquième tour, **pour le seul doublement**. Deux causes l'atteignent : un faux `basename` en tête de `PATH`, et un `LOG_DIR` commençant par un tiret, que `basename` prend pour une option. La seconde n'est pas tranchée ici : personne ne valide `LOG_DIR`, et `basename --` accepterait le chemin fautif pour déposer une règle logrotate qui n'a pas de sens. Ce sujet-là reste au point n° 6 des [points en suspens](../../docs/points-en-suspens.md) |
+| 38 | `if ! NOM_REGLE="$(basename …)"` | **traité** | fermé au cinquième tour, **pour le seul doublement**. Deux causes l'atteignent : un faux `basename` en tête de `PATH`, et un `LOG_DIR` commençant par un tiret, que `basename` prend pour une option. La seconde n'est pas tranchée ici : personne ne valide `LOG_DIR`, et `basename --` accepterait le chemin fautif pour déposer une règle logrotate qui n'a pas de sens. Ce sujet-là est fermé depuis le 2026-09-15 : `lib/common.sh` refuse un `LOG_DIR` non absolu (TASK-039, A19) |
 
 **Réserve de placement**, sans rapport avec le doublement : cette affectation est
 faite **avant** l'analyse des arguments, contrairement à l'ordre de préflight du
 dépôt. Son échec préempte donc `--help`. C'était déjà vrai sous la forme nue —
 `errexit` arrêtait le script au même endroit — et le déplacer relève d'un autre
 sujet que celui-ci.
+
+## 10 bis. Les trois diagnostics — 23 sites
+
+Versés le 2026-09-15 (TASK-039, A36). **Toutes leurs substitutions sont en
+contexte de condition** : aucun site nu, aucun doublement du `trap ERR` à craindre.
+
+| Script | Ligne | Site | Verdict |
+|---|---|---|---|
+| `check-disk.sh` | 13, 14 | `_dir="$(…)"` | sans objet |
+| `check-disk.sh` | 375, 447 | `if ! sortie="$(… df …)"` | **traité** — borné par `timeout` depuis A25 |
+| `check-disk.sh` | 523 | `if ! sortie="$(lsblk …)"` | **traité** |
+| `check-disk.sh` | 561 | `if ! table="$(awk … /proc/partitions)"` | **traité** |
+| `check-disk.sh` | 615, 632, 642 | `if ! sortie="$(du …)"`, `total`, `classement` | **traité** |
+| `check-memory.sh` | 13, 14 | `_dir="$(…)"` | sans objet |
+| `check-memory.sh` | 300, 302 | `FORMATE="$(( … ))"` | sans objet — expansion arithmétique, pas une substitution de commande |
+| `check-memory.sh` | 360, 430, 607, 736 | `free`, `/proc/meminfo`, `/proc/swaps`, `ps` | **traité** |
+| `check-services.sh` | 14, 15 | `_dir="$(…)"` | sans objet |
+| `check-services.sh` | 332, 430, 455, 480 | `systemctl show`, `is-system-running`, `list-units` ×2 | **traité** |
+
+**76 sites** au total pour les dix scripts du domaine. Numéros de ligne du
+2026-09-15.
 
 ## 11. Ce qui reste ouvert
 
