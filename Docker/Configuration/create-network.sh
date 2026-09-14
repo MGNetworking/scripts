@@ -86,8 +86,8 @@ done
 [ -n "$NOM" ] || NOM="${SRV_DOCKER_NETWORK:-}"
 [ -n "$NOM" ] || die "Nom de réseau manquant : le donner en argument, ou définir SRV_DOCKER_NETWORK dans config/server.env." 2
 
-NOM_REGEX='^[a-zA-Z0-9][a-zA-Z0-9_.-]+$'
-[[ "$NOM" =~ $NOM_REGEX ]] || die "Nom de réseau invalide : « $NOM » (Docker attend un premier caractère alphanumérique, puis lettres, chiffres, « . », « _ » ou « - », au moins deux caractères)." 2
+NOM_REGEX='^[a-zA-Z0-9][a-zA-Z0-9_.-]*$'
+[[ "$NOM" =~ $NOM_REGEX ]] || die "Nom de réseau invalide : « $NOM » (Docker attend un premier caractère alphanumérique, puis lettres, chiffres, « . », « _ » ou « - »)." 2
 
 [ "$DRIVER" != "overlay" ] || die "Pilote overlay refusé : il suppose un Swarm initialisé, hors du périmètre de ce script." 2
 

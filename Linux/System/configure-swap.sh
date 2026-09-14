@@ -94,8 +94,11 @@ est_fichier_swap() {
     local chemin="$1"
     local taille_page signature
 
+    # /proc/swaps écrit une espace « \040 » : le chemin est déséchappé avant la
+    # comparaison (TASK-039, A27), par index plutôt que par regex, pour que gawk et
+    # mawk lisent la même chose.
     if [ -r /proc/swaps ] && awk -v cible="$chemin" \
-            'NR > 1 && $1 == cible { trouve = 1 } END { exit !trouve }' /proc/swaps; then
+            'BEGIN { e = sprintf("%c", 92) "040" } NR > 1 { while ((i = index($1, e)) > 0) $1 = substr($1, 1, i - 1) " " substr($1, i + 4) } NR > 1 && $1 == cible { trouve = 1 } END { exit !trouve }' /proc/swaps; then
         return 0
     fi
 
@@ -491,6 +494,8 @@ require_cmd mkswap swapon swapoff
 # deux jugements différés par le premier appel : les droits sont acquis, la nature
 # de la cible et l'existence de son répertoire d'accueil peuvent être établies.
 valider_fichier_swap "$FICHIER_SWAP" apres-root
+# Garde (TASK-039, A26) : un chemin vide mènerait dirname, puis fallocate, sur « . ».
+[ -n "$FICHIER_SWAP" ] || die "Fichier d'échange indéterminé : chemin vide après validation." 1
 
 info "Taille demandée : ${TAILLE_MO} Mo ($ORIGINE_TAILLE : $TAILLE_DEMANDEE)"
 info "Fichier d'échange : $FICHIER_SWAP"
@@ -582,7 +587,7 @@ esac
 # État du fichier visé
 # -------------------------------------------------------------------
 swap_actif() {
-    [ -r /proc/swaps ] && awk -v cible="$FICHIER_SWAP" 'NR > 1 && $1 == cible { trouve = 1 } END { exit !trouve }' /proc/swaps
+    [ -r /proc/swaps ] && awk -v cible="$FICHIER_SWAP" 'BEGIN { e = sprintf("%c", 92) "040" } NR > 1 { while ((i = index($1, e)) > 0) $1 = substr($1, 1, i - 1) " " substr($1, i + 4) } NR > 1 && $1 == cible { trouve = 1 } END { exit !trouve }' /proc/swaps
 }
 
 # La fonction renseigne TAILLE_ACTUELLE_MO plutôt que d'écrire sur stdout : elle
@@ -693,7 +698,7 @@ if swap_actif; then
     # sûreté — faute de pouvoir la prendre, le script s'arrête plutôt que de
     # supposer une valeur.
     if ! swap_utilise_ko="$(awk -v cible="$FICHIER_SWAP" \
-            'NR > 1 && $1 == cible { print $4 }' /proc/swaps 2>/dev/null)"; then
+            'BEGIN { e = sprintf("%c", 92) "040" } NR > 1 { while ((i = index($1, e)) > 0) $1 = substr($1, 1, i - 1) " " substr($1, i + 4) } NR > 1 && $1 == cible { print $4 }' /proc/swaps 2>/dev/null)"; then
         error "Lecture de /proc/swaps impossible : la place occupée reste inconnue."
         die "Désactiver le swap sans cette mesure ferait tuer des processus."
     fi
