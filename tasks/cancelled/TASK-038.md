@@ -1,7 +1,7 @@
 ---
 id: TASK-038
 title: "Remettre l'acceptance TASK-011 au vert après les scripts Docker"
-status: ready
+status: cancelled
 priority: high
 depends_on: []
 environment: container-debian
@@ -37,3 +37,5 @@ Constaté le 2026-09-14 pendant TASK-028 : l'acceptance sort en 1 pour 4 directi
 dont la justification manque ou est placée sous la directive, et parce que
 `ASSUME_YES` est lue hors de `lib/common.sh`. Aucune relecture de TASK-029 ni de
 TASK-030 ne l'a vu : `juger.sh` ne lance pas l'acceptance.
+
+**Annulée le 2026-09-15** : absorbée par [TASK-039](../pending/TASK-039.md), ligne A01.

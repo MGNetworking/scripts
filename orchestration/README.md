@@ -77,26 +77,6 @@ permissions. Aucune règle métier.
 
 ## Points ouverts
 
-Décidés ou constatés, pas encore faits. À relire avant de lancer une tâche.
-
-1. **Relecteur : Opus confirmé** par l'essai comparatif de TASK-034 (voir
-   `mesures/journal.md`) — Sonnet a manqué le défaut majeur et consommé plus.
-   `.claude/agents/relecteur.md` déclare encore `model: sonnet` : sans effet, car
-   `/tache` impose Opus ; alignement reporté à la fin des corrections.
-2. **Tâches hors script** (README, schéma, documentation) : le circuit d'agent ne
-   les couvre pas — `limites.json` interdit les README et `docs/`, `juger.sh`
-   attend un script et son fichier de cas. L'orchestrateur les fait lui-même.
-3. **`juger.sh` ne lance pas l'acceptance** : les règles transverses de TASK-011
-   (directives justifiées, `ASSUME_YES`) échappent aux agents et au relecteur —
-   vu sur TASK-028, corrigé par TASK-038. À ajouter au juge, ou à `/tache`.
-4. **Durée de l'agent** : 2 728 s pour le premier jet de TASK-034, contre 315 s
-   pour TASK-033 ; cause non identifiée.
-5. **Coûts réels** estimés (≈ 0,25 $ pour TASK-033) ; à confirmer sur le tableau
-   de bord DeepSeek.
-6. **Parallélisme** : fermé jusqu'à trois tâches passées sans incident
-   (2 sur 3 : TASK-033, TASK-034).
-7. **`git push`** : groupé en fin de domaine Docker, rien n'est poussé depuis le
-   début de ces travaux.
-
-Éprouvé sur TASK-034 : la limite de 150 lignes (150 + 149 au premier jet) et le
-figement des tests levé par les retours de relecture.
+Aucune liste ici. Tout point ouvert de l'orchestration — comme tout défaut du
+dépôt — est une ligne du registre unique
+[TASK-039](../tasks/pending/TASK-039.md).

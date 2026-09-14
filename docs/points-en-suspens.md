@@ -1,7 +1,9 @@
 # Points en suspens
 
-Sujets identifiés pendant le développement et écartés pour ne pas interrompre la
-production des scripts. À traiter avant la fin du chantier.
+**Archive depuis le 2026-09-15.** Ce fichier garde le contexte détaillé des points
+soulevés jusque-là. Il ne reçoit plus aucun point : tout sujet ouvert est une ligne
+du registre unique [TASK-039](../tasks/pending/TASK-039.md), qui renvoie ici pour
+le détail.
 
 ---
 
@@ -298,7 +300,7 @@ d'ouvrir ou non un second cycle allégé.
 
 ---
 
-## 6. `LOG_DIR` n'est validé par personne
+## 6. `LOG_DIR` n'est validé par personne — versé dans TASK-039, A19
 
 **Soulevé le** 2026-09-02, pendant TASK-018, en recensant les substitutions de
 commande de `Linux/System`.
@@ -479,7 +481,7 @@ script poursuivi, code 0 — ce qui borne le périmètre à la forme `var="$(…
 
 ---
 
-## 9. `--privileged` sur le profil de conteneur `systemd`
+## 9. `--privileged` sur le profil de conteneur `systemd` — versé dans TASK-039, A13
 
 **Soulevé le** 2026-09-03, pendant TASK-020, par le relecteur.
 
@@ -511,7 +513,7 @@ profil `debian` ne demande aucun privilège particulier.
 
 ---
 
-## 10. `df` se fige sur un montage réseau injoignable
+## 10. `df` se fige sur un montage réseau injoignable — versé dans TASK-039, A25 et A13
 
 **Soulevé le** 2026-09-03, pendant TASK-021, qui l'excluait nommément de son
 périmètre.
@@ -562,7 +564,7 @@ borne à réviser, et non une panne du démon.
 
 ---
 
-## 11. Docker Desktop tombé bloque tout, et rien ne peut le relever
+## 11. Docker Desktop tombé bloque tout, et rien ne peut le relever — versé dans TASK-039, A11
 
 **Soulevé le** 2026-09-04, pendant TASK-027.
 
@@ -615,7 +617,7 @@ toute tâche dont l'`environment` n'est pas `host`.
 
 ---
 
-## 12. La septième issue de `check-services.sh` est documentée mais non éprouvée
+## 12. La septième issue de `check-services.sh` est documentée mais non éprouvée — versé dans TASK-039, A31
 
 **Soulevé le** 2026-09-08, pendant TASK-023, par le relecteur.
 
@@ -658,7 +660,7 @@ le décompte des non-exécutés, au lieu de reposer sur un commentaire.
 
 ---
 
-## 13. `recensement-substitutions.md` ignore les trois diagnostics récents
+## 13. `recensement-substitutions.md` ignore les trois diagnostics récents — versé dans TASK-039, A36
 
 **Soulevé le** 2026-09-08, pendant TASK-023, par le rédacteur puis par le
 relecteur.
@@ -691,7 +693,7 @@ l'introduit dans `Linux/System/README.md`.
 
 ---
 
-## 14. Le coût mécanique de la délégation : lectures entières et sorties brutes
+## 14. Le coût mécanique de la délégation : lectures entières et sorties brutes — reste ouvert versé dans TASK-039, A34
 
 **Soulevé le** 2026-09-08, au terme de TASK-023, par Maxime.
 **Partiellement traité le jour même** — voir « Ce qui a été fait » plus bas.

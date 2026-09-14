@@ -83,9 +83,16 @@ produits, commandes et codes réels, verdict. Format complet de `tasks/README.md
 
 ### Verser ce qui survit à la tâche
 
-Le contexte de cette conversation disparaîtra. Un piège ou un fait mesuré qui
-dépasse la tâche va dans le README du domaine, `docs/points-en-suspens.md`, une
-nouvelle tâche, ou un ADR si Maxime l'a tranché. Écris-le autoportant.
+Le contexte de cette conversation disparaîtra. **Tout défaut non corrigé** — réserve
+du rapport, remarque du relecteur laissée de côté, piège, point ouvert — devient
+une ligne du registre `tasks/pending/TASK-039.md`, avec le prochain `Axx` libre ;
+la réserve du rapport cite cet `Axx`. Nulle part ailleurs : ni README, ni
+`docs/points-en-suspens.md`. Un fait durable sur le fonctionnement d'un script va
+au README de son dossier ; une décision tranchée par `user`, dans
+`orchestration/decisions.md`. Écris-le autoportant.
+
+**Contrôle avant de clore** : chaque puce de la section « Réserves » du rapport
+porte un `Axx`, et chaque `Axx` cité existe dans le registre.
 
 ## 8. Clore
 

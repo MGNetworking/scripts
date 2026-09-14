@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-039**.
+Prochain identifiant libre : **TASK-040**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -49,7 +49,7 @@ de ce que cet ADR a tranché.
 | [TASK-025](pending/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
-| [TASK-038](pending/TASK-038.md) | Remettre l'acceptance TASK-011 au vert après les scripts Docker | `ready` | haute | — | conteneur `debian` | non |
+| [TASK-039](pending/TASK-039.md) | Tenir le registre unique des anomalies et les traiter | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -132,7 +132,7 @@ Opus, écrit seul les README et ce backlog, et fusionne. Coûts et défauts au
 |---|---|
 | TASK-024, TASK-033, TASK-034, TASK-035 | `deepseek` |
 | TASK-025, TASK-026, TASK-036, TASK-037 | `sonnet` |
-| TASK-038 | `orchestrateur` |
+| TASK-039 | `orchestrateur` |
 
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
 ni sa configuration n'apparaissent dans un script. `create-network.sh` prend le
@@ -144,13 +144,10 @@ est **abandonnée**, son préflight étant absorbé par `install-docker.sh` ; et
 `check-docker.sh` et `list-containers.sh`, qui couvrent leur contenu sans
 enfreindre la frontière de lecture seule de `Docker/Diagnostics/`.
 
-**[TASK-038](pending/TASK-038.md) passe devant elles**, comme TASK-028 avant elle (fermée le 2026-09-14). Elle n'appartient pas au
-chantier des scripts : c'est une dette d'une ligne, ouverte par TASK-021, qui
-rend **rouge la commande de référence du dépôt** — une directive `shellcheck`
-déposée sans la justification qu'exige le critère d'acceptation de TASK-011. Tant
-qu'elle n'est pas fermée, `tests/run.sh` sans argument sort en 1, et le prochain
-rapport de tâche qui citera cette commande devra répéter que le rouge n'est pas
-le sien.
+**[TASK-039](pending/TASK-039.md) passe devant elles.** C'est le registre unique des
+anomalies — orchestration, harnais, socle, scripts —, et sa ligne A01 rend
+aujourd'hui l'acceptance rouge sur `master`. Tout défaut ou point ouvert s'y inscrit,
+et nulle part ailleurs.
 
 ### Chemin critique
 
@@ -316,24 +313,10 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 
 ## 3. Entrées d'index — sujets transverses
 
-| Entrée | Source | Note |
-|---|---|---|
-| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [décisions](../orchestration/decisions.md) décision 15 : script de notification vers `ntfy` ou webhook. **Atomisée** : [TASK-024](pending/TASK-024.md) |
-| Profil de conteneur `systemd` | [décisions](../orchestration/decisions.md) | **tranché** par [décisions](../orchestration/decisions.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4. **Faite** le 2026-09-03 : [TASK-020](completed/TASK-020.md), [rapport](reports/TASK-020-report.md) |
-| Enchaînement de plusieurs tâches sans humain | [décisions](../orchestration/decisions.md) | **ouvert** par [décisions](../orchestration/decisions.md) décisions 1 à 4 : fusion et push par l'agent, ouverture des tâches déléguée, point d'étape par domaine |
-| Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | **autorisé en permanence** par [décisions](../orchestration/decisions.md) décision 5 : mode léger pour les scripts en lecture seule, relecteur obligatoire dès qu'un script écrit |
-| Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
-| Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011. Non traité par [TASK-012](completed/TASK-012.md), qui l'a laissé hors périmètre — le harnais a désormais le code 4 pour l'exprimer |
-| Les niveaux `unit` et `integration` gardent ~70 sauts non qualifiés | [TASK-013](reports/TASK-013-report.md) | ils n'affirment plus rien depuis TASK-013, mais leur nature n'est pas établie : le faux vert reste ouvert un étage plus bas |
-| `docker info` sans borne de temps dans trois fichiers de cas | [TASK-013](reports/TASK-013-report.md) | un Docker Desktop en cours de démarrage suspend l'appel — constaté, plus de dix minutes. Un fichier de cas peut suspendre le niveau indéfiniment |
-| Les scripts sont versionnés en `100644` | [TASK-009](reports/TASK-009-report.md) | **tranché** par [décisions](../orchestration/decisions.md) décision 11 : bit `+x` posé dans Git sur tous les `.sh` |
-| Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
-| `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | **tranché** par [décisions](../orchestration/decisions.md) décision 10 : le 1 est conservé — un privilège insuffisant est un échec d'exécution, pas une erreur d'usage. Aucun script modifié |
-| Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
-| Asymétrie `server.env` / `load_config` : deux chemins de chargement, deux contrats | [TASK-015](reports/TASK-015-report.md) | `lib/common.sh` charge `config/server.env` par un `source` nu, quand `load_config` exporte depuis decisions.md décision 7. Une variable de `server.env` n'atteint pas les processus fils, une de `docker.env` si — alors que `config/README.md` prescrit la même forme d'écriture aux deux. Sans conséquence aujourd'hui (tous les `SRV_*` sont lus par le script lui-même), mais c'est un piège pour la suite |
-| `set +a` n'est pas rétabli quand le `source` avorte le shell | [TASK-015](reports/TASK-015-report.md) | un `.env` référençant une variable non définie sous `set -u` tue le shell avant `set +a` : le piège `EXIT` s'exécute alors avec `allexport` armé. Le critère « rétabli même si le `source` échoue » tient pour les échecs qui rendent un code, pas pour ceux qui tuent le shell. Exposition limitée aux variables déclarées dans un handler de nettoyage |
-| Les liens entre tâches cassent à chaque changement de statut | reprise de TASK-002 | le répertoire fait partie du chemin : six liens rompus au seul passage de `blocked/` à `completed/`. À traiter par une convention de lien, ou par un contrôle automatique dans `tests/` |
-| `run-in-container.sh` : message de démon injoignable tronqué, et `--profil --dry-run` mal analysé | [TASK-002](reports/TASK-002-report.md) | deux défauts mineurs, relevés et non corrigés |
+Aucune liste ici. Les sujets transverses ouverts — dettes du harnais, du socle,
+de l'orchestration — sont les lignes du registre
+[TASK-039](pending/TASK-039.md). Les entrées tranchées qui figuraient dans ce
+tableau restent dans l'historique Git et dans [décisions](../orchestration/decisions.md).
 
 ---
 

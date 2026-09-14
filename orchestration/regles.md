@@ -164,6 +164,10 @@ instruction.
 `tasks/reports/TASK-XXX-report.md`, format de `tasks/README.md` §6. Faits observés
 seulement. Un rapport de blocage doit permettre de reprendre sans rejouer l'analyse.
 
+**Un seul registre des anomalies** : `tasks/pending/TASK-039.md`. Tout défaut non
+corrigé, toute réserve, tout point ouvert y devient une ligne `Axx`, que le rapport
+cite. Aucun autre fichier ne tient de liste de points ouverts.
+
 ## 18. Cycle de vie
 
 Statuts : `pending`, `ready`, `in_progress`, `validating`, `completed`, `blocked`,
