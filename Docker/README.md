@@ -34,6 +34,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 |---|---|---|---|
 | [`Installation/install-docker.sh`](Installation/install-docker.sh) | pose Engine, CLI, containerd, Buildx et Compose depuis les dépôts officiels | root | **oui** |
 | [`Configuration/configure-docker.sh`](Configuration/configure-docker.sh) | écrit `/etc/docker/daemon.json` : rotation des journaux de conteneurs, clés existantes conservées | root | **oui** |
+| [`Configuration/create-network.sh`](Configuration/create-network.sh) | crée un réseau Docker nommé, partageable par plusieurs projets Compose ; ne supprime jamais | root | **oui** |
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
 
 ## Ordre d'utilisation
@@ -44,6 +45,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 ./Docker/Installation/install-docker.sh --yes
 ./Docker/Configuration/configure-docker.sh --dry-run
 ./Docker/Configuration/configure-docker.sh --yes   # redémarre le démon si le fichier change
+./Docker/Configuration/create-network.sh proxy       # réseau externe partagé, idempotent
 ./Docker/Diagnostics/check-docker.sh          # et maintenant ?
 ```
 
