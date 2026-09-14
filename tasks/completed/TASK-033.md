@@ -1,7 +1,7 @@
 ---
 id: TASK-033
 title: "Écrire Docker/Diagnostics/list-containers.sh"
-status: ready
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

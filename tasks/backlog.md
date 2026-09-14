@@ -51,7 +51,7 @@ de ce que cet ADR a tranché.
 | [TASK-028](pending/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-033](pending/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-034](pending/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
@@ -361,6 +361,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | [rapport](reports/TASK-029-report.md) |
 | [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | [rapport](reports/TASK-030-report.md) |
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | [rapport](reports/TASK-032-report.md) |
+| [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | [rapport](reports/TASK-033-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |

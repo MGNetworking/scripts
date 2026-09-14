@@ -36,6 +36,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 | [`Configuration/configure-docker.sh`](Configuration/configure-docker.sh) | écrit `/etc/docker/daemon.json` : rotation des journaux de conteneurs, clés existantes conservées | root | **oui** |
 | [`Configuration/create-network.sh`](Configuration/create-network.sh) | crée un réseau Docker nommé, partageable par plusieurs projets Compose ; ne supprime jamais | root | **oui** |
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
+| [`Diagnostics/list-containers.sh`](Diagnostics/list-containers.sh) | inventaire des conteneurs : nom, image, état, identifiant, ports, réseaux — actifs par défaut, tous avec `--all` | aucun | non |
 
 ## Ordre d'utilisation
 

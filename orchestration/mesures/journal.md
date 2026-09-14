@@ -10,6 +10,7 @@ une fois, l'arbitre termine si nécessaire.
 | TASK-029 `install-docker.sh` | modifie le système | Claude seul | 5/5 | 26 → 43 | 176 + 105 → 199 + 149 | — | 33 991 jetons | 7 défauts corrigés par Claude |
 | TASK-030 `configure-docker.sh` | modifie le système | `deepseek-flash` | 5/5 après rattrapage | 68 | 228 + 294 | 0,22 $ pointe | 35 960 jetons | 3 lignes, arbitre |
 | TASK-032 `create-network.sh` | modifie le système | Sonnet, sous-agent | 5/5 après correction | 36 | 148 + 147 | 270 602 jetons | 30 729 jetons | aucun |
+| TASK-033 `list-containers.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 57 | 364 + 252 → 168 + 219 | ≈ 0,25 $ pointe, 2 lancements | 45 011 jetons | relance agent, 2 majeurs corrigés |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.
@@ -197,3 +198,21 @@ chiffre exact tant que la répartition n'est pas relevée dans la console Anthro
   sous-agent qui lit lui-même les fichiers. Les jetons ne se comparent pas à
   structure égale.
 - **Répartition entrée/sortie inconnue** pour Claude.
+
+---
+
+## TASK-033 — agent `deepseek` dans Claude Code, 2026-09-14
+
+Premier passage dans le circuit d'orchestration (agents = Claude Code + modèle).
+
+| Lancement | Tours | Entrée | Cache relu | Sortie | Durée | Résultat |
+|---|---|---|---|---|---|---|
+| 1, premier jet | 35 | 90 450 | 2 690 944 | 61 000 | 315 s | juge PASSE, 364 + 252 lignes |
+| 2, retours de relecture | 52 | 77 978 | 4 533 760 | 64 615 | 564 s | juge PASSE, 168 + 219 lignes |
+
+- Qualité du premier jet comparable à TASK-030 : validations vertes, mais 2 majeurs
+  que seule la relecture Opus a vus (pas de `timeout`, test dépendant de l'image).
+- **Contrairement à TASK-030, la correction par DeepSeek n'a pas régressé** : en
+  mode agent, il relance lui-même le juge et corrige sur les lignes FAIL.
+- Le mode agent relit tout son contexte à chaque tour : 7,2 M de jetons en cache.
+  Au tarif du cache DeepSeek, cela reste le plus petit poste du coût.

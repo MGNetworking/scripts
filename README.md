@@ -40,6 +40,7 @@ cluster quelle que soit son origine.
 | [`Docker/Configuration/configure-docker.sh`](Docker/Configuration/configure-docker.sh) | configure la rotation des journaux des conteneurs dans `/etc/docker/daemon.json` |
 | [`Docker/Configuration/create-network.sh`](Docker/Configuration/create-network.sh) | crée un réseau Docker nommé, partagé entre projets Compose indépendants |
 | [`Docker/Diagnostics/check-docker.sh`](Docker/Diagnostics/check-docker.sh) | diagnostic d'un environnement Docker : client et plugins, socket, service, démon, stockage — en lecture seule |
+| [`Docker/Diagnostics/list-containers.sh`](Docker/Diagnostics/list-containers.sh) | inventaire des conteneurs — actifs, ou tous avec `--all` — en lecture seule |
 | [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
 | [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |
 
