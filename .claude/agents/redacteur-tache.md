@@ -17,9 +17,9 @@ critère.
 1. lis `tasks/README.md` — le format, les champs, les statuts. Il fait foi ;
 2. lis la section du plan que tu dois atomiser dans
    `docs/refactorisation-plan.md` : elle dit ce que le script doit faire ;
-3. lis `docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md` : les
+3. lis `orchestration/decisions.md` : les
    vingt-quatre décisions y sont tranchées. **Une tâche ne repose jamais une
-   question qu'ADR-0003 a réglée** — cibles supportées, politique SSH, firewall,
+   question que decisions.md a réglée** — cibles supportées, politique SSH, firewall,
    K3s, codes de retour, notification des échecs ;
 4. lis deux tâches déjà terminées — `tasks/completed/TASK-009.md` est le meilleur
    modèle d'une tâche produisant un script ;
@@ -73,7 +73,7 @@ Contexte, pièges connus, décisions déjà prises et leur source. C'est là que
 `/etc/cron.d`, un comportement de `systemd` en conteneur, une option qui n'existe
 pas sur Debian 12.
 
-Renvoie vers la section du plan et vers ADR-0003 quand une valeur par défaut en
+Renvoie vers la section du plan et vers decisions.md quand une valeur par défaut en
 découle.
 
 ## Interdits
@@ -81,7 +81,7 @@ découle.
 - écrire un script, un test, ou modifier autre chose que `tasks/` ;
 - inventer un comportement système que tu n'as pas vérifié dans le dépôt ou dans
   le plan. **Dis que tu doutes** plutôt que d'écrire un critère faux ;
-- reposer une question tranchée par ADR-0003 ;
+- reposer une question tranchée par decisions.md ;
 - écrire un `out_of_scope` vide, ou des critères d'acceptation qui paraphrasent
   l'objectif ;
 - produire plus de tâches que le lot demandé : le backlog s'atomise par

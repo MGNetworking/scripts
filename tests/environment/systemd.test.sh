@@ -8,7 +8,7 @@
 #   - configure-timezone.sh applique le fuseau PAR TIMEDATECTL, et non par son
 #     repli /etc/localtime. Le niveau « integration » n'éprouve que le repli,
 #     faute d'init : c'est le cas déclaré NON EXÉCUTÉ dans
-#     tests/integration/linux-system.test.sh §5 depuis ADR-0001 ;
+#     tests/integration/linux-system.test.sh §5 depuis decisions.md ;
 #   - configure-hostname.sh change RÉELLEMENT le nom de la machine, par
 #     hostname(1) — l'autre cas §5 du même fichier, que le profil debian
 #     laissait hors de portée faute de CAP_SYS_ADMIN.

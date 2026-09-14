@@ -150,7 +150,7 @@ et le **stub sélectif**, qui ne refuse qu'une invocation précise, sans quoi le
 second site d'une fonction reste hors d'atteinte.
 
 Aucune installation réelle, aucun accès à un miroir `apt` réel, aucun appel à un
-registre : [AGENTS.md](../../AGENTS.md) §8 borne ce que l'agent lance.
+registre : [regles.md](../../orchestration/regles.md) §8 borne ce que l'agent lance.
 
 `lib/common.sh` charge `config/server.env`, lequel peut redéfinir `PATH` : le
 fichier de cas ne doit pas supposer que son `PATH` survit intact.
@@ -183,7 +183,7 @@ rafraîchit.
 ## Pourquoi `container-systemd`, et ce qu'on n'y lance pas
 
 Le script interroge `systemctl` autour du redémarrage du démon ; la règle
-d'[AGENTS.md](../../AGENTS.md) §7 envoie donc cette tâche sur le profil
+de [regles.md](../../orchestration/regles.md) §7 envoie donc cette tâche sur le profil
 `systemd`.
 
 Deux limites du profil, à connaître avant d'écrire les validations :
@@ -244,7 +244,7 @@ installé que personne ne met à jour.
 
 Cibles supportées : Debian 12 et 13, Ubuntu 22.04 et 24.04 LTS, `apt` et
 `systemd` partout, aucune famille RHEL —
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+[décisions](../../orchestration/decisions.md)
 décision 14. La question ne se repose pas.
 
 ## Documentation

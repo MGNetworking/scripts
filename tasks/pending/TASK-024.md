@@ -21,7 +21,7 @@ out_of_scope:
   - toute modification de configure-cron.sh et de la ligne déposée dans /etc/cron.d/mgnetworking — voir « Articulation », tâche distincte
   - toute modification d'update-system.sh, de security-check.sh, de backup-resources.sh ou de docker-cleanup.sh
   - l'envoi d'un extrait de journal dans la notification
-  - le courriel, le MTA local et toute forme de notification par messagerie — écartés par ADR-0003 décision 15
+  - le courriel, le MTA local et toute forme de notification par messagerie — écartés par decisions.md décision 15
   - la notification d'un succès, d'un avertissement ou d'un seuil dépassé — ce script notifie un échec
   - un mécanisme de réessai, de file d'attente ou de dédoublonnage des alertes
   - l'ajout de curl à l'image de test — le fichier de cas emploie un faux curl en tête de PATH
@@ -46,10 +46,10 @@ validation:
   - "tests/env/run-in-container.sh -- bash Linux/System/notify-failure.sh --help"
   - "tests/env/run-in-container.sh -- bash Linux/System/notify-failure.sh --script update-system.sh --code 1 --dry-run"
 implementation_notes:
-  - ADR-0003 décision 15 a tranché le principe et la cible — ntfy ou webhook, URL dans un .env non versionné
-  - AGENTS.md §8 interdit à l'agent toute publication, webhook compris — l'interdiction porte sur ce que l'agent lance, pas sur ce que le script fera chez son utilisateur
-  - AGENTS.md §16 interdit de journaliser une variable dont le nom porte TOKEN, PASSWORD, SECRET, KEY ou CREDENTIAL — ici c'est l'URL elle-même qui est le secret, un sujet ntfy valant mot de passe
-  - load_config exporte depuis ADR-0003 décision 7 — les variables du contexte atteignent curl et tout autre processus fils
+  - decisions.md décision 15 a tranché le principe et la cible — ntfy ou webhook, URL dans un .env non versionné
+  - orchestration/regles.md §8 interdit à l'agent toute publication, webhook compris — l'interdiction porte sur ce que l'agent lance, pas sur ce que le script fera chez son utilisateur
+  - orchestration/regles.md §16 interdit de journaliser une variable dont le nom porte TOKEN, PASSWORD, SECRET, KEY ou CREDENTIAL — ici c'est l'URL elle-même qui est le secret, un sujet ntfy valant mot de passe
+  - load_config exporte depuis decisions.md décision 7 — les variables du contexte atteignent curl et tout autre processus fils
   - un en-tête passé en argument de curl est visible dans la table des processus — le dire dans le README plutôt que de le taire
   - --dry-run doit rester utilisable sans configuration, pour qu'on puisse lire ce qui serait émis avant d'écrire le .env
 ---
@@ -61,7 +61,7 @@ implementation_notes:
 Point n° 2 de [docs/points-en-suspens.md](../../docs/points-en-suspens.md),
 soulevé le 2026-08-26 comme conséquence directe du point 1, et **tranché le
 2026-09-02 par
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+[décisions](../../orchestration/decisions.md),
 décision 15** : un script de notification appelé en cas d'échec, émettant vers
 `ntfy` ou un webhook dont l'URL vit dans un `.env` non versionné.
 
@@ -114,7 +114,7 @@ dans une tâche qui aura le droit de toucher `configure-cron.sh`.
 
 Un sujet `ntfy` est une URL publique : qui la connaît peut lire et écrire les
 alertes du serveur. Elle vaut donc mot de passe, alors qu'aucun nom de variable
-ne contiendra `TOKEN` ni `SECRET` — la règle littérale d'`AGENTS.md` §16 ne la
+ne contiendra `TOKEN` ni `SECRET` — la règle littérale de `orchestration/regles.md` §16 ne la
 couvre pas, son intention si.
 
 Trois conséquences, toutes portées par les critères d'acceptation :
@@ -143,7 +143,7 @@ séparément, pas un confort qu'on ajoute au passage.
 Appelé par `cron` derrière un `||`, ce 1 laisse la sortie d'erreur remonter par
 le filet actuel : les deux mécanismes se complètent au lieu de se remplacer.
 
-Ces trois choix sont réversibles et locaux au sens d'`AGENTS.md` §14 ; ils sont
+Ces trois choix sont réversibles et locaux au sens de `orchestration/regles.md` §14 ; ils sont
 fixés ici pour ne pas être rediscutés pendant l'exécution, et à consigner dans le
 rapport.
 
@@ -158,16 +158,16 @@ partout — voir `tests/README.md`, « Les échecs qui ne sont pas fatals ». El
 permet en outre d'éprouver les trois issues d'émission — 2xx, réponse d'erreur,
 délai dépassé — sans le moindre paquet réseau.
 
-**Aucune émission réelle pendant les validations.** `AGENTS.md` §8 interdit à
+**Aucune émission réelle pendant les validations.** `orchestration/regles.md` §8 interdit à
 l'agent toute publication, webhook compris. Un `curl` vers une adresse réelle,
 même de test, sort du cadre. Le `--dry-run` et le faux `curl` couvrent tout.
 
 **Le fichier de cas ne doit pas écrire dans `config/`.** `config/*.env` hors
-`.example` est en zone interdite (`AGENTS.md` §5). Le contexte de test se crée
+`.example` est en zone interdite (`orchestration/regles.md` §5). Le contexte de test se crée
 ailleurs et se charge par `--config`, ou par un bac à sable comme le fait
 `tests/unit/common.test.sh` avec une copie de `lib/common.sh`.
 
-**`load_config` exporte** depuis ADR-0003 décision 7 : tout ce que
+**`load_config` exporte** depuis decisions.md décision 7 : tout ce que
 `config/notify.env` déclare est visible de `curl` et de tout processus fils. Une
 raison de plus pour n'y mettre que ce qui est nécessaire.
 

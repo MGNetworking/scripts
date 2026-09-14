@@ -153,7 +153,7 @@ C'est le même raisonnement que l'inventaire de `check-services.sh`, qui rend 0
 même lorsque des services sont en échec : un diagnostic rend compte, il ne juge
 pas.
 
-Ces quatre choix sont réversibles et locaux au sens d'[AGENTS.md](../../AGENTS.md)
+Ces quatre choix sont réversibles et locaux au sens de [regles.md](../../orchestration/regles.md)
 §14 ; ils sont fixés ici pour ne pas être rediscutés pendant l'exécution, et à
 consigner dans le rapport.
 
@@ -193,6 +193,6 @@ lui est étrangère.
 `Docker/README.md` est créé par le lot A (`install-docker.sh` et les trois
 autres). S'il n'existe pas encore quand cette tâche s'exécute, **la créer** :
 rôle du domaine, prérequis, systèmes supportés — Debian 12 et 13, Ubuntu 22.04
-et 24.04 LTS par [ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+et 24.04 LTS par [décisions](../../orchestration/decisions.md)
 décision 14 —, tableau des scripts, ordre d'utilisation et risques. Ne pas y
 documenter les scripts du lot A : y ajouter la seule ligne de celui-ci.

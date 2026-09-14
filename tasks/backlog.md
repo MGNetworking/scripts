@@ -13,7 +13,7 @@ entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 Prochain identifiant libre : **TASK-038**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
-[ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) fixe
+[décisions](../orchestration/decisions.md) fixe
 les vingt-quatre décisions qui l'encadrent — conduite du travail, contrat du
 socle, cibles, politique de sécurité. L'agent écrit ses tâches, les ouvre, les
 exécute, fusionne et pousse en fin de domaine. Il ne demande plus confirmation
@@ -60,7 +60,7 @@ de ce que cet ADR a tranché.
 | [TASK-037](pending/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `pending` | haute | 034 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
-fixé par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+fixé par [décisions](../orchestration/decisions.md)
 décision 16 : l'outillage d'abord, puis la lecture seule, puis ce qui modifie,
 puis le destructif. `human_approval_required: true` ne suspend plus l'exécution
 (décision 2) : il signale ce qui mérite une lecture attentive.
@@ -74,7 +74,7 @@ pour rendre possible.
 Restent **trois tâches** au domaine — TASK-024, TASK-025 et TASK-026 —, toutes
 `ready`, indépendantes entre elles, et toutes sur le profil `debian`. Ce sont
 celles qui écrivent sur le système : elles relèvent du **cycle complet**,
-relecteur obligatoire (ADR-0003, décision 5).
+relecteur obligatoire (decisions.md, décision 5).
 
 ---
 
@@ -82,7 +82,7 @@ relecteur obligatoire (ADR-0003, décision 5).
 le 2026-09-13 en deux lots, le domaine dépassant les sept scripts qu'un lot
 unique admet.
 
-Le domaine **passe devant `Linux/Security`**, que l'ADR-0003 décision 16 plaçait
+Le domaine **passe devant `Linux/Security`**, que decisions.md décision 16 plaçait
 avant lui. Décision de Maxime, prise le 2026-09-13 : le premier serveur à servir
 doit héberger une application conteneurisée derrière un reverse proxy, sans
 Kubernetes. L'ordre des domaines n'est pas abrogé, il est devancé une fois.
@@ -113,19 +113,19 @@ l'image. C'est la transposition du faux `curl` retenu par TASK-024.
 `Docker/README.md` unique — plan §13 — et le bloc « Architecture » du README
 racine.
 
-**[ADR-0004](../docs/agent/decisions/ADR-0004-sobriete.md) a changé la façon
-d'écrire, le 2026-09-13, pendant TASK-031** : un script vise 150 lignes, un
-fichier de cas aussi, un fichier de tâche 30, et l'agent écrit lui-même au lieu
-de déléguer à `redacteur-script` et `redacteur-tests`. Les huit fichiers de
+**La sobriété s'applique depuis le 2026-09-13**
+([décisions](../orchestration/decisions.md) 25, 26, 28) : un script vise 150
+lignes, un fichier de cas aussi, un fichier de tâche 30. Les huit fichiers de
 tâche Docker restants comptent de 190 à 295 lignes — ils restent justes et
 exécutables, mais ils ne servent pas de modèle de longueur.
 
-**[ADR-0006](../docs/agent/decisions/ADR-0006-agents-agnostiques.md) confie les
-tâches à des agents depuis le 2026-09-14.** Chaque fiche porte un champ `agent` :
-un profil de `docs/agent/profils/`, ou `orchestrateur`. L'agent — Claude Code
-piloté par le modèle du profil — écrit, teste et corrige dans sa propre copie du
-dépôt ; l'orchestrateur vérifie, fait relire par Opus, écrit seul les README et ce
-backlog, et fusionne. Coûts et défauts au [journal](../docs/agent/mesures/journal.md).
+**Les tâches sont confiées à des agents depuis le 2026-09-14**
+([orchestration/](../orchestration/README.md)). Chaque fiche porte un champ
+`agent` : un modèle externe de `orchestration/modeles/`, un modèle Claude, ou
+`orchestrateur`. L'agent — Claude Code piloté par ce modèle — écrit, teste et
+corrige dans sa propre copie du dépôt ; l'orchestrateur vérifie, fait relire par
+Opus, écrit seul les README et ce backlog, et fusionne. Coûts et défauts au
+[journal](../orchestration/mesures/journal.md).
 
 | Tâche | Agent |
 |---|---|
@@ -199,7 +199,7 @@ cinquantaine de scripts, dont huit écrits.
 | [TASK-008](cancelled/TASK-008.md) | Interface LLM | découplage multi-fournisseur abandonné |
 
 Annulées le 2026-08-28 par
-[ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md). Les
+[décisions](../orchestration/decisions.md). Les
 fichiers sont conservés : ils documentent ce qui a été délibérément écarté, et
 pourquoi.
 
@@ -317,19 +317,19 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 
 | Entrée | Source | Note |
 |---|---|---|
-| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 15 : script de notification vers `ntfy` ou webhook. **Atomisée** : [TASK-024](pending/TASK-024.md) |
-| Profil de conteneur `systemd` | [ADR-0001](../docs/agent/decisions/ADR-0001-socle-agentique.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4. **Faite** le 2026-09-03 : [TASK-020](completed/TASK-020.md), [rapport](reports/TASK-020-report.md) |
-| Enchaînement de plusieurs tâches sans humain | [ADR-0002](../docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | **ouvert** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décisions 1 à 4 : fusion et push par l'agent, ouverture des tâches déléguée, point d'étape par domaine |
-| Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | **autorisé en permanence** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 5 : mode léger pour les scripts en lecture seule, relecteur obligatoire dès qu'un script écrit |
+| Remontée des échecs des tâches planifiées | [points-en-suspens.md](../docs/points-en-suspens.md) §2 | **tranché** par [décisions](../orchestration/decisions.md) décision 15 : script de notification vers `ntfy` ou webhook. **Atomisée** : [TASK-024](pending/TASK-024.md) |
+| Profil de conteneur `systemd` | [décisions](../orchestration/decisions.md) | **tranché** par [décisions](../orchestration/decisions.md) décision 12 : construit **avant** les domaines. Débloque `configure-timezone.sh`, `configure-hostname.sh` et le niveau 4. **Faite** le 2026-09-03 : [TASK-020](completed/TASK-020.md), [rapport](reports/TASK-020-report.md) |
+| Enchaînement de plusieurs tâches sans humain | [décisions](../orchestration/decisions.md) | **ouvert** par [décisions](../orchestration/decisions.md) décisions 1 à 4 : fusion et push par l'agent, ouverture des tâches déléguée, point d'étape par domaine |
+| Ajustement des sous-agents | [TASK-010](completed/TASK-010.md) | **autorisé en permanence** par [décisions](../orchestration/decisions.md) décision 5 : mode léger pour les scripts en lecture seule, relecteur obligatoire dès qu'un script écrit |
 | Intégration continue | audit §5 | aucune CI aujourd'hui ; `tests/run.sh` en est le prérequis |
 | Angle mort de l'hôte : `tests/lint.sh` sort en 0 en annonçant NON EXÉCUTÉ | [TASK-002](reports/TASK-002-report.md) | un validateur lira 0 et conclura PASS — c'est ce qui a laissé passer la dette de TASK-011. Non traité par [TASK-012](completed/TASK-012.md), qui l'a laissé hors périmètre — le harnais a désormais le code 4 pour l'exprimer |
 | Les niveaux `unit` et `integration` gardent ~70 sauts non qualifiés | [TASK-013](reports/TASK-013-report.md) | ils n'affirment plus rien depuis TASK-013, mais leur nature n'est pas établie : le faux vert reste ouvert un étage plus bas |
 | `docker info` sans borne de temps dans trois fichiers de cas | [TASK-013](reports/TASK-013-report.md) | un Docker Desktop en cours de démarrage suspend l'appel — constaté, plus de dix minutes. Un fichier de cas peut suspendre le niveau indéfiniment |
-| Les scripts sont versionnés en `100644` | [TASK-009](reports/TASK-009-report.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 11 : bit `+x` posé dans Git sur tous les `.sh` |
+| Les scripts sont versionnés en `100644` | [TASK-009](reports/TASK-009-report.md) | **tranché** par [décisions](../orchestration/decisions.md) décision 11 : bit `+x` posé dans Git sur tous les `.sh` |
 | Le piège du commentaire commençant par `shellcheck` | [TASK-011](reports/TASK-011-report.md) | `tests/lint.sh` est protégé, rien ne protège les autres fichiers ; le testeur y est tombé deux fois |
-| `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | **tranché** par [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md) décision 10 : le 1 est conservé — un privilège insuffisant est un échec d'exécution, pas une erreur d'usage. Aucun script modifié |
+| `require_root` sort en 1, pas en 2 | [TASK-011](reports/TASK-011-report.md) | **tranché** par [décisions](../orchestration/decisions.md) décision 10 : le 1 est conservé — un privilège insuffisant est un échec d'exécution, pas une erreur d'usage. Aucun script modifié |
 | Branche morte dans `configure-logging.sh` | [TASK-011](reports/TASK-011-report.md) | le `[dry-run] Créerait $REPERTOIRE_LOGS` est inatteignable, `common.sh` ayant déjà créé le répertoire |
-| Asymétrie `server.env` / `load_config` : deux chemins de chargement, deux contrats | [TASK-015](reports/TASK-015-report.md) | `lib/common.sh` charge `config/server.env` par un `source` nu, quand `load_config` exporte depuis ADR-0003 décision 7. Une variable de `server.env` n'atteint pas les processus fils, une de `docker.env` si — alors que `config/README.md` prescrit la même forme d'écriture aux deux. Sans conséquence aujourd'hui (tous les `SRV_*` sont lus par le script lui-même), mais c'est un piège pour la suite |
+| Asymétrie `server.env` / `load_config` : deux chemins de chargement, deux contrats | [TASK-015](reports/TASK-015-report.md) | `lib/common.sh` charge `config/server.env` par un `source` nu, quand `load_config` exporte depuis decisions.md décision 7. Une variable de `server.env` n'atteint pas les processus fils, une de `docker.env` si — alors que `config/README.md` prescrit la même forme d'écriture aux deux. Sans conséquence aujourd'hui (tous les `SRV_*` sont lus par le script lui-même), mais c'est un piège pour la suite |
 | `set +a` n'est pas rétabli quand le `source` avorte le shell | [TASK-015](reports/TASK-015-report.md) | un `.env` référençant une variable non définie sous `set -u` tue le shell avant `set +a` : le piège `EXIT` s'exécute alors avec `allexport` armé. Le critère « rétabli même si le `source` échoue » tient pour les échecs qui rendent un code, pas pour ceux qui tuent le shell. Exposition limitée aux variables déclarées dans un handler de nettoyage |
 | Les liens entre tâches cassent à chaque changement de statut | reprise de TASK-002 | le répertoire fait partie du chemin : six liens rompus au seul passage de `blocked/` à `completed/`. À traiter par une convention de lien, ou par un contrôle automatique dans `tests/` |
 | `run-in-container.sh` : message de démon injoignable tronqué, et `--profil --dry-run` mal analysé | [TASK-002](reports/TASK-002-report.md) | deux défauts mineurs, relevés et non corrigés |

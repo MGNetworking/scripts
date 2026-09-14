@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# juger.sh — juge automatique d'une fiche (ADR-0006 décision 40).
+# juger.sh — juge automatique d'une fiche (orchestration/decisions.md, décision 40).
 #
 # Lance, dans le conteneur de test, shellcheck sur les .sh du périmètre de la
 # fiche, puis son fichier de cas. Aucun jeton.
@@ -8,7 +8,7 @@
 # Codes : 0 tout passe — 1 échec, lignes « FAIL » sur la sortie — 2 usage.
 set -Eeuo pipefail
 
-racine="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+racine="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 fiche="${1:-}"
 [ -f "$racine/$fiche" ] || { echo "Usage : juger.sh <fiche>" >&2; exit 2; }
 

@@ -20,7 +20,7 @@
 #
 # Un troisième plan a existé : le contrôle de forme du diff, qui vérifiait que
 # les corrections de TASK-011 n'avaient touché que ce qu'elles annonçaient. Il a
-# été retiré le 2026-09-02 (ADR-0003, décision 13). Les corrections étant
+# été retiré le 2026-09-02 (decisions.md, décision 13). Les corrections étant
 # commitées, « git diff HEAD » était vide sur un arbre propre : ses six contrôles
 # sortaient en NON EXÉCUTÉ à chaque exécution et n'en seraient jamais revenus.
 # Six sauts permanents finissent par être ignorés — c'est le bruit qui masque un

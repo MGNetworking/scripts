@@ -20,7 +20,7 @@
 #    Le code est recueilli par « || CODE=$? » : cette forme n'arme pas le trap
 #    ERR posé par common.sh, la commande n'étant pas la dernière d'une liste ||.
 #    Le « set -Eeuo pipefail » du harnais reste en place de bout en bout — le
-#    retirer pour faire passer un cas vaudrait échec de la tâche (AGENTS.md §12).
+#    retirer pour faire passer un cas vaudrait échec de la tâche (orchestration/regles.md §12).
 #
 #    Un sous-shell « ( source … ) » ne suffirait pas : il hérite de la variable
 #    _COMMON_SH_CHARGE du harnais, et la garde anti-double-chargement de
@@ -32,7 +32,7 @@
 #    enracine donc d'elle-même, ce qui permet :
 #
 #      - de créer des config/*.env jetables sans jamais écrire dans config/,
-#        qui est en zone interdite (AGENTS.md §5) ;
+#        qui est en zone interdite (orchestration/regles.md §5) ;
 #      - de neutraliser un éventuel config/server.env de la machine, que
 #        common.sh charge de lui-même et qui pourrait redéfinir LOG_DIR.
 #
@@ -49,7 +49,7 @@
 # Trois divergences relevées ici, tranchées et corrigées par TASK-015
 # ---------------------------------------------------------------------------
 #
-# Ce fichier épinglait le comportement d'AVANT. ADR-0003 — décisions 7, 8 et 9 —
+# Ce fichier épinglait le comportement d'AVANT. decisions.md — décisions 7, 8 et 9 —
 # a tranché, TASK-015 a corrigé le socle, et les assertions ont été RETOURNÉES
 # dans le même commit. Elles décrivent désormais le contrat effectif :
 #
@@ -539,7 +539,7 @@ assert_contient "$ERREUR" "[INFO] Configuration chargée : config/unitaire.env" 
 assert_contient "$JOURNAL" "Configuration chargée : config/unitaire.env" \
     "load_config consigne le chargement dans le journal"
 
-# ASSERTION RETOURNÉE (TASK-015, ADR-0003 décision 7). Elle affirmait
+# ASSERTION RETOURNÉE (TASK-015, decisions.md décision 7). Elle affirmait
 # « FILS_NUE=absente » : c'était le comportement d'avant le set -a. Le contrat
 # dit maintenant l'inverse, et c'est ce que ce cas prouve. Une mutation qui
 # retirerait le « set -a » de load_config fait rougir ici, et ici seulement.
@@ -1005,7 +1005,7 @@ fi
 # CHARGEMENT — LOG_FILE y reste vide et rien n'est jamais tenté. Ici, le journal
 # a été ouvert normalement puis disparaît : répertoire supprimé, disque plein,
 # droits modifiés. Avant TASK-015, le premier « info » qui suivait tuait le
-# script sous set -e. ADR-0003 décision 8 : un avertissement, UNE SEULE FOIS,
+# script sous set -e. decisions.md décision 8 : un avertissement, UNE SEULE FOIS,
 # puis on continue sans journal.
 titre "11. Journal inécrivable en cours d'exécution"
 
@@ -1105,7 +1105,7 @@ assert_contient "$ERREUR" "[INFO] seconde-mort" \
 # script appelant, y compris quand la faute venait du socle — « à la ligne 273
 # de extrait.sh » alors que la ligne 273 est celle de common.sh. $LINENO et le
 # nom du fichier désignaient deux unités différentes, et le diagnostic était
-# trompeur. ADR-0003 décision 9 : « ${BASH_SOURCE[0]} », évalué DANS la chaîne
+# trompeur. decisions.md décision 9 : « ${BASH_SOURCE[0]} », évalué DANS la chaîne
 # du trap.
 #
 # Les deux sens sont éprouvés. Un seul ne suffirait pas : une correction qui se

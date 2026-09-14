@@ -1,15 +1,15 @@
 ---
-description: Orchestre une tâche du backlog — lancer l'agent, vérifier, relire, fusionner (ADR-0006)
+description: Orchestre une tâche du backlog — lancer l'agent, vérifier, relire, fusionner (orchestration/README.md)
 argument-hint: <TASK-XXX>
 ---
 
 Tu es l'**orchestrateur** de la tâche **$1**. Tu n'écris pas le script : un
-agent le fait (ADR-0006). Toi, tu prépares, tu lances, tu vérifies, tu relis et
+agent le fait (orchestration/README.md). Toi, tu prépares, tu lances, tu vérifies, tu relis et
 tu fusionnes. Suis les étapes dans l'ordre.
 
 ## 1. Charger le contexte
 
-- lis `AGENTS.md` et la fiche `$1` dans `tasks/pending/` ou `tasks/blocked/` ;
+- lis `orchestration/regles.md` et la fiche `$1` dans `tasks/pending/` ou `tasks/blocked/` ;
 - si elle n'existe pas : arrête-toi et dis-le.
 
 ## 2. Vérifier qu'elle est exécutable
@@ -22,9 +22,9 @@ Refuse et explique pourquoi si :
   une analyse statique ;
 - l'arbre Git de `master` n'est pas propre. Ne remise rien : signale.
 
-**Le champ `agent`** désigne un profil de `docs/agent/profils/` (`deepseek`), un modèle
+**Le champ `agent`** désigne un modèle externe de `orchestration/modeles/` (`deepseek`), un modèle
 Claude (`sonnet`, `opus`, `haiku`) ou `orchestrateur`. Fiche sans ce champ : choisis, écris-le dans la
-fiche, annonce-le. `human_approval_required: true` ne bloque pas (ADR-0003
+fiche, annonce-le. `human_approval_required: true` ne bloque pas (decisions.md
 décision 2).
 
 ## 3. Activer
@@ -35,7 +35,7 @@ puis `git commit -m "chore: $1 en cours"`. L'agent la lira dans sa copie.
 ## 4. Lancer l'agent
 
 ```bash
-bash docs/agent/outils/lancer-agent.sh <agent> $1
+bash orchestration/outils/lancer-agent.sh <agent> $1
 ```
 
 En **arrière-plan** (`run_in_background`) : tu es notifié à la fin, ne sonde pas.
@@ -49,7 +49,7 @@ corrige 3 fois au plus, commite, et rend une ligne `VERDICT`.
 
 Dans la copie `../script-agents/$1` :
 
-1. `bash docs/agent/outils/juger.sh tasks/active/$1.md` — tu relances toi-même ;
+1. `bash orchestration/outils/juger.sh tasks/active/$1.md` — tu relances toi-même ;
 2. **périmètre** : `git diff --name-only master...agent/$1` ne contient que des
    fichiers du `scope` ;
 3. **tests figés** : `git diff <premier jet>..agent/$1 -- tests/` est vide, le
@@ -73,7 +73,7 @@ Si un défaut touche `lib/common.sh` : ne le corrige pas, consigne-le et bloque.
 
 ## 7. Rendre compte
 
-`tasks/reports/$1-report.md`, court par défaut (ADR-0003 décision 6) : fichiers
+`tasks/reports/$1-report.md`, court par défaut (decisions.md décision 6) : fichiers
 produits, commandes et codes réels, verdict. Format complet de `tasks/README.md`
 §6 dès qu'il y a eu blocage, relance ou défaut. **Faits observés seulement.**
 
@@ -92,8 +92,8 @@ nouvelle tâche, ou un ADR si Maxime l'a tranché. Écris-le autoportant.
 2. fiche vers `tasks/completed/`, `status: completed` ;
 3. ligne du script dans le `README.md` du domaine et celui de la racine ;
 4. `tasks/backlog.md` : statut, section « Terminé », tâches débloquées en `ready` ;
-5. ligne au journal `docs/agent/mesures/journal.md` : agent, modèle, passages,
-   jetons (`docs/agent/mesures/agents.tsv`), jetons de relecture, défauts ;
+5. ligne au journal `orchestration/mesures/journal.md` : agent, modèle, passages,
+   jetons (`orchestration/mesures/agents.tsv`), jetons de relecture, défauts ;
 6. `git commit` avec la ligne `Tâche : $1`.
 
 **Tâche `blocked`** : fiche vers `tasks/blocked/` avec `blocked_reason`, rapport,
@@ -105,7 +105,7 @@ ni de `push --force`. `git status` final.
 ## 9. Résumer et enchaîner
 
 Quelques lignes : fait, prouvé, en suspens, prochaine tâche prête. S'il en reste
-une `ready` **du même domaine**, reprends à l'étape 1 sans demander (ADR-0003
+une `ready` **du même domaine**, reprends à l'étape 1 sans demander (decisions.md
 décision 4). Rappelle à Maxime qu'il peut taper `/clear` : tout est écrit.
 
 Domaine achevé : `git push origin master` et point d'étape court.
@@ -114,5 +114,5 @@ Domaine achevé : `git push origin master` et point d'étape court.
 
 **En cas de blocage**, présente : pourquoi, ce qui a été tenté, ce qui bloque,
 la décision attendue et les conséquences de chaque option — une question à
-laquelle Maxime répond en une phrase. Vérifie d'abord qu'ADR-0003 ne l'a pas
+laquelle Maxime répond en une phrase. Vérifie d'abord que decisions.md ne l'a pas
 déjà tranchée.

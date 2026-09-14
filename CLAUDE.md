@@ -4,11 +4,11 @@ Bibliothèque personnelle de scripts d'administration, d'installation, de
 configuration et de maintenance d'infrastructure Linux / K3s / Kubernetes /
 Docker / Synology.
 
-**Contrat de l'agent :** [AGENTS.md](AGENTS.md)
-Cycle de travail d'un agent automatique : périmètre de modification, commandes
-autorisées, règles Git et de validation, limites, conditions d'arrêt. Ce
-document-ci dit *comment écrire un script* ; `AGENTS.md` dit *comment conduire
-une tâche*. Backlog exécutable dans [tasks/](tasks/README.md).
+**Orchestration des agents :** [orchestration/](orchestration/README.md)
+Fonctionnement des agents IA, règles de travail ([regles.md](orchestration/regles.md) :
+périmètre, commandes, Git, validation, arrêt) et décisions en vigueur. Ce
+document-ci dit *comment écrire un script* ; `orchestration/regles.md` dit
+*comment conduire une tâche*. Backlog exécutable dans [tasks/](tasks/README.md).
 
 **Socle technique :** [docs/architecture-technique.md](docs/architecture-technique.md)
 Chargement de `lib/common.sh`, configurations de contexte, journalisation,

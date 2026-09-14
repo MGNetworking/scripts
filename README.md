@@ -87,21 +87,17 @@ Le dépôt se dote d'une couche permettant à un agent automatique de reprendre 
 chantier : lire le backlog, écrire un script, le valider dans un conteneur
 jetable, rendre compte.
 
-**Pour s'en servir :** [docs/agent/mode-emploi.md](docs/agent/mode-emploi.md).
+**Pour s'en servir :** [orchestration/README.md](orchestration/README.md).
 Deux commandes suffisent — `/backlog` pour le point de situation, `/tache
-TASK-xxx` pour exécuter une tâche de bout en bout.
+TASK-xxx` pour faire exécuter une tâche par l'agent désigné dans sa fiche.
 
 | Fichier | Rôle |
 |---|---|
-| [docs/agent/mode-emploi.md](docs/agent/mode-emploi.md) | **comment utiliser tout ceci au quotidien** |
-| [docs/agent/comprendre-agent.md](docs/agent/comprendre-agent.md) | comment ça fonctionne, et pourquoi c'est bâti ainsi |
-| [AGENTS.md](AGENTS.md) | contrat de travail : périmètre, commandes, Git, validation, arrêt |
+| [orchestration/](orchestration/README.md) | **fonctionnement des agents**, règles, décisions, modèles, outils, mesures |
 | [tasks/](tasks/README.md) | backlog exécutable, une tâche par fichier |
 | [tests/](tests/README.md) | validations — analyse statique, tests unitaires et d'intégration |
-| [docs/agent/project-audit.md](docs/agent/project-audit.md) | audit du dépôt |
-| [docs/agent/decisions/](docs/agent/decisions/ADR-0002-claude-code-comme-moteur.md) | décisions d'architecture et leurs raisons |
-| `.claude/agents/` | les trois rôles délégués : rédacteur de script, rédacteur de tests, relecteur |
-| `.claude/commands/` | `/tache <ID>` exécute une tâche de bout en bout, `/backlog` fait le point |
+| `.claude/commands/` | `/tache <ID>` orchestre une tâche, `/executer-tache` est la consigne de l'agent, `/backlog` fait le point |
+| `.claude/agents/` | sous-agents `relecteur` et `redacteur-tache` |
 
 Le moteur est Claude Code — aucun programme d'orchestration n'est écrit. Les
 règles, le backlog et les preuves appartiennent au dépôt ; `.claude/` ne décrit

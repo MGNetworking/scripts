@@ -58,7 +58,7 @@ implementation_notes:
   - bridge, host et none sont les réseaux prédéfinis du démon ; Docker refuse de les supprimer, mais les afficher comme candidats serait déjà une faute d'affichage
   - ASSUME_YES est la variable lue par confirm() dans lib/common.sh ; update-system.sh l'exporte depuis -y|--yes
   - enable_full_logging capture tout le script, run_logged capture la sortie d'une commande externe — l'un des deux est nécessaire pour que le récapitulatif atterrisse dans le journal
-  - load_config exporte depuis ADR-0003 décision 7 ; la variable des réseaux protégés vit dans config/server.env, chargé de lui-même par lib/common.sh
+  - load_config exporte depuis decisions.md décision 7 ; la variable des réseaux protégés vit dans config/server.env, chargé de lui-même par lib/common.sh
   - ne jamais écrire var="$(docker …)" en affectation nue — voir Linux/System/recensement-substitutions.md
 ---
 
@@ -212,7 +212,7 @@ pas un hasard »).
 Attention enfin à `PATH` : `lib/common.sh` charge `config/server.env`, lequel
 peut le redéfinir. Et le fichier de cas **n'écrit jamais dans `config/`** —
 `config/*.env` hors `.example` est en zone interdite
-([AGENTS.md](../../AGENTS.md) §5) ; le contexte d'essai se crée ailleurs, comme
+([regles.md](../../orchestration/regles.md) §5) ; le contexte d'essai se crée ailleurs, comme
 le fait `tests/unit/common.test.sh` avec sa copie de `lib/common.sh`.
 
 ## Décision : `--dry-run` reste lisible sans démon
@@ -231,7 +231,7 @@ l'espace récupérable manquant.
 
 ## Ce que cette tâche ne branche pas
 
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+[décisions](../../orchestration/decisions.md)
 décision 15 nomme `docker-cleanup.sh` parmi les **quatre appelants de
 `notify-failure.sh`**, avec `update-system.sh`, `security-check.sh` et
 `backup-resources.sh`.
@@ -282,7 +282,7 @@ script affiche avant de supprimer, et la règle d'affichage de l'espace
 récupérable manquant. Ne pas démarrer avant qu'elle soit `completed`.
 
 Cibles supportées : Debian 12 et 13, Ubuntu 22.04 et 24.04 LTS —
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+[décisions](../../orchestration/decisions.md)
 décision 14. La question ne se repose pas.
 
 ## Documentation

@@ -695,7 +695,7 @@ suppression d'une ressource en cours d'utilisation.
 **Les volumes sont exclus par défaut.** Ils portent les données ; un nettoyage
 général ne les emporte jamais sans une intention explicitement exprimée.
 
-Nommé ainsi par [ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+Nommé ainsi par [décisions](../orchestration/decisions.md)
 décision 15, qui en fait l'un des appelants de `notify-failure.sh`.
 
 ### `cleanup-images.sh`

@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash docs/agent/outils/juger.sh:*)",
+      "Bash(bash orchestration/outils/juger.sh:*)",
       "Bash(bash tests/env/run-in-container.sh:*)",
       "Bash(bash -n:*)",
       "Bash(git add:*)",
@@ -14,7 +14,7 @@
       "Read(config/*.env)",
       "Read(**/.env)",
       "Edit(CLAUDE.md)",
-      "Edit(AGENTS.md)",
+      "Edit(orchestration/**)",
       "Edit(lib/**)",
       "Edit(config/*.env)",
       "Edit(tasks/**)",

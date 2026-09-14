@@ -12,7 +12,7 @@ fichiers de tâche exécutables.
 
 - lis `docs/refactorisation-plan.md` pour la section visée ;
 - lis `tasks/backlog.md` §2 pour les entrées d'index correspondantes ;
-- lis `docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md` : il a
+- lis `orchestration/decisions.md` : il a
   tranché les cibles, la politique de sécurité, les codes de retour et la
   notification des échecs. Rien de tout cela ne se redemande ;
 - constate ce qui existe déjà dans le domaine : un script présent ne se réécrit
@@ -23,7 +23,7 @@ de sept scripts, découpe-le et annonce le découpage.
 
 ## 2. Ordonner
 
-Au sein du domaine — ADR-0003, décision 16 :
+Au sein du domaine — decisions.md, décision 16 :
 
 ```text
 lecture seule  →  modifie le système  →  destructif
@@ -57,7 +57,7 @@ après.
 
 ## 5. Ouvrir
 
-ADR-0003, décision 3 : l'ouverture t'est déléguée.
+decisions.md, décision 3 : l'ouverture t'est déléguée.
 
 - passe en `ready` les tâches dont le périmètre et les validations tiennent
   debout et dont les dépendances sont satisfaites ;

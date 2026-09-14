@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# lancer-agent.sh — fait exécuter une tâche par un agent (ADR-0006).
+# lancer-agent.sh — fait exécuter une tâche par un agent (orchestration/README.md).
 #
 # L'agent est une instance de Claude Code, sans interface, pilotée par le modèle
-# de son profil (docs/agent/profils/<profil>.env), ou par un modèle Claude
+# externe décrit dans orchestration/modeles/<nom>.env, ou par un modèle Claude
 # (sonnet, opus, haiku) sur l'abonnement. Il travaille dans une copie
 # séparée du dépôt (git worktree) sur la branche agent/<TASK>, et n'y fait que
-# ce que permet docs/agent/profils/agent-settings.json.
+# ce que permet orchestration/limites.json.
 #
 # Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]
 #   Le fichier de retours, facultatif, porte les défauts relevés par la
@@ -14,11 +14,11 @@
 set -Eeuo pipefail
 
 ici="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-racine="$(cd "$ici/../../.." && pwd)"
+racine="$(cd "$ici/../.." && pwd)"
 profil="${1:-}" tache="${2:-}" retours="${3:-}"
 
 usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]" >&2; exit 2; }
-case "$profil" in sonnet|opus|haiku) ;; *) [ -f "$ici/../profils/$profil.env" ] || usage ;; esac
+case "$profil" in sonnet|opus|haiku) ;; *) [ -f "$ici/../modeles/$profil.env" ] || usage ;; esac
 [[ "$tache" =~ ^TASK-[0-9]{3}$ ]] || usage
 [ -f "$racine/tasks/active/$tache.md" ] || { echo "tasks/active/$tache.md absent : l'orchestrateur active la fiche avant." >&2; exit 2; }
 if [ -n "$retours" ] && [ ! -f "$retours" ]; then
@@ -29,10 +29,10 @@ command -v claude >/dev/null || { echo "claude introuvable dans le PATH." >&2; e
 # Un modèle Claude passe par l'abonnement, sans profil. Un autre modèle a son
 # profil, qui ne définit que trois variables ; lu ligne à ligne, jamais exécuté.
 ADRESSE="" MODELE="$profil" VARIABLE_CLE=""
-if [ -f "$ici/../profils/$profil.env" ]; then
+if [ -f "$ici/../modeles/$profil.env" ]; then
     while IFS='=' read -r cle valeur; do
         case "$cle" in ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;; esac
-    done < "$ici/../profils/$profil.env"
+    done < "$ici/../modeles/$profil.env"
 fi
 [ -n "$MODELE" ] || { echo "Profil $profil : MODELE vide." >&2; exit 2; }
 
@@ -68,7 +68,7 @@ code=0
 sortie="$(cd "$copie" && "${env_agent[@]}" claude -p "$consigne" \
     --model "$MODELE" \
     --setting-sources project \
-    --settings "$ici/../profils/agent-settings.json" \
+    --settings "$ici/../limites.json" \
     --strict-mcp-config \
     --permission-mode acceptEdits \
     --output-format json)" || code=$?
@@ -76,7 +76,7 @@ rm -f "$copie/RETOURS-$tache.md"
 
 # Relevé : une ligne par lancement. Le coût se calcule au tarif du profil,
 # pas au total_cost_usd de Claude Code, qui applique les prix Anthropic.
-journal="$racine/docs/agent/mesures/agents.tsv"
+journal="$racine/orchestration/mesures/agents.tsv"
 [ -f "$journal" ] || printf 'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\n' > "$journal"
 node -e '
     const [sortie, ...champs] = process.argv.slice(1);

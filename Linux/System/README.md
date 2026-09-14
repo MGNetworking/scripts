@@ -200,7 +200,7 @@ Quatre traits de cette ligne ne sont pas négociables :
   enregistrés dans Git en `100644`, si bien qu'après un `git clone` un appel
   direct rendait `126` à chaque passage, sans que rien ne le signale. Ils sont
   en `100755` depuis le 2026-09-02
-  ([ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+  ([décisions](../../orchestration/decisions.md),
   décision 11) — `git ls-files -s Linux/System/` le montre. La ligne reste
   passée par `bash` : elle demeure ainsi correcte sur un dépôt déployé autrement
   qu'en clonant, par copie ou par archive, où le bit peut se perdre ;
@@ -406,7 +406,7 @@ n'existe pas : l'inexistence est un constat du système, elle vaut 1.
 L'absence de `systemctl` rend **1**, avec un message qui nomme la dépendance :
 la ligne de commande était juste, c'est la machine qui n'a pas ce qu'il faut.
 Aucune distribution n'est exigée — ce qui compte est la présence de systemd, que
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+[décisions](../../orchestration/decisions.md)
 décision 14 pose partout, sans repli sur SysV ni OpenRC.
 
 **La liste des services en échec n'est pas un état de santé complet du serveur.**

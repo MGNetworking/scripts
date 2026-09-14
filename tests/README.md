@@ -82,13 +82,13 @@ réellement l'UID est retenu. Si aucun n'y parvient, les cas concernés sont
 déclarés `NON EXÉCUTÉ`, jamais réussis.
 
 Le `set -Eeuo pipefail` du harnais reste en place de bout en bout. Le retirer
-pour faire passer un cas vaudrait échec de la tâche — [AGENTS.md](../AGENTS.md)
+pour faire passer un cas vaudrait échec de la tâche — [regles.md](../orchestration/regles.md)
 §12.
 
 #### Trois écarts relevés ici, tranchés et corrigés
 
 Ces trois écarts entre l'énoncé et le socle avaient été **mesurés sans être
-corrigés** : `lib/common.sh` est en zone protégée. [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+corrigés** : `lib/common.sh` est en zone protégée. [décisions](../orchestration/decisions.md)
 les a tranchés — décisions 7, 8 et 9 — et TASK-015 a corrigé le socle. Les
 assertions qui épinglaient l'ancien comportement ont été **retournées dans le
 même commit** ; `common.test.sh` décrit désormais le contrat effectif.
@@ -733,7 +733,7 @@ d'être connues, parce qu'elles ne vont pas de soi :
   **installable mais non installé faute de réseau** est une *indisponibilité* :
   là, l'environnement a échoué ;
 - les six contrôles de forme du diff de TASK-011 ont été **retirés** le
-  2026-09-02 ([ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+  2026-09-02 ([décisions](../orchestration/decisions.md),
   décision 13). Ils avaient été comptés *non applicables par nature* dès lors que
   les corrections étaient commitées : sur un arbre propre, `git diff HEAD` ne
   produit rien, et l'objet de la comparaison avait disparu. Le saut était
@@ -770,7 +770,7 @@ Le code **3** reste délibérément distinct de 0 et de 1. Sans lui,
 les tests unitaires passent, alors qu'aucun n'existe. « Rien à exécuter » n'est
 pas « tout va bien ».
 
-C'est la traduction en code de retour de la règle d'[AGENTS.md](../AGENTS.md)
+C'est la traduction en code de retour de la règle de [regles.md](../orchestration/regles.md)
 §10 : une validation non exécutée vaut `NON EXÉCUTÉ`, jamais `PASS`.
 
 Le 3 et le 4 de `tests/env/run-in-container.sh` (§4) relèvent d'un autre
@@ -1305,7 +1305,7 @@ justification dans le `Dockerfile`.
 ### Nommage et nettoyage
 
 Images et conteneurs sont préfixés `mgnet-test-`, sans exception :
-[AGENTS.md](../AGENTS.md) §8 n'autorise les commandes Docker de l'agent que sur
+[regles.md](../orchestration/regles.md) §8 n'autorise les commandes Docker de l'agent que sur
 ce préfixe. L'image est `mgnet-test-<profil>:latest`, le conteneur
 `mgnet-test-<profil>-<pid>-<horodatage>`.
 
@@ -1354,7 +1354,7 @@ Trois règles propres aux tests :
    réutilisé entre deux exécutions invalide le résultat ;
 3. **on ne corrige jamais un test pour le faire passer.** Neutraliser une
    assertion, ajouter `|| true` ou retirer `set -e` vaut échec de la tâche —
-   voir [AGENTS.md](../AGENTS.md) §12.
+   voir [regles.md](../orchestration/regles.md) §12.
 
 ### `tests/lib/assert.sh`
 
