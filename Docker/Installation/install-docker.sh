@@ -16,7 +16,7 @@ LISTE="/etc/apt/sources.list.d/docker.list"
 PAQUETS="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 CONFLITS="docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc"
 MIN_DISQUE_MO=2048
-MIN_MEMOIRE_MO=1024
+MIN_MEMOIRE_MO=512
 
 usage() {
     cat <<'EOF'
@@ -72,6 +72,15 @@ case "$OS_ARCH" in
     *) die "Architecture non supportée : $OS_ARCH (attendu : x86_64 ou aarch64)" ;;
 esac
 
+# 3.10 est le minimum historique de Docker Engine. Toutes les cibles supportées
+# sont très au-delà : le contrôle attrape l'accident, il ne dimensionne rien.
+NOYAU="$(uname -r)"
+IFS=. read -r NOYAU_MAJ NOYAU_MIN _ <<<"$NOYAU"
+NOYAU_MAJ="${NOYAU_MAJ%%[!0-9]*}"; NOYAU_MIN="${NOYAU_MIN%%[!0-9]*}"
+if [ "${NOYAU_MAJ:-0}" -lt 3 ] || { [ "${NOYAU_MAJ:-0}" -eq 3 ] && [ "${NOYAU_MIN:-0}" -lt 10 ]; }; then
+    die "Noyau $NOYAU trop ancien : Docker Engine exige au moins 3.10."
+fi
+
 # VERSION_CODENAME est lu sur la machine : aucun nom de code n'est écrit en dur,
 # sans quoi le script mentirait au premier Debian suivant.
 CODENAME="$( . /etc/os-release && echo "${VERSION_CODENAME:-}" )"
@@ -89,14 +98,16 @@ fi
 
 # --- Ressources -----------------------------------------------------------
 DISQUE_MO="$(df -Pm /var 2>/dev/null | awk 'NR==2 {print $4}')"
-if [ -n "${DISQUE_MO:-}" ] && [ "$DISQUE_MO" -lt "$MIN_DISQUE_MO" ]; then
+if [ -z "${DISQUE_MO:-}" ]; then
+    warn "Espace libre sous /var illisible : le contrôle du disque n'a pas été fait."
+elif [ "$DISQUE_MO" -lt "$MIN_DISQUE_MO" ]; then
     die "Espace insuffisant sous /var : ${DISQUE_MO} Mo libres, ${MIN_DISQUE_MO} Mo requis."
 fi
 MEMOIRE_MO="$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo "")"
 if [ -n "$MEMOIRE_MO" ] && [ "$MEMOIRE_MO" -lt "$MIN_MEMOIRE_MO" ]; then
     warn "Mémoire totale de ${MEMOIRE_MO} Mo : Docker fonctionnera, les compilations d'images souffriront."
 fi
-info "Noyau $(uname -r), ${DISQUE_MO:-?} Mo libres sous /var, ${MEMOIRE_MO:-?} Mo de mémoire."
+info "Noyau $NOYAU, ${DISQUE_MO:-?} Mo libres sous /var, ${MEMOIRE_MO:-?} Mo de mémoire."
 
 # --- Paquets conflictuels -------------------------------------------------
 # dpkg -l tronque les noms dans ses colonnes : on interroge paquet par paquet.
@@ -123,6 +134,9 @@ if [ "$DRY_RUN" = "true" ]; then
     exit 0
 fi
 
+# Avant le premier apt-get, retrait des conflits compris.
+export DEBIAN_FRONTEND=noninteractive
+
 if [ -n "$TROUVES" ]; then
     warn "Des paquets en conflit avec Docker officiel sont installés :${TROUVES}"
     [ -t 0 ] || [ "${ASSUME_YES:-false}" = "true" ] \
@@ -138,21 +152,30 @@ fi
 confirm "Installer Docker depuis $DEPOT ?" || die "Installation abandonnée."
 
 # --- Dépôt officiel -------------------------------------------------------
-export DEBIAN_FRONTEND=noninteractive
 run_logged apt-get update
 run_logged apt-get install -y ca-certificates curl
 
 install -m 0755 -d /etc/apt/keyrings
-run_logged curl -fsSL "$DEPOT/gpg" -o "$KEYRING"
-chmod a+r "$KEYRING"
+CLE_NOUVELLE="non"
+if [ ! -e "$KEYRING" ]; then CLE_NOUVELLE="oui"; fi
+
+# Une clé téléchargée à moitié ne doit jamais prendre la place de la bonne.
+CLE_TMP="$(mktemp "$KEYRING.XXXXXX")"
+if ! run_logged curl -fsSL "$DEPOT/gpg" -o "$CLE_TMP" || [ ! -s "$CLE_TMP" ]; then
+    rm -f "$CLE_TMP"
+    die "Clé du dépôt $DEPOT/gpg irrécupérable : rien n'a été installé."
+fi
+chmod a+r "$CLE_TMP"
+mv -f "$CLE_TMP" "$KEYRING"
 
 printf 'deb [arch=%s signed-by=%s] %s %s stable\n' "$ARCH" "$KEYRING" "$DEPOT" "$CODENAME" > "$LISTE"
 
-# Une suite non publiée pour ce nom de code ferait échouer apt-get update et
-# laisserait un dépôt cassé derrière nous : on le retire avant de rendre la main.
+# Un dépôt inutilisable laisserait apt cassé derrière nous : on retire ce qu'on
+# vient de poser avant de rendre la main.
 if ! run_logged apt-get update; then
     rm -f "$LISTE"
-    die "Le dépôt $DEPOT ne publie pas la suite « $CODENAME » : fichier $LISTE retiré."
+    if [ "$CLE_NOUVELLE" = "oui" ]; then rm -f "$KEYRING"; fi
+    die "apt-get update échoue avec le dépôt Docker (suite « $CODENAME » non publiée, réseau ou clé invalide) : dépôt retiré."
 fi
 
 # --- Installation ---------------------------------------------------------

@@ -7,7 +7,7 @@ une fois, l'arbitre termine si nécessaire.
 
 | Tâche | Nature | Exécutant | Validations | Vérif. | Lignes script + cas | Coût délégué | Relecture Opus | Rattrapage |
 |---|---|---|---|---|---|---|---|---|
-| TASK-029 `install-docker.sh` | modifie le système | Claude seul | 5/5 | 26 | 176 + 105 | — | 33 991 jetons | non corrigé |
+| TASK-029 `install-docker.sh` | modifie le système | Claude seul | 5/5 | 26 → 43 | 176 + 105 → 199 + 149 | — | 33 991 jetons | 7 défauts corrigés par Claude |
 | TASK-030 `configure-docker.sh` | modifie le système | `deepseek-flash` | 5/5 après rattrapage | 68 | 228 + 294 | 0,22 $ pointe | 35 960 jetons | 3 lignes, arbitre |
 
 Aucun coût Claude en jetons n'est encore mesuré pour les travaux faits dans la
@@ -92,7 +92,8 @@ version livrée.
 Tests creux : un faux `os-release` que rien ne lit, un `grep -c` comparé à « 1 »
 qui laisserait passer un compte de 2, des faux binaires jamais appelés.
 
-**Ces défauts ne sont pas corrigés.** Aucun n'est bloquant.
+**Corrigés le même jour par Claude**, en une passe : 43 vérifications, 0 sautée,
+cinq validations à 0. Aucun n'était bloquant.
 
 ### Comparaison
 

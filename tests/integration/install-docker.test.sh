@@ -5,6 +5,10 @@
 # par de faux apt-get, curl, systemctl, dpkg-query et docker en tête de PATH.
 # Le --dry-run, lui, s'exécute tel quel — il n'écrit rien par contrat.
 
+# shellcheck disable=SC2016
+# Les corps des faux binaires sont écrits entre apostrophes : leurs $ appartiennent
+# au faux programme, qui s'exécute plus tard, et non à ce fichier.
+
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
@@ -46,13 +50,11 @@ titre "Le nom de code vient de la machine, il n'est pas écrit en dur"
 
 attendu="$( . /etc/os-release && echo "$VERSION_CODENAME" )"
 assert_contient "$sortie" "$attendu" "le dépôt annoncé porte le nom de code lu dans /etc/os-release"
-assert_absent "$(grep -c 'bookworm\|jammy\|noble' "$CIBLE" || true)" "1" \
+assert_egal "0" "$(grep -c 'bookworm\|jammy\|noble' "$CIBLE" || true)" \
     "aucun nom de code de distribution n'apparaît dans le source du script"
 
 titre "Système non supporté — refus avant toute action"
 
-faux os-release ''
-printf 'ID=fedora\nVERSION_ID=41\nVERSION_CODENAME=heisenbug\n' > "$BAC/os-release"
 sortie="$(OS_ID=fedora OS_VERSION=41 OS_ARCH=x86_64 bash "$CIBLE" --dry-run 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "une distribution hors cibles est refusée en 1"
 assert_contient "$sortie" "fedora" "le refus nomme ce qui a été détecté"
@@ -60,6 +62,12 @@ assert_contient "$sortie" "fedora" "le refus nomme ce qui a été détecté"
 sortie="$(OS_ID=debian OS_VERSION=12 OS_ARCH=riscv64 bash "$CIBLE" --dry-run 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "une architecture hors cibles est refusée en 1"
 assert_contient "$sortie" "riscv64" "le refus nomme l'architecture détectée"
+
+faux uname 'case "$1" in -m) echo x86_64 ;; -r) echo 3.2.0-4-amd64 ;; *) echo Linux ;; esac'
+sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" --dry-run 2>&1)" && code=0 || code=$?
+assert_code 1 "$code" "un noyau antérieur à 3.10 est refusé en 1 (contraste : le vrai noyau passe le --dry-run plus haut)"
+assert_contient "$sortie" "3.2.0" "le refus nomme le noyau détecté"
+rm -f "$BAC/uname"
 
 titre "Installation déjà en place — constat, et rien d'autre"
 
@@ -90,7 +98,53 @@ assert_code 1 "$code" "sans terminal et sans --yes, le script rend 1"
 assert_contient "$sortie" "--yes" "le message nomme l'option qui débloque la situation"
 assert_absent   "$sortie" "Échec (code" "aucune ligne du trap ERR : le refus est délibéré, pas un plantage"
 
-saute_par_nature "l'installation réelle et le retrait des paquets conflictuels" \
-    "poser docker-ce dans le conteneur de test supposerait un réseau vers download.docker.com et un dpkg réel ; AGENTS.md §8 l'exclut. Les chemins qui y mènent sont éprouvés jusqu'à la confirmation, et le --dry-run couvre le résumé des changements"
+titre "Chemins modifiants — faux apt-get, curl, systemctl, dpkg-query et docker"
+
+# Ces cas écrivent réellement la clé et le dépôt : seulement sur un système
+# jetable, et seulement s'ils n'y sont pas déjà.
+LISTE=/etc/apt/sources.list.d/docker.list
+CLE=/etc/apt/keyrings/docker.asc
+if [ ! -e /.dockerenv ] || [ -e "$LISTE" ] || [ -e "$CLE" ]; then
+    saute_indisponible "chemins modifiants" "système non jetable, ou dépôt Docker déjà présent"
+    bilan "TASK-029 / install-docker.sh"
+fi
+trap 'rm -rf "$BAC"; rm -f "$LISTE" "$CLE"' EXIT
+export APT_LOG="$BAC/apt.log" APT_N="$BAC/apt.n" SYSTEMCTL_LOG="$BAC/systemctl.log"
+
+faux dpkg-query 'case "$*" in *docker.io*) echo "install ok installed" ;; *) exit 1 ;; esac'
+faux apt-get 'echo "${DEBIAN_FRONTEND:-} $*" >> "$APT_LOG"
+if [ "$1" = update ]; then
+    n=$(( $(cat "$APT_N" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$APT_N"
+    [ "$n" != "${APT_UPDATE_ECHEC_AU:-0}" ] || exit 100
+fi
+exit 0'
+faux curl 'while [ $# -gt 0 ]; do [ "$1" = -o ] && echo "CLE-FACTICE" > "$2"; shift; done
+[ "${CURL_ECHEC:-0}" = 0 ]'
+faux systemctl 'echo "$*" >> "$SYSTEMCTL_LOG"'
+faux docker 'case "$*" in "--version") echo "Docker version 28.5.2, build aaa" ;;
+"compose version --short") echo 2.39.1 ;; "buildx version") echo "github.com/docker/buildx v0.17.1" ;; *) exit 0 ;; esac'
+
+sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 0 "$code" "installation complète avec conflit : rend 0"
+assert_contient "$(cat "$APT_LOG")" "noninteractive remove -y docker.io" "le conflit est retiré, en mode non interactif"
+assert_contient "$(cat "$APT_LOG")" "install -y docker-ce docker-ce-cli containerd.io" "les paquets officiels sont installés"
+assert_contient "$(cat "$SYSTEMCTL_LOG")" "enable docker" "le service est activé"
+assert_contient "$(cat "$SYSTEMCTL_LOG")" "start docker"  "le service est démarré"
+assert_contient "$(cat "$LISTE" 2>/dev/null)" "signed-by=$CLE" "le dépôt référence la clé par signed-by"
+assert_egal "CLE-FACTICE" "$(cat "$CLE" 2>/dev/null)" "la clé est en place"
+assert_contient "$sortie" "0.17.1" "la vérification finale lit la version de Buildx"
+
+rm -f "$LISTE" "$CLE" "$APT_N"
+sortie="$(APT_UPDATE_ECHEC_AU=2 PATH="$BAC:$PATH" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 1 "$code" "apt-get update en échec après ajout du dépôt : rend 1"
+assert_absent "$(ls /etc/apt/sources.list.d/)" "docker.list" "le dépôt inutilisable est retiré"
+assert_absent "$(ls /etc/apt/keyrings/ 2>/dev/null)" "docker.asc" "la clé qu'il venait de poser est retirée"
+assert_contient "$sortie" "dépôt retiré" "le message dit ce qui a été défait"
+
+rm -f "$APT_N"
+sortie="$(CURL_ECHEC=1 PATH="$BAC:$PATH" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 1 "$code" "clé irrécupérable : rend 1"
+assert_absent "$(ls /etc/apt/keyrings/ 2>/dev/null)" "docker.asc" "aucune clé tronquée n'est mise en place"
+assert_absent "$(ls /etc/apt/sources.list.d/)" "docker.list" "aucun dépôt n'est écrit sans clé"
 
 bilan "TASK-029 / install-docker.sh"
