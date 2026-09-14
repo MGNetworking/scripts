@@ -6,8 +6,7 @@ priority: medium
 depends_on:
   - TASK-029
 environment: container-systemd
-niveau: N3
-executor: sonnet
+agent: sonnet
 human_approval_required: true
 objective: |
   Livrer la mise à jour du moteur Docker et de ses composants — Engine, CLI,

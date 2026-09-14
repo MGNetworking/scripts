@@ -181,8 +181,8 @@ corriger **la règle qui a permis ce travail**.
 
 | Symptôme | Où agir |
 |---|---|
-| le script ne suit pas les conventions | `.claude/agents/redacteur-script.md` |
-| les tests sont superficiels | `.claude/agents/redacteur-tests.md` |
+| le script ou les tests de l'agent sont mal faits | `.claude/commands/executer-tache.md` |
+| un modèle n'est pas le bon pour une tâche | le champ `agent` de la fiche, ou `docs/agent/profils/` |
 | la relecture laisse passer des défauts | `.claude/agents/relecteur.md` |
 | l'agent déborde du périmètre | le champ `out_of_scope` de la tâche |
 | le déroulé lui-même est bancal | `.claude/commands/tache.md` |

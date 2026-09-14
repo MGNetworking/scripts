@@ -1,7 +1,7 @@
 # ADR-0005 — Orchestration des tâches entre plusieurs LLM
 
 **Date** : 2026-09-14
-**Statut** : accepté le 2026-09-14
+**Statut** : remplacé par [ADR-0006](ADR-0006-agents-agnostiques.md) le 2026-09-14
 **Décideur** : Maxime Ghalem
 **S'appuie sur** : [ADR-0004](ADR-0004-sobriete.md) décision 29, et les mesures du
 [journal de comparaison](../mesures/journal.md)

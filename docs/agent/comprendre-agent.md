@@ -78,14 +78,17 @@ se trouve en conflit d'intérêts. Il a écrit le test, il sait pourquoi il
 D'où trois rôles séparés :
 
 ```text
-        agent principal (lit la tâche, répartit)
+     orchestrateur (votre session : lit la tâche, lance, vérifie, fusionne)
                       │
-      ┌───────────────┼───────────────┐
-      ▼               ▼               ▼
-redacteur-script  redacteur-tests  relecteur
-  écrit le          écrit les       vérifie
-  script            tests           LECTURE SEULE
+          ┌───────────┴───────────┐
+          ▼                       ▼
+   agent (profil)             relecteur
+   écrit script et tests,     vérifie
+   les lance, corrige         LECTURE SEULE
 ```
+
+Depuis [ADR-0006](decisions/ADR-0006-agents-agnostiques.md), l'agent est une
+instance de Claude Code pilotée par le modèle de son profil (DeepSeek, Sonnet…).
 
 ### Ils ne se souviennent de rien
 
@@ -201,11 +204,10 @@ vous : /tache TASK-002
    ├── branche agent/TASK-002
    ├── plan annoncé
    │
-   ├──→ redacteur-script    → script + documentation
-   ├──→ redacteur-tests     → tests
-   ├──→ relecteur           → verdict
+   ├──→ agent (lancer-agent.sh) → script + tests, 3 corrections au plus
+   ├──→ relecteur               → verdict
    │         │
-   │    non conforme → correction → relecteur   (5 fois au plus)
+   │    non conforme → agent relancé une fois → sinon l'orchestrateur finit ou bloque
    │
    ├── rapport dans .agent/reports/
    ├── mise à jour du backlog

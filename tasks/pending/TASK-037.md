@@ -6,8 +6,7 @@ priority: high
 depends_on:
   - TASK-034
 environment: container-debian
-niveau: N3
-executor: sonnet
+agent: sonnet
 human_approval_required: true
 objective: |
   Livrer l'orchestrateur de nettoyage des ressources Docker inutilisées. Il

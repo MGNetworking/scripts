@@ -127,12 +127,10 @@ la demande.
 | `implementation_notes` | non | liste |
 | `blocked_reason` | si `blocked` | bloc littéral |
 | `attempts` | non | entier, tenu pendant l'exécution |
-| `niveau` | oui, depuis ADR-0005 | `N1` lecture seule, `N2` un effet simple, `N3` effets enchaînés ou destructif, `N4` décision ou zone protégée |
-| `executor` | oui, depuis ADR-0005 | `deepseek-flash`, `sonnet`, `opus` |
-| `effort` | si `executor` est DeepSeek | `low` `high` `max` — `low` par défaut : l'effort par défaut a épuisé le plafond de sortie sur TASK-030 |
+| `agent` | oui, depuis ADR-0006 | un profil de `docs/agent/profils/` (`deepseek`, `sonnet`…), ou `orchestrateur` |
 
-Le `scope` d'une fiche ne contient plus les README ni le backlog : l'arbitre les
-écrit à la clôture (ADR-0005 décision 34).
+Le `scope` d'une fiche ne contient pas les README ni le backlog : l'orchestrateur
+les écrit à la clôture (ADR-0006 décision 36).
 
 ---
 
@@ -153,7 +151,7 @@ Transitions normales :
 ```text
 pending → ready → in_progress → validating → completed
                        ↑             ↓
-                       └─── (correction, MAX_RETRIES = 5)
+                       └─── (3 corrections au plus, ADR-0006)
                                      ↓
                                   blocked
 ```

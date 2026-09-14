@@ -5,8 +5,7 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
-niveau: N3
-executor: sonnet
+agent: sonnet
 human_approval_required: true
 objective: |
   Livrer le script qui crée un compte d'administration utilisable — utilisateur,
