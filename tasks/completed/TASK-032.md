@@ -1,7 +1,7 @@
 ---
 id: TASK-032
 title: "Écrire Docker/Configuration/create-network.sh"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-029

@@ -9,9 +9,10 @@ une fois, l'arbitre termine si nécessaire.
 |---|---|---|---|---|---|---|---|---|
 | TASK-029 `install-docker.sh` | modifie le système | Claude seul | 5/5 | 26 → 43 | 176 + 105 → 199 + 149 | — | 33 991 jetons | 7 défauts corrigés par Claude |
 | TASK-030 `configure-docker.sh` | modifie le système | `deepseek-flash` | 5/5 après rattrapage | 68 | 228 + 294 | 0,22 $ pointe | 35 960 jetons | 3 lignes, arbitre |
+| TASK-032 `create-network.sh` | modifie le système | Sonnet, sous-agent | 5/5 après correction | 36 | 148 + 147 | 270 602 jetons | 30 729 jetons | aucun |
 
-Aucun coût Claude en jetons n'est encore mesuré pour les travaux faits dans la
-session principale — ni TASK-029, ni les rattrapages.
+Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
+sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.
 
 ---
 
@@ -130,3 +131,69 @@ cinq validations à 0. Aucun n'était bloquant.
 Le coût en jetons de la production par Claude n'est toujours pas mesuré. Tant
 qu'il ne l'est pas, on sait que la qualité est comparable, pas lequel coûte le
 moins cher à qualité égale.
+
+---
+
+## TASK-032 — Sonnet en sous-agent, 2026-09-14
+
+Protocole identique à TASK-030 : mêmes fichiers d'entrée, mêmes consignes,
+**interdiction de lancer la moindre commande** — l'arbitre valide après.
+Correction unique par un nouveau sous-agent, avec la grille d'Opus.
+
+### Déroulé
+
+| Étape | Résultat | Jetons |
+|---|---|---|
+| Génération Sonnet | 132 + 138 lignes. 4/5 : lint conteneur à 1 (2 × SC2015, 1 × SC1007). 34 vérifications réussies | 155 297 — 14 appels d'outils, 7 min 47 s |
+| Relecture Opus | *fusionnable après corrections* : 0 bloquant, **1 majeur (le lint)**, 5 mineurs. Tous les critères conformes, sauf un partiel (CIDR IPv6 refusé) | 30 729 |
+| Correction Sonnet | 148 + 147 lignes. `shellcheck` à 0, **36 vérifications, 0 échec, du premier coup** | 115 305 — 17 appels, 3 min 57 s |
+| Rattrapage | **aucun** | — |
+| Validations finales | **5/5** | — |
+
+### Coût
+
+Claude Code ne rapporte pour un sous-agent qu'un **total** de jetons, sans
+séparer entrée et sortie. D'où une fourchette, au tarif Sonnet 5 (2 $ / 10 $ par
+million) :
+
+| | Jetons | Si tout est entrée | Si tout est sortie |
+|---|---|---|---|
+| Génération + correction Sonnet | 270 602 | 0,54 $ | 2,71 $ |
+| Relecture Opus (5 $ / 25 $) | 30 729 | 0,15 $ | 0,77 $ |
+
+Une boucle agentique renvoie tout son contexte à chaque appel d'outil : la
+consommation est dominée par l'entrée, et une partie est lue en cache à prix
+réduit. Le coût réel est donc **plus proche du bas de la fourchette** — sans
+chiffre exact tant que la répartition n'est pas relevée dans la console Anthropic.
+
+### Comparaison
+
+| | TASK-030 — DeepSeek | TASK-032 — Sonnet |
+|---|---|---|
+| Défauts majeurs à la 1re livraison | 2 réels (dont démon laissé arrêté) | 1, le lint seul |
+| Critères non tenus | 5 partiels | 1 partiel |
+| Correction | **introduit 3 échecs** | **propre du premier coup** |
+| Rattrapage par l'arbitre | 3 lignes | aucun |
+| Taille finale | 228 + 294 | **148 + 147**, dans la cible |
+| Coût de production | **0,22 $** exact, pointe | **0,54 à 2,71 $**, probablement bas de fourchette |
+| Jetons pour produire | 3 appels, sortie 52 000 à 66 000 chacun | 2 sous-agents, 270 602 au total |
+
+### Ce qu'on en retient
+
+- **Sonnet livre mieux** : moins de défauts, aucun comportement faux, une
+  correction sans régression, et la sobriété de l'ADR-0004 respectée sans effort.
+- **DeepSeek coûte nettement moins cher par appel**, probablement 3 à 10 fois
+  moins, mais son travail demande une relecture qui coûte le même prix et un
+  rattrapage que Sonnet n'a pas demandé.
+- **Une boucle agentique est chère en jetons** : 14 à 17 appels d'outils, chacun
+  renvoyant le contexte. Un appel direct à l'API avec les fichiers joints —
+  la façon dont DeepSeek a été appelé — serait bien plus économe pour Sonnet aussi.
+
+### Limites
+
+- **TASK-032 est plus simple que TASK-030** : ni fusion JSON, ni sauvegarde, ni
+  redémarrage, ni restauration. Une part de l'écart de qualité tient à la tâche.
+- **Mode d'appel différent** : DeepSeek par un appel d'API unique, Sonnet par un
+  sous-agent qui lit lui-même les fichiers. Les jetons ne se comparent pas à
+  structure égale.
+- **Répartition entrée/sortie inconnue** pour Claude.
