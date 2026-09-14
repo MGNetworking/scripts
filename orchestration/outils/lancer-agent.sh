@@ -27,11 +27,14 @@ fi
 command -v claude >/dev/null || { echo "claude introuvable dans le PATH." >&2; exit 2; }
 
 # Un modèle Claude passe par l'abonnement, sans profil. Un autre modèle a son
-# profil, qui ne définit que trois variables ; lu ligne à ligne, jamais exécuté.
-ADRESSE="" MODELE="$profil" VARIABLE_CLE=""
+# profil : adresse, modèle, variable de clé et tarifs ; lu ligne à ligne, jamais exécuté.
+ADRESSE="" MODELE="$profil" VARIABLE_CLE="" PRIX_ENTREE="" PRIX_CACHE="" PRIX_SORTIE=""
 if [ -f "$ici/../modeles/$profil.env" ]; then
     while IFS='=' read -r cle valeur; do
-        case "$cle" in ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;; esac
+        case "$cle" in
+            ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;;
+            PRIX_ENTREE) PRIX_ENTREE="$valeur" ;; PRIX_CACHE) PRIX_CACHE="$valeur" ;; PRIX_SORTIE) PRIX_SORTIE="$valeur" ;;
+        esac
     done < "$ici/../modeles/$profil.env"
 fi
 [ -n "$MODELE" ] || { echo "Profil $profil : MODELE vide." >&2; exit 2; }
@@ -65,7 +68,10 @@ fi
 echo "AGENT  $profil ($MODELE) sur $tache, dans $copie"
 debut=$(date +%s)
 code=0
-sortie="$(cd "$copie" && "${env_agent[@]}" claude -p "$consigne" \
+# Plafond de durée (A08) : un agent qui tourne en rond est arrêté au bout d'une heure.
+DUREE_MAX="${DUREE_MAX:-3600}"
+borne=(); command -v timeout >/dev/null 2>&1 && borne=(timeout "$DUREE_MAX")
+sortie="$(cd "$copie" && "${env_agent[@]}" "${borne[@]}" claude -p "$consigne" \
     --model "$MODELE" \
     --setting-sources project \
     --settings "$ici/../limites.json" \
@@ -77,17 +83,21 @@ rm -f "$copie/RETOURS-$tache.md"
 # Relevé : une ligne par lancement. Le coût se calcule au tarif du profil,
 # pas au total_cost_usd de Claude Code, qui applique les prix Anthropic.
 journal="$racine/orchestration/mesures/agents.tsv"
-[ -f "$journal" ] || printf 'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\n' > "$journal"
+[ -f "$journal" ] || printf 'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\tcout_usd\n' > "$journal"
+# Coût au tarif du profil (A09) ; vide pour un modèle Claude, facturé à l'abonnement.
 node -e '
     const [sortie, ...champs] = process.argv.slice(1);
     let j = {}; try { j = JSON.parse(sortie); } catch {}
     const u = j.usage || {};
     const cache = (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-    const [date, tache, profil, modele, duree, code] = champs;
+    const [date, tache, profil, modele, duree, code, pe, pc, ps] = champs;
+    const cout = pe && u.output_tokens !== undefined
+        ? ((u.input_tokens * pe + cache * pc + u.output_tokens * ps) / 1e6).toFixed(3) : "";
     console.log([date, tache, profil, modele, j.num_turns ?? "?", u.input_tokens ?? "?", cache,
-                 u.output_tokens ?? "?", duree, code].join("\t"));
+                 u.output_tokens ?? "?", duree, code, cout].join("\t"));
     console.error(j.result || "(aucune réponse lisible de cet agent)");
-' "$sortie" "$(date '+%F %T')" "$tache" "$profil" "$MODELE" "$(( $(date +%s) - debut ))" "$code" >> "$journal"
+' "$sortie" "$(date '+%F %T')" "$tache" "$profil" "$MODELE" "$(( $(date +%s) - debut ))" "$code" \
+    "$PRIX_ENTREE" "$PRIX_CACHE" "$PRIX_SORTIE" >> "$journal"
 
 tail -1 "$journal"
 exit "$code"

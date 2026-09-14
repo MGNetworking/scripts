@@ -54,16 +54,16 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A05 | P2 | ~70 sauts non qualifiés (`saute` nu) dans `unit` et `integration` : leur nature n'est pas établie | TASK-013 | tâche à atomiser |
 | [ ] | A06 | P2 | Exécutions concurrentes non maîtrisées (conteneur tué en 137, assertions « aucun conteneur résiduel » fausses en parallèle) — préalable au parallélisme des agents | TASK-002, 012, 014 | tâche à atomiser |
 | [x] | A07 | P2 | Tâches hors script (README, schéma, documentation) non couvertes par le circuit d'agent : `limites.json` et `juger.sh` ne le permettent pas | orchestration | décision 41 — la documentation reste à l'orchestrateur |
-| [ ] | A08 | P2 | Premier jet de TASK-034 : 2 728 s et 80 tours, contre 315 s pour TASK-033 ; cause non identifiée | TASK-034 | orchestrateur |
-| [ ] | A09 | P2 | Coût réel des agents non calculé : `lancer-agent.sh` relève les jetons, pas le prix ; estimations à confirmer sur le tableau de bord DeepSeek | TASK-033, 034 | orchestrateur |
+| [x] | A08 | P2 | Premier jet de TASK-034 : 2 728 s et 80 tours, contre 315 s pour TASK-033 ; cause non identifiée | TASK-034 | atténué — `lancer-agent.sh` borne l'agent à une heure (`DUREE_MAX`) ; la cause de TASK-034 n'est plus établissable, la durée reste journalisée |
+| [x] | A09 | P2 | Coût réel des agents non calculé : `lancer-agent.sh` relève les jetons, pas le prix ; estimations à confirmer sur le tableau de bord DeepSeek | TASK-033, 034 | fait — tarifs dans `modeles/deepseek.env`, colonne `cout_usd` dans `agents.tsv` (TASK-033 : 0,244 $, TASK-034 : 0,357 $) |
 | [ ] | A10 | P2 | `.claude/agents/relecteur.md` : `model: sonnet` et « lance les validations », alors que `/tache` impose Opus en lecture seule — Opus confirmé par l'essai de TASK-034 | TASK-034 | orchestrateur, reporté par `user` en fin de corrections |
 | [x] | A11 | P2 | Docker Desktop tombé en cours de session : aucune reprise possible sans humain ; `DELAI_DISPONIBILITE` (300 s) jamais mesuré | points en suspens §11, TASK-027 | décision 42 — arrêt signalé, limite assumée |
-| [ ] | A12 | P2 | `run-in-container.sh` : message de démon injoignable tronqué, `--profil --dry-run` mal analysé | TASK-002, backlog | orchestrateur |
+| [x] | A12 | P2 | `run-in-container.sh` : message de démon injoignable tronqué, `--profil --dry-run` mal analysé | TASK-002, backlog | fait pour `--profil --dry-run` (refus clair) ; message tronqué non reproductible sans couper le démon, ce que la décision 42 exclut |
 | [ ] | A13 | P2 | Profil `systemd` en `--privileged` sans preuve qu'il soit indispensable ; plafond de 30 s du lancement détaché jugé, non mesuré | points en suspens §9, §10, TASK-020 | tâche à atomiser |
-| [ ] | A14 | P2 | Aucune garde contre la récursion du niveau `acceptance` : un fichier de cas qui l'appelle boucle sans fin | TASK-012 | orchestrateur |
-| [ ] | A15 | P2 | Les gardes de `run-unit.sh` ne sont vérifiées par aucune suite en continu | TASK-003 | orchestrateur |
-| [ ] | A16 | P2 | Les liens entre tâches cassent à chaque changement de statut (le répertoire fait partie du chemin) | backlog | orchestrateur |
-| [ ] | A17 | P2 | Piège du commentaire commençant par `shellcheck` : seul `tests/lint.sh` en est protégé | TASK-011, backlog | orchestrateur |
+| [x] | A14 | P2 | Aucune garde contre la récursion du niveau `acceptance` : un fichier de cas qui l'appelle boucle sans fin | TASK-012 | fait — `run-acceptance.sh` refuse en 2 une relance sur le même répertoire, les bacs à sable restent permis |
+| [x] | A15 | P2 | Les gardes de `run-unit.sh` ne sont vérifiées par aucune suite en continu | TASK-003 | fait — `tests/acceptance/TASK-039-gardes-dispatchers.sh`, 10 vérifications |
+| [x] | A16 | P2 | Les liens entre tâches cassent à chaque changement de statut (le répertoire fait partie du chemin) | backlog | fait — `orchestration/outils/verifier-liens.sh`, lancé à la clôture par `/tache` |
+| [x] | A17 | P2 | Piège du commentaire commençant par `shellcheck` : seul `tests/lint.sh` en est protégé | TASK-011, backlog | fait — contrôle ajouté à `TASK-011-analyse-statique.sh`, contre-épreuve détectée |
 | [x] | A18 | P2 | Aucune intégration continue | backlog | décision 43 — pas de CI pendant le chantier |
 | [ ] | A19 | P3 | `LOG_DIR` validé par personne : une valeur commençant par un tiret traverse le socle | points en suspens §6 | orchestrateur, `lib/common.sh` |
 | [ ] | A20 | P3 | Asymétrie de chargement : `server.env` par `source` nu, `load_config` avec `set -a` — même écriture, effets différents | TASK-015, backlog | orchestrateur, `lib/common.sh` |

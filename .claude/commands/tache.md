@@ -107,7 +107,9 @@ porte un `Axx`, et chaque `Axx` cité existe dans le registre.
 4. `tasks/backlog.md` : statut, section « Terminé », tâches débloquées en `ready` ;
 5. ligne au journal `orchestration/mesures/journal.md` : agent, modèle, passages,
    jetons (`orchestration/mesures/agents.tsv`), jetons de relecture, défauts ;
-6. `git commit` avec la ligne `Tâche : $1`.
+6. `bash orchestration/outils/verifier-liens.sh` : 0, sinon corrige les liens cassés
+   par le déplacement de la fiche ;
+7. `git commit` avec la ligne `Tâche : $1`.
 
 **Tâche `blocked`** : fiche vers `tasks/blocked/` avec `blocked_reason`, rapport,
 commit sur `master`. Branche et copie gardées, rien fusionné.
