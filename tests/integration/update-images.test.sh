@@ -24,7 +24,7 @@ ident() {
 case "$*" in
     "compose version"*)               [ -n "$P_COMPOSE" ] || exit 1; printf 'Docker Compose version %s\n' "$P_COMPOSE" ;;
     "version --format"*)              [ -n "$P_DEMON" ] || exit 1; printf '%s\n' "$P_DEMON" ;;
-    "compose -f "*" config --images") [ -n "$P_IMAGES" ] || exit 1; printf '%s\n' "$P_IMAGES" ;;
+    "compose -f "*" config --images") [ -z "$P_IMAGES" ] || printf '%s\n' "$P_IMAGES" ;;
     "compose -f "*" pull")            printf 'Image pulled\n' ;;
     "image inspect"*)                 ident "${*##* }" ;;
     *)                                exit 1 ;;
@@ -90,7 +90,7 @@ CHEMIN="$BAC:$PATH"; P_COMPOSE=""; : > "$TRACE"; lancer --project "$PROJET"
 assert_code 1 "$CODE" "sans greffon Compose v2, le script rend 1"
 assert_contient "$SORTIE" "greffon Compose v2" "le message nomme le greffon attendu"
 assert_absent "$SORTIE" "docker-compose v1 est présent" "et ne parle pas d'un binaire qui n'est pas là"
-P_COMPOSE="2.29.7"; CHEMIN="$BAC:$V1:$PATH"; lancer --project "$PROJET"
+P_COMPOSE=""; CHEMIN="$BAC:$V1:$PATH"; lancer --project "$PROJET"
 assert_code 1 "$CODE" "le seul docker-compose v1 est refusé en 1"
 assert_contient "$SORTIE" "seul docker-compose v1 est présent — c'est le greffon Compose v2, « docker compose », qui est attendu" "le message dit lequel est là, et lequel est attendu"
 titre "Démon injoignable — 1 hors --dry-run, 0 avec, et rien de récupéré"
