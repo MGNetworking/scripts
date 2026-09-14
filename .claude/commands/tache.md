@@ -94,7 +94,8 @@ nouvelle tâche, ou un ADR si Maxime l'a tranché. Écris-le autoportant.
 1. `git merge --no-ff agent/$1`, puis `git worktree remove ../script-agents/$1`
    et `git branch -d agent/$1` ;
 2. fiche vers `tasks/completed/`, `status: completed` ;
-3. ligne du script dans le `README.md` du domaine et celui de la racine ;
+3. ligne du script dans le `README.md` de son dossier ; dans le `README.md` racine,
+   qui ne liste que les domaines, le seul nombre de scripts ;
 4. `tasks/backlog.md` : statut, section « Terminé », tâches débloquées en `ready` ;
 5. ligne au journal `orchestration/mesures/journal.md` : agent, modèle, passages,
    jetons (`orchestration/mesures/agents.tsv`), jetons de relecture, défauts ;

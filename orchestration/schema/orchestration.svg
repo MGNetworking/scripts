@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="960" viewBox="0 0 1400 960" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="fleche" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="960" fill="#ffffff"/>
+
+  <text x="700" y="48" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Orchestration des agents — MGNetworking/script</text>
+
+  <!-- Utilisateur -->
+  <rect x="40" y="90" width="300" height="100" rx="12" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+  <text x="60" y="122" font-size="17" font-weight="700" fill="#334155">UTILISATEUR (user)</text>
+  <text x="60" y="150" font-size="14" fill="#1e293b">Tape /tache TASK-XXX</text>
+  <text x="60" y="174" font-size="14" fill="#1e293b">Tranche les décisions</text>
+
+  <!-- Orchestrateur -->
+  <rect x="480" y="80" width="440" height="150" rx="12" fill="#f5f3ff" stroke="#6d28d9" stroke-width="2.5"/>
+  <text x="500" y="112" font-size="17" font-weight="700" fill="#5b21b6">ORCHESTRATEUR</text>
+  <text x="500" y="138" font-size="14" fill="#1e293b">Claude Code + Opus — session de user</text>
+  <text x="500" y="162" font-size="14" fill="#1e293b">Lit le champ agent: de la fiche, lance l'agent,</text>
+  <text x="500" y="186" font-size="14" fill="#1e293b">vérifie, fait relire, fusionne ; écrit README,</text>
+  <text x="500" y="210" font-size="14" fill="#1e293b">backlog, rapport et journal</text>
+
+  <!-- Relecteur -->
+  <rect x="1060" y="80" width="300" height="150" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+  <text x="1080" y="112" font-size="17" font-weight="700" fill="#9a3412">RELECTEUR</text>
+  <text x="1080" y="138" font-size="14" fill="#1e293b">Sous-agent Opus, lecture seule</text>
+  <text x="1080" y="162" font-size="14" fill="#1e293b">Critères de la fiche un par un</text>
+  <text x="1080" y="186" font-size="14" fill="#1e293b">BLOQUANT / MAJEUR / MINEUR</text>
+  <text x="1080" y="210" font-size="14" fill="#1e293b">Verdict</text>
+
+  <!-- Juge -->
+  <rect x="40" y="420" width="300" height="140" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+  <text x="60" y="452" font-size="17" font-weight="700" fill="#1e40af">JUGE — juger.sh</text>
+  <text x="60" y="480" font-size="14" fill="#1e293b">Aucun modèle, 0 jeton</text>
+  <text x="60" y="504" font-size="14" fill="#1e293b">shellcheck + fichier de cas</text>
+  <text x="60" y="528" font-size="14" fill="#1e293b">Conteneur Docker jetable</text>
+
+  <!-- Agent -->
+  <rect x="480" y="400" width="440" height="180" rx="12" fill="#ecfdf5" stroke="#047857" stroke-width="2.5"/>
+  <text x="500" y="432" font-size="17" font-weight="700" fill="#065f46">AGENT EXÉCUTANT</text>
+  <text x="500" y="460" font-size="14" fill="#1e293b">Claude Code sans interface + modèle de la fiche</text>
+  <text x="500" y="486" font-size="14" fill="#1e293b">Copie du dépôt : git worktree, branche agent/TASK-XXX</text>
+  <text x="500" y="512" font-size="14" fill="#1e293b">Écrit le script (≤ 150 lignes) et ses tests</text>
+  <text x="500" y="538" font-size="14" fill="#1e293b">Lance le juge, corrige 3 fois au plus, commite</text>
+
+  <!-- Modèles -->
+  <rect x="1060" y="420" width="300" height="140" rx="12" fill="#ffffff" stroke="#047857" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="1080" y="452" font-size="16" font-weight="700" fill="#065f46">MODÈLE DE L'AGENT</text>
+  <text x="1080" y="480" font-size="14" fill="#1e293b">deepseek — API compatible</text>
+  <text x="1080" y="504" font-size="14" fill="#1e293b">Anthropic, orchestration/modeles/</text>
+  <text x="1080" y="528" font-size="14" fill="#1e293b">sonnet · opus · haiku — abonnement</text>
+
+  <!-- Dépôt -->
+  <rect x="1060" y="640" width="300" height="100" rx="12" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+  <text x="1080" y="672" font-size="17" font-weight="700" fill="#334155">DÉPÔT — branche master</text>
+  <text x="1080" y="700" font-size="14" fill="#1e293b">Travail vérifié puis fusionné</text>
+  <text x="1080" y="724" font-size="14" fill="#1e293b">push groupé en fin de domaine</text>
+
+  <!-- Flux -->
+  <g stroke="#334155" stroke-width="2" fill="none">
+    <line x1="340" y1="140" x2="476" y2="140" marker-end="url(#fleche)"/>
+    <line x1="590" y1="230" x2="590" y2="396" marker-end="url(#fleche)"/>
+    <line x1="340" y1="490" x2="476" y2="490" marker-start="url(#fleche)" marker-end="url(#fleche)"/>
+    <line x1="810" y1="400" x2="810" y2="234" marker-end="url(#fleche)"/>
+    <polyline points="480,215 190,215 190,416" marker-end="url(#fleche)"/>
+    <line x1="920" y1="120" x2="1056" y2="120" marker-end="url(#fleche)"/>
+    <line x1="1060" y1="195" x2="924" y2="195" marker-end="url(#fleche)"/>
+    <polyline points="880,230 880,350 1000,350 1000,690 1056,690" marker-end="url(#fleche)"/>
+  </g>
+  <g font-size="14" fill="#0f172a">
+    <text x="352" y="128">① /tache</text>
+    <text x="580" y="300" text-anchor="end">② lancer-agent.sh</text>
+    <text x="580" y="320" text-anchor="end">&lt;modèle&gt; TASK-XXX</text>
+    <text x="410" y="478" text-anchor="middle">③ tests</text>
+    <text x="410" y="512" text-anchor="middle">≤ 3 corrections</text>
+    <text x="800" y="300" text-anchor="end">④ commit +</text>
+    <text x="800" y="320" text-anchor="end">ligne VERDICT</text>
+    <text x="200" y="262">⑤ vérification</text>
+    <text x="200" y="282">indépendante</text>
+    <text x="928" y="110">⑥ relecture</text>
+    <text x="930" y="218" font-size="13">⑦ défauts :</text>
+    <text x="930" y="236" font-size="13">agent relancé</text>
+    <text x="930" y="254" font-size="13">1 fois</text>
+    <text x="1010" y="630">⑧ fusion dans master</text>
+  </g>
+
+  <!-- Ressources -->
+  <text x="40" y="802" font-size="16" font-weight="700" fill="#475569">RESSOURCES</text>
+  <g font-size="13" fill="#1e293b">
+    <rect x="40" y="815" width="310" height="105" rx="10" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="58" y="848" font-size="15" font-weight="700" fill="#334155">tasks/</text>
+    <text x="58" y="876">Backlog : une fiche par tâche</text>
+    <text x="58" y="898">Champ agent: = modèle choisi</text>
+
+    <rect x="370" y="815" width="310" height="105" rx="10" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="388" y="848" font-size="15" font-weight="700" fill="#334155">orchestration/modeles/</text>
+    <text x="388" y="876">Un fichier par modèle externe :</text>
+    <text x="388" y="898">adresse d'API, nom, variable de clé</text>
+
+    <rect x="700" y="815" width="310" height="105" rx="10" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="718" y="848" font-size="15" font-weight="700" fill="#334155">orchestration/limites.json</text>
+    <text x="718" y="876">Droits de l'agent : ni README,</text>
+    <text x="718" y="898">ni push, ni lecture de secrets</text>
+
+    <rect x="1030" y="815" width="330" height="105" rx="10" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="1048" y="848" font-size="15" font-weight="700" fill="#334155">orchestration/mesures/</text>
+    <text x="1048" y="876">Jetons et coût de chaque tâche</text>
+    <text x="1048" y="898">Journal de comparaison des modèles</text>
+  </g>
+</svg>

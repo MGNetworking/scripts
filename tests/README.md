@@ -982,7 +982,7 @@ chemin de l'exécutable — il tient au **contexte de lancement** : `Start-Proce
 depuis la session de l'agent ne fournit pas ce que Docker Desktop attend,
 élévation ou session interactive. Laquelle des deux n'a pas été établie.
 
-D'où la décision de Maxime, le 2026-09-04 : **Docker Desktop est lancé au
+D'où la décision de `user`, le 2026-09-04 : **Docker Desktop est lancé au
 démarrage du système, l'agent n'a plus à le démarrer.** Le code de démarrage
 reste dans le script, avec sa limite écrite sur place — si le contexte de
 lancement change un jour, il est là plutôt qu'à réinventer.

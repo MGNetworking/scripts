@@ -114,7 +114,7 @@ démontre en exécutant deux fois.
 
 ## 11. Documentation
 
-Dans le même commit que le script : README du domaine, ligne du README racine,
+Dans le même commit que le script : README de son dossier, nombre de scripts du README racine,
 statut de la tâche, rapport. C'est l'orchestrateur qui les écrit (décision 36).
 
 ## 12. Correction
