@@ -38,7 +38,7 @@ Exception assumée à la règle des 30 lignes : c'est un registre, pas une fiche
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A40**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A41**.
 
 ## Registre
 
@@ -65,11 +65,11 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [x] | A16 | P2 | Les liens entre tâches cassent à chaque changement de statut (le répertoire fait partie du chemin) | backlog | fait — `orchestration/outils/verifier-liens.sh`, lancé à la clôture par `/tache` |
 | [x] | A17 | P2 | Piège du commentaire commençant par `shellcheck` : seul `tests/lint.sh` en est protégé | TASK-011, backlog | fait — contrôle ajouté à `TASK-011-analyse-statique.sh`, contre-épreuve détectée |
 | [x] | A18 | P2 | Aucune intégration continue | backlog | décision 43 — pas de CI pendant le chantier |
-| [ ] | A19 | P3 | `LOG_DIR` validé par personne : une valeur commençant par un tiret traverse le socle | points en suspens §6 | orchestrateur, `lib/common.sh` |
-| [ ] | A20 | P3 | Asymétrie de chargement : `server.env` par `source` nu, `load_config` avec `set -a` — même écriture, effets différents | TASK-015, backlog | orchestrateur, `lib/common.sh` |
-| [ ] | A21 | P3 | `set +a` non rétabli quand le `source` d'un `.env` tue le shell sous `set -u` | TASK-015, backlog | orchestrateur, `lib/common.sh` |
-| [ ] | A22 | P3 | `lib/common.sh` crée et écrit `LOG_DIR` dès le `source` : `--help` et `--dry-run` ne sont jamais sans effet de bord | TASK-004, 011 | orchestrateur, `lib/common.sh` |
-| [ ] | A23 | P3 | `enable_full_logging` sans aucune couverture de test | TASK-003, 015 | orchestrateur |
+| [x] | A19 | P3 | `LOG_DIR` validé par personne : une valeur commençant par un tiret traverse le socle | points en suspens §6 | fait — `lib/common.sh` refuse un `LOG_DIR` non absolu, avertit et prend la valeur par défaut ; testé |
+| [x] | A20 | P3 | Asymétrie de chargement : `server.env` par `source` nu, `load_config` avec `set -a` — même écriture, effets différents | TASK-015, backlog | fait — `server.env` chargé sous `set -a`, comme `load_config` ; testé |
+| [x] | A21 | P3 | `set +a` non rétabli quand le `source` d'un `.env` tue le shell sous `set -u` | TASK-015, backlog | fait — lecture d'essai en sous-shell pour `server.env` et `load_config` : arrêt propre, `allexport` jamais armé ; testé |
+| [x] | A22 | P3 | `lib/common.sh` crée et écrit `LOG_DIR` dès le `source` : `--help` et `--dry-run` ne sont jamais sans effet de bord | TASK-004, 011 | requalifié limite assumée — journaliser un `--dry-run` est voulu, et créer `LOG_DIR` au chargement est le contrat du socle (`docs/architecture-technique.md`) |
+| [x] | A23 | P3 | `enable_full_logging` sans aucune couverture de test | TASK-003, 015 | fait — `tests/unit/journalisation-complete.test.sh`, 19 vérifications |
 | [ ] | A24 | P3 | Trois commentaires de `lib/common.sh` (l.87, 229, 294) citent « ADR-0003 », retiré | refonte orchestration | fait — renvois vers `orchestration/decisions.md` |
 | [ ] | A25 | P3 | `check-disk.sh` : `df` se fige sur un montage réseau injoignable | points en suspens §10 | tâche agent |
 | [ ] | A26 | P3 | `configure-swap.sh` : `FICHIER_SWAP` jamais contrôlé non vide après validation | TASK-017 | tâche agent |
@@ -86,6 +86,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A37 | P4 | README de `configure-cron.sh` muet sur le contrôle secondaire du répertoire | TASK-009 | orchestrateur |
 | [ ] | A38 | P4 | En-têtes de colonnes sans accents : `ETAT`, `RESEAUX` (`list-containers.sh`), `CATEGORIE`, `RECUPERABLE` (`docker-disk-usage.sh`) | relectures TASK-033, 034 | tâche agent |
 | [x] | A39 | P4 | Commit d'activation `chore: TASK-XXX en cours` fait sur `master`, alors que `regles.md` §9 interdit tout commit de travail sur `master` : règle à préciser | TASK-033, 034 | fait — `regles.md` §9 : activation et clôture sur `master`, jamais le code |
+| [x] | A40 | P3 | Sous `enable_full_logging`, chaque message et chaque sortie de `run_logged` sont écrits deux fois dans le journal (par `_journaliser` ou `tee`, et par la capture complète) | test de A23 | fait — `_journaliser` et `run_logged` n'écrivent plus sous capture complète ; testé |
 
 ## Suivi, pas des défauts
 
