@@ -157,9 +157,6 @@ done
 # -------------------------------------------------------------------
 # Bilan
 # -------------------------------------------------------------------
-if [ "$SHELLCHECK_DISPONIBLE" = "false" ]; then
-    warn "shellcheck absent : analyse approfondie NON EXÉCUTÉE (seule la syntaxe a été vérifiée)"
-fi
 
 if [ "$erreurs" -gt 0 ]; then
     die "Analyse statique : $erreurs erreur(s) sur ${#fichiers[@]} fichier(s)." 1
@@ -169,4 +166,11 @@ if [ "$avertissements" -gt 0 ]; then
     success "Analyse statique : ${#fichiers[@]} fichier(s), 0 erreur, $avertissements averti(s)."
 else
     success "Analyse statique : ${#fichiers[@]} fichier(s), 0 erreur."
+fi
+
+# Sans shellcheck, seule la syntaxe est prouvée : 3, jamais 0 (TASK-039, A03).
+# Un validateur qui lirait 0 conclurait PASS sur une analyse qui n'a pas eu lieu.
+if [ "$SHELLCHECK_DISPONIBLE" = "false" ]; then
+    warn "shellcheck absent : analyse approfondie NON EXÉCUTÉE — seule la syntaxe a été vérifiée."
+    exit 3
 fi

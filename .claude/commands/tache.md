@@ -58,7 +58,8 @@ Dans la copie `../script-agents/$1` :
 4. **longueur** : `wc -l` du script et du fichier de cas. Au-delà de 150 lignes
    sans raison donnée sur la ligne `VERDICT`, c'est un défaut à signaler au
    relecteur ;
-5. les commandes du champ `validation`, codes réels consignés.
+5. les commandes du champ `validation`, codes réels consignés. Sur l'hôte, `tests/run.sh lint`
+   rend 3 faute de `shellcheck` : c'est NON EXÉCUTÉ, la preuve est le lint en conteneur.
 
 Périmètre débordé ou tests modifiés : travail rejeté, tâche bloquée.
 

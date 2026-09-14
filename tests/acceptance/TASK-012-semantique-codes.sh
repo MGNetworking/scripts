@@ -586,7 +586,7 @@ titre "9. tests/run.sh lint dans le conteneur"
 
 DOCKER_UTILISABLE="false"
 if command -v docker >/dev/null 2>&1; then
-    if [ -n "$(docker info --format '{{.ServerVersion}}' 2>/dev/null || true)" ]; then
+    if [ -n "$(timeout 30 docker info --format '{{.ServerVersion}}' 2>/dev/null || true)" ]; then
         DOCKER_UTILISABLE="true"
     fi
 fi

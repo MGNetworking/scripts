@@ -89,7 +89,9 @@ validation figure dans le rapport avec son code réel.
 ## 9. Git
 
 Une branche `agent/TASK-XXX` par tâche, créée depuis `master` ; jamais de commit de
-travail sur `master` ; fusion `--no-ff` puis suppression de la branche ; arbre
+code sur `master` — seuls y vont le commit d'activation d'une fiche et les commits de
+clôture de l'orchestrateur (rapport, backlog, README, registre) ; fusion `--no-ff` puis
+suppression de la branche ; arbre
 propre avant de commencer, sinon arrêt sans rien remiser.
 
 Commit conventionnel en français, avec la ligne `Tâche : TASK-XXX` :

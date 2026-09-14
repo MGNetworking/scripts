@@ -175,3 +175,32 @@ Traefik conservé, `cert-manager` avec Let's Encrypt, domaine dans `config/`.
 ### Décision 24 — Aucun secret ni valeur de machine en dur
 
 Domaine, adresses, horaires, chemins et jetons passent par `config/`.
+
+---
+
+## E. Décisions prises par délégation (2026-09-15)
+
+`user` a délégué à l'orchestrateur, le 2026-09-15, les lignes du registre
+TASK-039 qui attendaient son arbitrage. Choix les plus simples et réversibles.
+
+### Décision 41 — La documentation reste à l'orchestrateur (A07)
+
+README, schémas, décisions et registre ne passent pas par un agent : ce sont des
+textes courts, qui dépendent du contexte de l'orchestrateur, et `limites.json`
+interdit volontairement ces chemins aux agents. Aucun circuit dédié n'est construit.
+
+### Décision 42 — Docker Desktop tombé reste un arrêt signalé (A11)
+
+Les pistes de relance automatique touchent la configuration des services Windows,
+que l'agent n'a pas le droit de modifier. Si le démon manque, l'orchestrateur
+s'arrête et le signale ; `DELAI_DISPONIBILITE` garde sa valeur jugée de 300 s.
+
+### Décision 43 — Pas d'intégration continue pendant le chantier (A18)
+
+Les validations exigent un démon Docker et le profil `systemd` privilégié ; le
+juge et `/tache` en tiennent lieu. Sujet à rouvrir à la fin du chantier des scripts.
+
+### Décision 44 — `tests/README.md` n'est pas scindé (A34)
+
+Sa lecture par sections suffit aux agents ; le scinder casserait des liens dans
+tout le dépôt pour un gain de confort. Sujet à rouvrir s'il dépasse 100 Ko.

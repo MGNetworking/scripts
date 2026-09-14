@@ -50,10 +50,12 @@ Codes de retour :
 EOF
 }
 
+# OUI dit si --yes a été passé ; lib/common.sh reste seul lecteur d'ASSUME_YES.
+OUI="false"
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run) DRY_RUN="true"; shift ;;
-        -y|--yes)  export ASSUME_YES="true"; shift ;;
+        -y|--yes)  export ASSUME_YES="true"; OUI="true"; shift ;;
         --help|-h) usage; exit 0 ;;
         --log-driver|--log-max-size|--log-max-file)
             cle="$1"; shift
@@ -88,8 +90,8 @@ contenu_cible() {
 est_conforme() {
     [ -f "$FICHIER" ] || return 1
     if [ -n "$JQ" ]; then
-        # shellcheck disable=SC2016
         # Filtre jq : les $d, $s, $f sont des variables jq, pas du shell.
+        # shellcheck disable=SC2016
         if "$JQ" -e --arg d "$LOG_DRIVER" --arg s "$LOG_MAX_SIZE" --arg f "$LOG_MAX_FILE" \
             '."log-driver" == $d and ."log-opts"."max-size" == $s and ."log-opts"."max-file" == $f' \
             "$FICHIER" >/dev/null 2>&1; then
@@ -138,8 +140,8 @@ if [ "$etat" = "divergent" ]; then
         printf '\nContenu qui aurait été écrit :\n%s\n' "$cible" >&2
         die "jq absent : rien n'a été écrit." 1
     fi
-    # shellcheck disable=SC2016
     # Filtre jq : les $d, $s, $f sont des variables jq, pas du shell.
+    # shellcheck disable=SC2016
     if ! contenu="$("$JQ" --arg d "$LOG_DRIVER" --arg s "$LOG_MAX_SIZE" --arg f "$LOG_MAX_FILE" \
         '."log-driver" = $d | ."log-opts"."max-size" = $s | ."log-opts"."max-file" = $f' \
         "$FICHIER" 2>/dev/null)"; then
@@ -162,7 +164,7 @@ if docker ps -q >/dev/null 2>&1; then
 fi
 info "$en_cours conteneur(s) en cours seront interrompus par le redémarrage."
 
-[ -t 0 ] || [ "${ASSUME_YES:-false}" = "true" ] \
+[ -t 0 ] || [ "$OUI" = "true" ] \
     || die "Écriture à confirmer, et aucun terminal n'est disponible. Relancer avec --yes." 1
 confirm "Écrire $FICHIER et redémarrer le démon ?" || die "Configuration abandonnée." 1
 

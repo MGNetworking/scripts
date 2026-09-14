@@ -84,7 +84,7 @@ _journal_hors_service() {
 # Ajoute une ligne horodatée au fichier de journal, s'il y en a un.
 #
 # Un journal devenu inécrivable en cours d'exécution — répertoire disparu,
-# disque plein, droits modifiés — n'interrompt pas le script (ADR-0003,
+# disque plein, droits modifiés — n'interrompt pas le script (orchestration/decisions.md,
 # décision 8). L'écriture est enveloppée pour deux raisons :
 #
 #   - le « if » place l'écriture dans un contexte de condition, ce qui neutralise
@@ -226,7 +226,7 @@ require_os() {
 # configuration attendue serait plus dangereux que s'arrêter.
 #
 # Les variables chargées sont exportées, donc visibles des processus fils
-# (ADR-0003, décision 7). Les fichiers .env continuent de s'écrire en
+# (orchestration/decisions.md, décision 7). Les fichiers .env continuent de s'écrire en
 # affectations nues : c'est set -a qui se charge de l'exportation, pas eux.
 load_config() {
     local nom="${1:?load_config : nom de configuration manquant}"
@@ -291,7 +291,7 @@ confirm() {
 # Évalué dans la chaîne du trap, ${BASH_SOURCE[0]} désigne au contraire le
 # fichier où l'échec s'est produit — le script appelant, ou common.sh lui-même
 # quand la faute vient du socle. $LINENO y renvoie à la même unité, les deux
-# valeurs sont donc cohérentes entre elles (ADR-0003, décision 9).
+# valeurs sont donc cohérentes entre elles (orchestration/decisions.md, décision 9).
 _on_error() {
     local code="$1" ligne="$2" fichier="${3:-$0}"
     error "Échec (code $code) à la ligne $ligne de $(basename "$fichier")."

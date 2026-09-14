@@ -177,7 +177,7 @@ aucun_conteneur_residuel() {
 
 DOCKER_UTILISABLE="false"
 if command -v docker >/dev/null 2>&1; then
-    version_serveur="$(docker info --format '{{.ServerVersion}}' 2>/dev/null || true)"
+    version_serveur="$(timeout 30 docker info --format '{{.ServerVersion}}' 2>/dev/null || true)"
     if [ -n "$version_serveur" ]; then
         DOCKER_UTILISABLE="true"
         info "Démon Docker disponible — version serveur $version_serveur"

@@ -47,10 +47,12 @@ Codes de retour :
 EOF
 }
 
+# OUI dit si --yes a été passé ; lib/common.sh reste seul lecteur d'ASSUME_YES.
+OUI="false"
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run) DRY_RUN="true"; shift ;;
-        -y|--yes)  export ASSUME_YES="true"; shift ;;
+        -y|--yes)  export ASSUME_YES="true"; OUI="true"; shift ;;
         --help|-h) usage; exit 0 ;;
         *) die "Option inconnue : $1" 2 ;;
     esac
@@ -139,15 +141,15 @@ export DEBIAN_FRONTEND=noninteractive
 
 if [ -n "$TROUVES" ]; then
     warn "Des paquets en conflit avec Docker officiel sont installés :${TROUVES}"
-    [ -t 0 ] || [ "${ASSUME_YES:-false}" = "true" ] \
+    [ -t 0 ] || [ "$OUI" = "true" ] \
         || die "Retrait à confirmer, et aucun terminal n'est disponible. Relancer avec --yes."
     confirm "Retirer ces paquets ?" || die "Installation abandonnée : les conflits subsistent."
-    # shellcheck disable=SC2086
     # Découpage voulu : $TROUVES est une liste de noms de paquets sans espace.
+    # shellcheck disable=SC2086
     run_logged apt-get remove -y $TROUVES
 fi
 
-[ -t 0 ] || [ "${ASSUME_YES:-false}" = "true" ] \
+[ -t 0 ] || [ "$OUI" = "true" ] \
     || die "Installation à confirmer, et aucun terminal n'est disponible. Relancer avec --yes."
 confirm "Installer Docker depuis $DEPOT ?" || die "Installation abandonnée."
 
@@ -179,8 +181,8 @@ if ! run_logged apt-get update; then
 fi
 
 # --- Installation ---------------------------------------------------------
-# shellcheck disable=SC2086
 # Découpage voulu : $PAQUETS est une liste de noms de paquets sans espace.
+# shellcheck disable=SC2086
 run_logged apt-get install -y $PAQUETS
 
 run_logged systemctl enable docker
