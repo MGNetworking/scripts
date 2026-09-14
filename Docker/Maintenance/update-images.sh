@@ -56,7 +56,7 @@ resoudre_projet() {
     done
     die "Aucun fichier Compose dans « $PROJET » : cherché ${FICHIERS_COMPOSE// /, }." 2
 }
-[ -f "$PROJET" ] && FICHIER_COMPOSE="$PROJET" || resoudre_projet
+if [ -f "$PROJET" ]; then FICHIER_COMPOSE="$PROJET"; else resoudre_projet; fi
 
 # Sonde bornée : un démon muet se dit, et ne se confond pas avec une machine vide.
 BORNE=()
