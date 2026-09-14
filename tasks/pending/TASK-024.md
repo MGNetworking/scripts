@@ -16,7 +16,6 @@ scope:
   - Linux/System/notify-failure.sh
   - config/notify.env.example
   - tests/integration/notify-failure.test.sh
-  - docs/points-en-suspens.md — clore le point 2
 out_of_scope:
   - toute modification de configure-cron.sh et de la ligne déposée dans /etc/cron.d/mgnetworking — voir « Articulation », tâche distincte
   - toute modification d'update-system.sh, de security-check.sh, de backup-resources.sh ou de docker-cleanup.sh

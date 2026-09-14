@@ -48,7 +48,8 @@ de ce que cet ADR a tranché.
 | [TASK-024](pending/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-025](pending/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-028](pending/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `ready` | haute | — | conteneur `debian` | non |
+| [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
+| [TASK-038](pending/TASK-038.md) | Remettre l'acceptance TASK-011 au vert après les scripts Docker | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -131,7 +132,7 @@ Opus, écrit seul les README et ce backlog, et fusionne. Coûts et défauts au
 |---|---|
 | TASK-024, TASK-033, TASK-034, TASK-035 | `deepseek` |
 | TASK-025, TASK-026, TASK-036, TASK-037 | `sonnet` |
-| TASK-028 | `orchestrateur` |
+| TASK-038 | `orchestrateur` |
 
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
 ni sa configuration n'apparaissent dans un script. `create-network.sh` prend le
@@ -143,7 +144,7 @@ est **abandonnée**, son préflight étant absorbé par `install-docker.sh` ; et
 `check-docker.sh` et `list-containers.sh`, qui couvrent leur contenu sans
 enfreindre la frontière de lecture seule de `Docker/Diagnostics/`.
 
-**[TASK-028](pending/TASK-028.md) passe devant elles.** Elle n'appartient pas au
+**[TASK-038](pending/TASK-038.md) passe devant elles**, comme TASK-028 avant elle (fermée le 2026-09-14). Elle n'appartient pas au
 chantier des scripts : c'est une dette d'une ligne, ouverte par TASK-021, qui
 rend **rouge la commande de référence du dépôt** — une directive `shellcheck`
 déposée sans la justification qu'exige le critère d'acceptation de TASK-011. Tant
@@ -362,6 +363,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | [rapport](reports/TASK-030-report.md) |
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | [rapport](reports/TASK-032-report.md) |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | [rapport](reports/TASK-033-report.md) |
+| [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | [rapport](reports/TASK-028-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |

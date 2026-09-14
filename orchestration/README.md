@@ -97,5 +97,8 @@ Décidés ou constatés, pas encore faits. À relire avant de lancer une tâche.
    bord DeepSeek.
 6. **Parallélisme** : fermé jusqu'à trois tâches passées sans incident
    (1 sur 3 : TASK-033).
-7. **`git push`** : groupé en fin de domaine Docker, rien n'est poussé depuis le
+7. **`juger.sh` ne lance pas l'acceptance** : les règles transverses de TASK-011
+   (directives justifiées, `ASSUME_YES`) échappent aux agents et au relecteur —
+   vu sur TASK-028. À ajouter au juge, ou aux vérifications de `/tache`.
+8. **`git push`** : groupé en fin de domaine Docker, rien n'est poussé depuis le
    début de ces travaux.
