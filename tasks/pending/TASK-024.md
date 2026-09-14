@@ -17,6 +17,7 @@ scope:
   - config/notify.env.example
   - tests/integration/notify-failure.test.sh
 out_of_scope:
+  - docs/points-en-suspens.md — le point 2 est clos par l'orchestrateur à la clôture, un agent n'écrit pas dans docs/
   - toute modification de configure-cron.sh et de la ligne déposée dans /etc/cron.d/mgnetworking — voir « Articulation », tâche distincte
   - toute modification d'update-system.sh, de security-check.sh, de backup-resources.sh ou de docker-cleanup.sh
   - l'envoi d'un extrait de journal dans la notification
