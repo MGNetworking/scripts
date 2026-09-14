@@ -37,6 +37,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 | [`Configuration/create-network.sh`](Configuration/create-network.sh) | crée un réseau Docker nommé, partageable par plusieurs projets Compose ; ne supprime jamais | root | **oui** |
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
 | [`Diagnostics/list-containers.sh`](Diagnostics/list-containers.sh) | inventaire des conteneurs : nom, image, état, identifiant, ports, réseaux — actifs par défaut, tous avec `--all` | aucun | non |
+| [`Diagnostics/docker-disk-usage.sh`](Diagnostics/docker-disk-usage.sh) | stockage consommé par Docker : images, conteneurs, volumes, cache de build, espace récupérable ; `--detail` pour le détail | aucun | non |
 
 ## Ordre d'utilisation
 

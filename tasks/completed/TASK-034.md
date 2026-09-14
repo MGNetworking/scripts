@@ -1,7 +1,7 @@
 ---
 id: TASK-034
 title: "Écrire Docker/Diagnostics/docker-disk-usage.sh"
-status: ready
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

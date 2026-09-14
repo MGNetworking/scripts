@@ -11,6 +11,7 @@ une fois, l'arbitre termine si nécessaire.
 | TASK-030 `configure-docker.sh` | modifie le système | `deepseek-flash` | 5/5 après rattrapage | 68 | 228 + 294 | 0,22 $ pointe | 35 960 jetons | 3 lignes, arbitre |
 | TASK-032 `create-network.sh` | modifie le système | Sonnet, sous-agent | 5/5 après correction | 36 | 148 + 147 | 270 602 jetons | 30 729 jetons | aucun |
 | TASK-033 `list-containers.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 57 | 364 + 252 → 168 + 219 | ≈ 0,25 $ pointe, 2 lancements | 45 011 jetons | relance agent, 2 majeurs corrigés |
+| TASK-034 `docker-disk-usage.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 52 | 150 + 149 → 150 + 150 | 2 lancements, 14,7 M cache | Opus 37 957 / Sonnet 47 098 | relance agent, 1 majeur corrigé |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.
@@ -216,3 +217,26 @@ Premier passage dans le circuit d'orchestration (agents = Claude Code + modèle)
   mode agent, il relance lui-même le juge et corrige sur les lignes FAIL.
 - Le mode agent relit tout son contexte à chaque tour : 7,2 M de jetons en cache.
   Au tarif du cache DeepSeek, cela reste le plus petit poste du coût.
+
+---
+
+## TASK-034 — essai comparatif de relecture, 2026-09-14
+
+Même consigne, mêmes cinq fichiers, aucune commande, lancés en parallèle.
+
+| | Opus | Sonnet |
+|---|---|---|
+| Verdict | FUSIONNABLE APRÈS CORRECTIONS | CONFORME AVEC RÉSERVES |
+| Majeur : borne de 5 s sur `system df`, faux diagnostic | trouvé | **manqué** |
+| Titre imprimé deux fois (`printf`), confirmé à la lecture | trouvé | **manqué** |
+| Mineurs | 6 | 3, tous vus par Opus |
+| Tests creux | 7 | 1 |
+| Erreurs de constat | aucune | « français accentué intégral » (faux) ; 48 vérifications attribuées à l'intégration |
+| Jetons | **37 957** | 47 098 |
+
+**Conclusion : Opus reste le relecteur.** Il trouve davantage, et consomme moins
+que Sonnet sur la même lecture. Une seule mesure ; DeepSeek relecteur non essayé.
+
+Agent : la limite de 150 lignes, ajoutée après TASK-033, est tenue dès le premier
+jet (150 + 149). Le premier lancement a duré 2 728 s pour 80 tours — trois fois
+TASK-033 —, sans cause identifiée.

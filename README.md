@@ -30,7 +30,7 @@ d'utilisation dans son propre README.
 | Domaine | Contenu | État |
 |---|---|---|
 | [Linux/](Linux/README.md) | système de base, sécurité, distribution K3s | `System` : 10 scripts ; `Security`, `K3s` à venir |
-| [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 5 scripts |
+| [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 6 scripts |
 | `Kubernetes/` | installation, configuration et maintenance d'un cluster | à venir |
 | [Synology/](Synology/README.md) | NAS Synology : Plex, administration DSM | 2 scripts hérités |
 

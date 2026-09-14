@@ -79,26 +79,24 @@ permissions. Aucune règle métier.
 
 Décidés ou constatés, pas encore faits. À relire avant de lancer une tâche.
 
-1. **Essai comparatif de relecture — décidé le 2026-09-14, à faire sur la
-   prochaine tâche.** Le même travail est relu deux fois : par Opus (référence)
-   et par un modèle moins cher (Sonnet en sous-agent, ou DeepSeek). On compare les
-   défauts trouvés et les jetons, dans `mesures/journal.md`. Opus reste le
-   relecteur tant que l'essai n'a pas tranché.
-2. **`.claude/agents/relecteur.md` déclare encore `model: sonnet`** : `/tache`
-   impose Opus à l'appel, donc sans effet. Alignement reporté à la fin des
-   corrections, selon le résultat de l'essai 1.
-3. **Consignes d'agent non encore éprouvées** : limite de 150 lignes comptée
-   avant le commit, figement des tests levé par les retours de relecture
-   (ajoutées après TASK-033).
-4. **Tâches hors script** (README, schéma, documentation) : le circuit d'agent ne
+1. **Relecteur : Opus confirmé** par l'essai comparatif de TASK-034 (voir
+   `mesures/journal.md`) — Sonnet a manqué le défaut majeur et consommé plus.
+   `.claude/agents/relecteur.md` déclare encore `model: sonnet` : sans effet, car
+   `/tache` impose Opus ; alignement reporté à la fin des corrections.
+2. **Tâches hors script** (README, schéma, documentation) : le circuit d'agent ne
    les couvre pas — `limites.json` interdit les README et `docs/`, `juger.sh`
    attend un script et son fichier de cas. L'orchestrateur les fait lui-même.
-5. **Coût réel de TASK-033** estimé à ≈ 0,25 $ ; à confirmer sur le tableau de
-   bord DeepSeek.
-6. **Parallélisme** : fermé jusqu'à trois tâches passées sans incident
-   (1 sur 3 : TASK-033).
-7. **`juger.sh` ne lance pas l'acceptance** : les règles transverses de TASK-011
+3. **`juger.sh` ne lance pas l'acceptance** : les règles transverses de TASK-011
    (directives justifiées, `ASSUME_YES`) échappent aux agents et au relecteur —
-   vu sur TASK-028. À ajouter au juge, ou aux vérifications de `/tache`.
-8. **`git push`** : groupé en fin de domaine Docker, rien n'est poussé depuis le
+   vu sur TASK-028, corrigé par TASK-038. À ajouter au juge, ou à `/tache`.
+4. **Durée de l'agent** : 2 728 s pour le premier jet de TASK-034, contre 315 s
+   pour TASK-033 ; cause non identifiée.
+5. **Coûts réels** estimés (≈ 0,25 $ pour TASK-033) ; à confirmer sur le tableau
+   de bord DeepSeek.
+6. **Parallélisme** : fermé jusqu'à trois tâches passées sans incident
+   (2 sur 3 : TASK-033, TASK-034).
+7. **`git push`** : groupé en fin de domaine Docker, rien n'est poussé depuis le
    début de ces travaux.
+
+Éprouvé sur TASK-034 : la limite de 150 lignes (150 + 149 au premier jet) et le
+figement des tests levé par les retours de relecture.

@@ -53,12 +53,12 @@ de ce que cet ADR a tranché.
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-034](pending/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-034](completed/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-035](pending/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `ready` | moyenne | 029 | conteneur `debian` | **oui** |
 | [TASK-036](pending/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `ready` | moyenne | 029 | conteneur `systemd` | **oui** |
-| [TASK-037](pending/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `pending` | haute | 034 | conteneur `debian` | **oui** |
+| [TASK-037](pending/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `ready` | haute | 034 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -364,6 +364,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | [rapport](reports/TASK-032-report.md) |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | [rapport](reports/TASK-033-report.md) |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | [rapport](reports/TASK-028-report.md) |
+| [TASK-034](completed/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | [rapport](reports/TASK-034-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |
