@@ -203,6 +203,16 @@ verifier "$([ "$directives_sans_justification" -eq 0 ] && echo 0 || echo 1)" \
     "toute directive shellcheck locale porte une justification au-dessus" \
     "$directives_sans_justification directive(s) nue(s)"
 
+# Un commentaire dont le premier mot est « shellcheck » est lu comme une
+# directive, et shellcheck échoue s'il n'en est pas une (A17). Seuls les mots-clés
+# connus sont permis ; le motif est assemblé pour ne pas se désigner lui-même.
+MOTIF_COMMENTAIRE="^[[:space:]]*#[[:space:]]*shell""check[[:space:]]"
+MOTS_DIRECTIVE="[[:space:]]*#[[:space:]]*shell""check[[:space:]]+(disable|enable|source|source-path|shell|external-sources)="
+pieges="$(grep -rnE --include='*.sh' "$MOTIF_COMMENTAIRE" "$SCRIPTS_ROOT" | grep -vE "^[^:]+:[0-9]+:$MOTS_DIRECTIVE" || true)"
+verifier "$([ -z "$pieges" ] && echo 0 || echo 1)" \
+    "aucun commentaire ne commence par le mot shellcheck sans être une directive" \
+    "$(printf '%s' "$pieges" | head -n 3 | tr '\n' ' ')"
+
 # ===================================================================
 # 3. L'analyse statique elle-même — le critère central de TASK-011
 # ===================================================================

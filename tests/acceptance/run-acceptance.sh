@@ -40,6 +40,13 @@ source "$_dir/lib/common.sh"
 
 REPERTOIRE="$SCRIPTS_ROOT/tests/acceptance"
 
+# Un fichier de cas qui relancerait ce niveau sur le même répertoire bouclerait
+# sans fin (A14). Un bac à sable, dont le répertoire diffère, reste permis.
+if [ "${MGNET_ACCEPTANCE_EN_COURS:-}" = "$REPERTOIRE" ]; then
+    die "Récursion : le niveau acceptance de $REPERTOIRE est déjà en cours." 2
+fi
+export MGNET_ACCEPTANCE_EN_COURS="$REPERTOIRE"
+
 fichiers=()
 while IFS= read -r f; do
     fichiers+=("$f")

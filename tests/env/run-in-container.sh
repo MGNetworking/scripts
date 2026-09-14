@@ -249,7 +249,7 @@ while [ "${1:-}" != "" ]; do
     case "$1" in
         --profil)
             shift
-            [ -n "${1:-}" ] || die "--profil attend un nom de profil." 2
+            case "${1:-}" in ""|-*) die "--profil attend un nom de profil." 2 ;; esac
             PROFIL="$1"; shift
             ;;
         --reconstruire) RECONSTRUIRE="true"; shift ;;
