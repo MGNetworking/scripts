@@ -14,7 +14,7 @@ mkdir -p "$RACINE_STUB"
 trap 'rm -rf "$BAC"' EXIT
 
 # Faux docker : trace ses arguments, puis répond selon la sous-commande.
-# STUB_ERREUR posée tient lieu de panne, sur stderr et en STUB_CODE.
+# STUB_ERREUR posée tient lieu de panne — message sur stderr, code dans STUB_CODE.
 cat > "$BAC/docker" <<'STUB'
 #!/bin/sh
 printf '%s\n' "$*" >> "$TRACE"
@@ -29,19 +29,14 @@ chmod +x "$BAC/docker"
 
 # PATH sans docker : la preuve « commande absente » ne dépend pas de l'image.
 SANS_DOCKER="$BAC/sans-docker"; mkdir -p "$SANS_DOCKER"
-for b in dirname basename mkdir id date cat; do
-    c="$(command -v "$b" 2>/dev/null || true)"; [ -n "$c" ] && ln -s "$c" "$SANS_DOCKER/$b"
-done
+for b in dirname basename mkdir id date cat; do ln -s "$(command -v "$b")" "$SANS_DOCKER/$b"; done
 CHEMIN="$BAC:$PATH"
 
-# Lance le script. Renseigne SORTIE et CODE — les passer par stdout les perdrait.
-# $1 synthèse, $2 racine, $3 détail, $4 erreur du client.
+# Lance le script et renseigne SORTIE et CODE ; $1..$4 = synthèse, racine, détail, erreur.
 SORTIE=""; CODE=0
 lancer() {
-    local s="$1" r="$2" d="$3" e="$4"
-    shift 4
-    SORTIE="$(STUB_SYNTHESE="$s" STUB_RACINE="$r" STUB_DETAIL="$d" STUB_ERREUR="$e" \
-        STUB_CODE=1 TRACE="$TRACE" PATH="$CHEMIN" "$BASH_BIN" "$CIBLE" "$@" 2>&1)" \
+    SORTIE="$(STUB_SYNTHESE="${1:-}" STUB_RACINE="${2:-}" STUB_DETAIL="${3:-}" STUB_ERREUR="${4:-}" \
+        STUB_CODE="${CODE_STUB:-1}" TRACE="$TRACE" PATH="$CHEMIN" "$BASH_BIN" "$CIBLE" "${@:5}" 2>&1)" \
         && CODE=0 || CODE=$?
 }
 
@@ -51,40 +46,47 @@ VIDE=$'Images|0|0|0B|0B\nContainers|0|0|0B|0B\nLocal Volumes|0|0|0B|0B\nBuild Ca
 ANCIEN=$'Images|2|1|500MB|250MB\nContainers|1|1|10MB|0B\nLocal Volumes|0|0|0B|0B'
 DETAIL=$'Images  2  1  500MB  250MB (50%)\nnginx:1.27  1  1  200MB  100MB'
 LIGNES='^  (Images|Conteneurs|Volumes locaux|Cache de build) '
+ZEROS='^  (Images|Conteneurs|Volumes locaux|Cache de build) +0 +0 +0B +0B$'
+INTERDITS='(^| )(rm|rmi|prune)( |$)'
 
-titre "Aide — lisible alors que docker n'est pas installé"
+titre "Sans docker installé — l'aide, puis la dépendance nommée"
 CHEMIN="$SANS_DOCKER"
 lancer "" "" "" "" --help
 assert_code 0 "$CODE" "--help rend 0 sans consulter le moindre démon"
 assert_contient "$SORTIE" "--detail" "l'aide documente les options"
 assert_contient "$SORTIE" "RECUPERABLE" "l'aide dit ce que porte chaque colonne"
 assert_contient "$SORTIE" "Codes de retour" "l'aide documente les codes de retour"
-
-titre "Docker absent — PATH maîtrisé qui ne porte pas docker"
 lancer "" "" "" ""
-assert_code 1 "$CODE" "l'absence de la commande rend 1, jamais 2"
+assert_code 1 "$CODE" "sans --help, l'absence de la commande rend 1, jamais 2"
 assert_contient "$SORTIE" "introuvable" "le message nomme la dépendance manquante"
 assert_absent "$SORTIE" "ne répond pas" "elle n'est pas confondue avec un démon muet"
 assert_absent "$SORTIE" "groupe docker" "ni avec un refus d'accès à la socket"
 
-# Garde de contraste : le même appel, avec un faux docker qui répond, rend 0.
-CHEMIN="$BAC:$PATH"
-lancer "$REPARTI" "$RACINE_STUB" "" ""
-assert_code 0 "$CODE" "contraste : le même appel, docker présent, rend 0"
-
 titre "Option inconnue — faute d'usage, et rien d'autre"
+: > "$TRACE"
 lancer "" "" "" "" --inconnue
-assert_code 2 "$CODE" "une option inconnue rend 2, et aucun préflight n'a eu lieu"
+assert_code 2 "$CODE" "une option inconnue rend 2, sans même que docker soit là"
 assert_contient "$SORTIE" "[ERROR] Option inconnue" "le message porte [ERROR] et nomme l'option"
 assert_absent "$SORTIE" "Usage" "l'aide n'est pas déversée"
 assert_egal "1" "$(printf '%s\n' "$SORTIE" | wc -l | tr -d ' ')" "le refus tient sur une seule ligne"
+assert_egal "0" "$(wc -l < "$TRACE" | tr -d ' ')" "aucun appel au démon : le refus précède le préflight"
+CHEMIN="$BAC:$PATH"
 
-titre "Le démon ne répond pas"
+titre "Le démon ne répond pas — par connexion, puis par délai dépassé"
 lancer "" "" "" "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?"
 assert_code 1 "$CODE" "un démon muet rend 1"
 assert_contient "$SORTIE" "ne répond pas" "le message nomme le démon"
 assert_absent "$SORTIE" "groupe docker" "et ne renvoie pas au groupe docker, qui n'y changerait rien"
 assert_absent "$SORTIE" "Cannot connect" "le message brut du client ne filtre pas à l'écran"
+# Le délai prime sur le texte du client, ici « permission denied », qui mènerait ailleurs.
+CODE_STUB=124
+lancer "" "" "" "permission denied while trying to connect to the Docker daemon socket"
+unset CODE_STUB
+assert_code 1 "$CODE" "une sonde qui expire rend 1"
+assert_contient "$SORTIE" "ne répond pas" "le message nomme le démon qui ne répond pas"
+assert_contient "$SORTIE" "silence au-delà de 5 s" "il dit le délai dépassé"
+assert_absent "$SORTIE" "trop long" "sans le confondre avec une mesure trop longue"
+assert_absent "$SORTIE" "groupe docker" "et sans suivre le texte du client, ici trompeur"
 
 titre "La socket est là, l'utilisateur n'y a pas droit"
 lancer "" "" "" 'permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: connect: permission denied'
@@ -110,36 +112,35 @@ assert_contient "$SORTIE" "différer" "la sortie dit que la somme peut différer
 titre "Machine vide, et catégorie que le démon tait"
 lancer "$VIDE" "$RACINE_STUB" "" ""
 assert_code 0 "$CODE" "aucune image, aucun conteneur, aucun volume : le relevé rend 0"
-assert_egal "4" "$(grep -cE "$LIGNES" <<< "$SORTIE")" "les quatre catégories gardent leur ligne, à zéro"
-
+assert_egal "4" "$(grep -cE "$ZEROS" <<< "$SORTIE")" "les quatre catégories gardent leur ligne, à 0 objet, 0 actif, 0 B"
 lancer "$ANCIEN" "$RACINE_STUB" "" ""
 assert_code 0 "$CODE" "un démon qui ne rapporte pas le cache de build rend 0"
 ligne_cache="$(grep -F "Cache de build" <<< "$SORTIE")"
-assert_contient "$ligne_cache" "non fourni" "sa ligne porte une mention explicite"
+assert_contient "$ligne_cache" "non fourni" "la catégorie tue garde sa ligne, avec une mention explicite"
 assert_absent "$ligne_cache" "0" "et aucun zéro n'y est inventé"
-
 lancer "$REPARTI" "/chemin/qui-nexiste-pas" "" ""
 assert_contient "$SORTIE" "non disponible" "un répertoire de données invisible est dit non disponible"
 
 titre "--detail — le relevé par objet s'ajoute, il ne remplace pas"
 lancer "$REPARTI" "$RACINE_STUB" "$DETAIL" ""
 assert_absent "$SORTIE" "nginx:1.27" "sans --detail, aucun relevé par objet"
+sans_detail="$(sed -n '/^Consommation/,/^Répertoire de données/p' <<< "$SORTIE")"
 lancer "$REPARTI" "$RACINE_STUB" "$DETAIL" "" --detail
 assert_code 0 "$CODE" "--detail rend 0"
-assert_contient "$SORTIE" "3.14GB" "le relevé synthétique précède toujours"
+avec_detail="$(sed -n '/^Consommation/,/^Répertoire de données/p' <<< "$SORTIE")"
+assert_egal "$sans_detail" "$avec_detail" "le relevé synthétique est identique avec et sans --detail"
 assert_contient "${SORTIE#*RECUPERABLE}" "nginx:1.27" "et le relevé par objet le suit, jamais avant"
 
 titre "Lecture seule — ce que la trace des appels prouve"
 : > "$TRACE"
 lancer "$REPARTI" "$RACINE_STUB" "" ""
-assert_egal "2" "$(wc -l < "$TRACE" | tr -d ' ')" "deux appels suffisent au relevé synthétique"
+assert_egal "3" "$(wc -l < "$TRACE" | tr -d ' ')" "trois appels suffisent au relevé synthétique"
 assert_egal "info
-system" "$(awk '{print $1}' "$TRACE" | sort -u)" "seules « system » et « info » sont appelées"
-
+system
+version" "$(awk '{print $1}' "$TRACE" | sort -u)" "seules « version », « info » et « system » sont appelées"
 lancer "$REPARTI" "$RACINE_STUB" "$DETAIL" "" --detail
 assert_contient "$(cat "$TRACE")" "system df -v" "le relevé par objet vient de « docker system df -v »"
-assert_absent "$(cat "$TRACE")" "prune" "aucun prune, pas même en simulation"
-assert_absent "$(cat "$TRACE")" "rmi" "aucun rmi"
+assert_egal "0" "$(grep -cE "$INTERDITS" "$TRACE")" "ni rm, ni rmi, ni prune, sans --detail comme avec"
 
 SORTIE="$(cd /tmp && STUB_SYNTHESE="$REPARTI" STUB_RACINE="$RACINE_STUB" TRACE="$TRACE" \
     PATH="$CHEMIN" "$BASH_BIN" "$CIBLE" 2>&1)" && code=0 || code=$?
