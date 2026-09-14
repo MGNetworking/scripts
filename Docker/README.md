@@ -33,6 +33,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 | Script | Rôle | Privilège | Modifie |
 |---|---|---|---|
 | [`Installation/install-docker.sh`](Installation/install-docker.sh) | pose Engine, CLI, containerd, Buildx et Compose depuis les dépôts officiels | root | **oui** |
+| [`Configuration/configure-docker.sh`](Configuration/configure-docker.sh) | écrit `/etc/docker/daemon.json` : rotation des journaux de conteneurs, clés existantes conservées | root | **oui** |
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
 
 ## Ordre d'utilisation
@@ -41,6 +42,8 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 ./Docker/Diagnostics/check-docker.sh          # que porte cette machine ?
 ./Docker/Installation/install-docker.sh --dry-run
 ./Docker/Installation/install-docker.sh --yes
+./Docker/Configuration/configure-docker.sh --dry-run
+./Docker/Configuration/configure-docker.sh --yes   # redémarre le démon si le fichier change
 ./Docker/Diagnostics/check-docker.sh          # et maintenant ?
 ```
 
