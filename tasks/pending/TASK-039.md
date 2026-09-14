@@ -76,7 +76,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A27 | P3 | `swap_actif()` ne déséchappe pas `/proc/swaps` (`\040`) : un chemin avec espace n'est pas reconnu | TASK-019 | tâche agent |
 | [ ] | A28 | P3 | Groupe `swap-fstab` fragile : dépend de l'absence de `/dev/sdc` dans le conteneur | TASK-019 | tâche agent |
 | [ ] | A29 | P3 | Branche morte dans `configure-logging.sh` : `[dry-run] Créerait …` inatteignable | TASK-011, backlog | tâche agent |
-| [ ] | A30 | P3 | `update-system.sh:133` : `|| true` laisse une chaîne vide au `[ -gt 0 ]` — vérifier si le §8 des points en suspens l'a bien fermé | TASK-018 | orchestrateur |
+| [ ] | A30 | P3 | `update-system.sh:133` : `\|\| true` laisse une chaîne vide au `[ -gt 0 ]` — vérifier si le §8 des points en suspens l'a bien fermé | TASK-018 | orchestrateur |
 | [ ] | A31 | P3 | Septième issue de `check-services.sh` (« unité non chargée ») documentée, jamais éprouvée | points en suspens §12 | tâche agent |
 | [ ] | A32 | P3 | `create-network.sh` : règle de nom à deux caractères empruntée aux conteneurs, non vérifiée pour les réseaux | TASK-032 | orchestrateur |
 | [ ] | A33 | P3 | Test de `configure-cron.sh` : `demon_cron_present()` duplique `chemin_demon_cron()`, les deux peuvent dériver | TASK-009 | tâche agent |
