@@ -81,7 +81,7 @@ node -e '
     const [date, tache, profil, modele, duree, code] = champs;
     console.log([date, tache, profil, modele, j.num_turns ?? "?", u.input_tokens ?? "?", cache,
                  u.output_tokens ?? "?", duree, code].join("\t"));
-    console.error(j.result || "(aucune réponse lisible de l’agent)");
+    console.error(j.result || "(aucune réponse lisible de cet agent)");
 ' "$sortie" "$(date '+%F %T')" "$tache" "$profil" "$MODELE" "$(( $(date +%s) - debut ))" "$code" >> "$journal"
 
 tail -1 "$journal"
