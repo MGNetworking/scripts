@@ -640,6 +640,10 @@ if [ "$MODE_INIT" = "systemd" ]; then
     #   les périphériques de l'hôte — et il n'est employé que parce que ce profil
     #   n'a pas d'autre raison d'être que de faire tourner un init. Le conteneur
     #   est jetable, ne porte aucun secret, et ne monte que le dépôt.
+    #   MESURÉ le 2026-09-15 (TASK-039, A13) : « --cap-add SYS_ADMIN », seul ou
+    #   avec seccomp et apparmor « unconfined » et « --cgroupns=private », laisse
+    #   le conteneur s'arrêter avant que systemd soit prêt ; « --privileged »
+    #   donne « running » en quelques secondes. L'alternative étroite ne suffit pas.
     # --tmpfs /run : /run porte l'état d'exécution volatile du système. Le faire
     #   reposer sur la couche d'image laisserait des résidus de construction à un
     #   endroit que systemd s'attend à trouver vide au démarrage. /run/lock n'est
