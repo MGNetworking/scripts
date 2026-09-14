@@ -6,6 +6,9 @@ priority: medium
 depends_on:
   - TASK-029
 environment: container-debian
+niveau: N2
+executor: deepseek-flash
+effort: low
 human_approval_required: true
 objective: |
   Livrer la récupération des images d'un projet Compose désigné explicitement en
@@ -15,8 +18,6 @@ objective: |
 scope:
   - Docker/Maintenance/update-images.sh
   - tests/integration/update-images.test.sh
-  - Docker/README.md — la ligne du tableau pour ce script, et la création du fichier s'il n'existe pas encore
-  - README.md — la ligne du tableau des scripts disponibles
 out_of_scope:
   - le redéploiement des services — le script récupère les images, il ne relance aucun conteneur ; voir « Deux actes, pas un »
   - tout parcours automatique des projets de la machine, toute découverte par balayage de /opt, /srv ou d'un répertoire de configuration

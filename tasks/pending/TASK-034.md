@@ -5,6 +5,9 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
+niveau: N1
+executor: deepseek-flash
+effort: low
 human_approval_required: true
 objective: |
   Livrer le relevé de consommation de stockage de Docker, en lecture seule,
@@ -14,8 +17,6 @@ objective: |
 scope:
   - Docker/Diagnostics/docker-disk-usage.sh
   - tests/integration/docker-disk-usage.test.sh
-  - Docker/README.md — la ligne du tableau pour ce script, et la création du fichier s'il n'existe pas encore
-  - README.md — la ligne du tableau des scripts disponibles
 out_of_scope:
   - toute écriture sur la machine — le dossier Docker/Diagnostics/ est en lecture seule sans exception (CLAUDE.md, frontière Diagnostics)
   - toute suppression, tout prune, tout appel à docker system prune même en simulation

@@ -5,6 +5,9 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
+niveau: N1
+executor: deepseek-flash
+effort: low
 human_approval_required: true
 objective: |
   Livrer l'inventaire des conteneurs de la machine, en lecture seule : nom,
@@ -15,8 +18,6 @@ objective: |
 scope:
   - Docker/Diagnostics/list-containers.sh
   - tests/integration/list-containers.test.sh
-  - Docker/README.md — la ligne du tableau pour ce script, et la création du fichier s'il n'existe pas encore
-  - README.md — la ligne du tableau des scripts disponibles
 out_of_scope:
   - toute écriture sur la machine — le dossier Docker/Diagnostics/ est en lecture seule sans exception (CLAUDE.md, frontière Diagnostics)
   - tout arrêt, démarrage, redémarrage ou suppression de conteneur

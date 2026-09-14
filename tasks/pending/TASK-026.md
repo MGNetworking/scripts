@@ -5,6 +5,8 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
+niveau: N3
+executor: sonnet
 human_approval_required: true
 objective: |
   Livrer le redémarrage explicite et confirmé du serveur — le script le plus
@@ -15,8 +17,6 @@ scope:
   - Linux/System/reboot-system.sh
   - tests/integration/reboot-system.test.sh
   - config/server.env.example — le mode par défaut, si une valeur de machine s'avère nécessaire
-  - Linux/System/README.md — ligne du tableau, utilisation, risques
-  - README.md — ligne du tableau des scripts
 out_of_scope:
   - l'extinction de la machine — poweroff, halt, shutdown -h
   - le redémarrage différé, sa programmation et son annulation

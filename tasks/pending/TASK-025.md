@@ -5,6 +5,8 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
+niveau: N3
+executor: sonnet
 human_approval_required: true
 objective: |
   Livrer le script qui crée un compte d'administration utilisable — utilisateur,
@@ -15,8 +17,6 @@ scope:
   - Linux/System/manage-users.sh
   - tests/integration/manage-users.test.sh
   - config/server.env.example — nom du compte d'administration et chemin de sa clé publique
-  - Linux/System/README.md — ligne du tableau, utilisation, risques, ordre avec Linux/Security
-  - README.md — ligne du tableau des scripts
 out_of_scope:
   - la suppression d'un utilisateur, userdel et la destruction d'un répertoire personnel — tâche distincte, réellement destructive
   - le verrouillage, le déverrouillage et l'expiration d'un compte

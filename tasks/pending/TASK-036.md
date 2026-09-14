@@ -6,6 +6,8 @@ priority: medium
 depends_on:
   - TASK-029
 environment: container-systemd
+niveau: N3
+executor: sonnet
 human_approval_required: true
 objective: |
   Livrer la mise à jour du moteur Docker et de ses composants — Engine, CLI,
@@ -16,8 +18,6 @@ objective: |
 scope:
   - Docker/Maintenance/update-docker.sh
   - tests/integration/update-docker.test.sh
-  - Docker/README.md — la ligne du tableau pour ce script, et la création du fichier s'il n'existe pas encore
-  - README.md — la ligne du tableau des scripts disponibles
 out_of_scope:
   - toute mise à jour d'image applicative, tout docker pull — c'est TASK-035
   - la mise à jour des autres paquets du système — c'est Linux/System/update-system.sh, déjà écrit

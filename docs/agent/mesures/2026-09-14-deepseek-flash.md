@@ -62,8 +62,8 @@ tentatives, pour quelques centimes. La cascade à deux tentatives suffit.
 ## Rejouer
 
 ```bash
-node docs/agent/mesures/deleguer.mjs <worktree> --liste
-node docs/agent/mesures/deleguer.mjs <worktree> deepseek-flash <worktree>/Docker/Diagnostics/check-docker.sh
+node docs/agent/outils/deleguer.mjs <worktree> --liste
+node docs/agent/outils/deleguer.mjs <worktree> deepseek-flash <worktree>/Docker/Diagnostics/check-docker.sh
 ```
 
 La clé est lue dans `DEEPSEEK_API_KEY`, jamais affichée ni écrite. La grille

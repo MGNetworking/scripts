@@ -5,6 +5,9 @@ status: ready
 priority: medium
 depends_on: []
 environment: container-debian
+niveau: N2
+executor: deepseek-flash
+effort: low
 human_approval_required: true
 objective: |
   Livrer le script de notification appelé lorsqu'un script planifié échoue. Il
@@ -15,10 +18,7 @@ scope:
   - Linux/System/notify-failure.sh
   - config/notify.env.example
   - tests/integration/notify-failure.test.sh
-  - config/README.md — la ligne du nouveau contexte, si le tableau le demande
   - docs/points-en-suspens.md — clore le point 2
-  - Linux/System/README.md — ligne du tableau, utilisation, risques, secrets
-  - README.md — ligne du tableau des scripts
 out_of_scope:
   - toute modification de configure-cron.sh et de la ligne déposée dans /etc/cron.d/mgnetworking — voir « Articulation », tâche distincte
   - toute modification d'update-system.sh, de security-check.sh, de backup-resources.sh ou de docker-cleanup.sh
