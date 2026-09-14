@@ -37,6 +37,7 @@ cluster quelle que soit son origine.
 | [`Linux/System/check-memory.sh`](Linux/System/check-memory.sh) | diagnostic mémoire : mémoire vive, fichier d'échange, processus consommateurs |
 | [`Linux/System/check-services.sh`](Linux/System/check-services.sh) | diagnostic des services systemd : services actifs, services en échec, vérification d'un service nommé |
 | [`Docker/Installation/install-docker.sh`](Docker/Installation/install-docker.sh) | installe Docker Engine, containerd, Buildx et le plugin Compose depuis les dépôts officiels |
+| [`Docker/Configuration/configure-docker.sh`](Docker/Configuration/configure-docker.sh) | configure la rotation des journaux des conteneurs dans `/etc/docker/daemon.json` |
 | [`Docker/Diagnostics/check-docker.sh`](Docker/Diagnostics/check-docker.sh) | diagnostic d'un environnement Docker : client et plugins, socket, service, démon, stockage — en lecture seule |
 | [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
 | [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |

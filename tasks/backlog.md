@@ -53,7 +53,7 @@ de ce que cet ADR a tranché.
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](pending/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-034](pending/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-030](pending/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `ready` | moyenne | 029 | conteneur `systemd` | **oui** |
+| [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-032](pending/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | `ready` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-035](pending/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `ready` | moyenne | 029 | conteneur `debian` | **oui** |
 | [TASK-036](pending/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `ready` | moyenne | 029 | conteneur `systemd` | **oui** |
@@ -346,6 +346,7 @@ se limitera au niveau 1 tant qu'un environnement Synology de test n'existe pas.
 | [TASK-027](completed/TASK-027.md) | Rendre le démon Docker disponible sans intervention humaine | [rapport](reports/TASK-027-report.md) |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | [rapport](reports/TASK-031-report.md) |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | [rapport](reports/TASK-029-report.md) |
+| [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | [rapport](reports/TASK-030-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |
