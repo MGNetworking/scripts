@@ -25,8 +25,8 @@ Options :
   -h, --help         afficher cette aide
 
 Colonnes, dimensionnées sur leur contenu — aucune valeur n'est tronquée :
-  NOM, IMAGE, ETAT (« Up 3 hours », « Exited (0) 2 days ago »)
-  IDENTIFIANT (douze premiers caractères), PORTS, RESEAUX
+  NOM, IMAGE, ÉTAT (« Up 3 hours », « Exited (0) 2 days ago »)
+  IDENTIFIANT (douze premiers caractères), PORTS, RÉSEAUX
 
 Codes de retour :
   0  inventaire produit, même sans aucun conteneur à afficher
@@ -146,7 +146,7 @@ afficher() {
     shift
     printf '\n%s — %d\n%s\n' "$titre" "$#" "------------------------------------------------------------"
     if [ "$#" -eq 0 ]; then printf '  Aucun.\n'; return 0; fi
-    rangee NOM IMAGE ETAT IDENTIFIANT PORTS RESEAUX
+    rangee NOM IMAGE ÉTAT IDENTIFIANT PORTS RÉSEAUX
     for ligne in "$@"; do
         champs "$ligne" || continue
         # Le gabarit suit l'ordre de Docker, où l'identifiant ferme la ligne ;

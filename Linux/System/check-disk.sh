@@ -41,6 +41,12 @@ source "$_dir/lib/common.sh"
 # 60 % d'espace libre.
 SEUIL_DEFAUT="85"
 SEUIL="$SEUIL_DEFAUT"
+
+# Borne de « df » (TASK-039, A25) : un montage réseau injoignable fige statfs, et
+# « df » attendrait sans fin. Au-delà, la section est déclarée non disponible.
+DELAI_DF=15
+BORNE_DF=()
+if command -v timeout >/dev/null 2>&1; then BORNE_DF=(timeout "$DELAI_DF"); fi
 ORIGINE_SEUIL="valeur par défaut"
 if [ -n "${SRV_DISK_SEUIL:-}" ]; then
     SEUIL="$SRV_DISK_SEUIL"
@@ -366,7 +372,7 @@ section_systemes_de_fichiers() {
     # quel que soit le code — c'est le vide, et non le code, qui décide ici du
     # « non disponible ».
     local sortie="" partiel="non"
-    if ! sortie="$(df -P -T -h "${ARGS_DF[@]}" 2>/dev/null)"; then
+    if ! sortie="$("${BORNE_DF[@]}" df -P -T -h "${ARGS_DF[@]}" 2>/dev/null)"; then
         partiel="oui"
     fi
 
@@ -438,7 +444,7 @@ section_inodes() {
     fi
 
     local sortie="" partiel="non"
-    if ! sortie="$(df -P -T -i -h "${ARGS_DF[@]}" 2>/dev/null)"; then
+    if ! sortie="$("${BORNE_DF[@]}" df -P -T -i -h "${ARGS_DF[@]}" 2>/dev/null)"; then
         partiel="oui"
     fi
 

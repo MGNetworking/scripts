@@ -24,8 +24,8 @@ un compte du groupe docker suffit.
                  le relevé synthétique, qui reste affiché
   -h, --help     afficher cette aide
 
-Colonnes : CATEGORIE ; OBJETS et ACTIFS, comptabilisés puis en service ; TAILLE,
-l'espace occupé ; RECUPERABLE, ce que le démon dit récupérable, ou « non fourni »
+Colonnes : CATÉGORIE ; OBJETS et ACTIFS, comptabilisés puis en service ; TAILLE,
+l'espace occupé ; RÉCUPÉRABLE, ce que le démon dit récupérable, ou « non fourni »
 quand il ne le dit pas — jamais un zéro, qui se lirait « rien à récupérer ».
 
 Codes de retour : 0 relevé produit, même sans aucune image ; 1 relevé impossible :
@@ -115,7 +115,7 @@ valeur() {
 }
 
 printf '\nConsommation par catégorie\n%s\n' "------------------------------------------------------------"
-printf '  %-16s%8s%8s%12s%14s\n' "CATEGORIE" "OBJETS" "ACTIFS" "TAILLE" "RECUPERABLE"
+printf '  %-17s%8s%8s%12s%16s\n' "CATÉGORIE" "OBJETS" "ACTIFS" "TAILLE" "RÉCUPÉRABLE" # largeurs en octets : +1 et +2 pour les accents
 for i in 0 1 2 3; do
     printf '  %-16s%8s%8s%12s%14s\n' "${NOMS[$i]}" "$(valeur "${OBJETS[$i]}" "-")" \
         "$(valeur "${ACTIFS[$i]}" "-")" "$(valeur "${TAILLES[$i]}" "-")" \
@@ -135,7 +135,7 @@ if [ -z "$BLOC" ]; then
 else
     read -r _ TAILLE_FS UTILISE_FS LIBRE_FS POURCENT MONTAGE <<< "$BLOC"
     printf '  %-14s%s\n' "Occupation" "$POURCENT occupés — $UTILISE_FS utilisés sur $TAILLE_FS, $LIBRE_FS libres"
-    printf '  %-14s%s\n' "Monte sur" "$MONTAGE"
+    printf '  %-15s%s\n' "Monté sur" "$MONTAGE"
 fi
 
 printf '\nCe que cette mesure ne compte pas\n  %s\n  %s\n' \

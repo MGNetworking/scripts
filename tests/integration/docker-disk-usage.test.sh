@@ -54,7 +54,7 @@ CHEMIN="$SANS_DOCKER"
 lancer "" "" "" "" --help
 assert_code 0 "$CODE" "--help rend 0 sans consulter le moindre démon"
 assert_contient "$SORTIE" "--detail" "l'aide documente les options"
-assert_contient "$SORTIE" "RECUPERABLE" "l'aide dit ce que porte chaque colonne"
+assert_contient "$SORTIE" "RÉCUPÉRABLE" "l'aide dit ce que porte chaque colonne"
 assert_contient "$SORTIE" "Codes de retour" "l'aide documente les codes de retour"
 lancer "" "" "" ""
 assert_code 1 "$CODE" "sans --help, l'absence de la commande rend 1, jamais 2"
@@ -129,7 +129,7 @@ lancer "$REPARTI" "$RACINE_STUB" "$DETAIL" "" --detail
 assert_code 0 "$CODE" "--detail rend 0"
 avec_detail="$(sed -n '/^Consommation/,/^Répertoire de données/p' <<< "$SORTIE")"
 assert_egal "$sans_detail" "$avec_detail" "le relevé synthétique est identique avec et sans --detail"
-assert_contient "${SORTIE#*RECUPERABLE}" "nginx:1.27" "et le relevé par objet le suit, jamais avant"
+assert_contient "${SORTIE#*RÉCUPÉRABLE}" "nginx:1.27" "et le relevé par objet le suit, jamais avant"
 
 titre "Lecture seule — ce que la trace des appels prouve"
 : > "$TRACE"
