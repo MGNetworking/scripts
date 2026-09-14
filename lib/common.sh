@@ -29,15 +29,38 @@ export SCRIPTS_ROOT
 #
 # Les valeurs de la ligne de commande priment toujours sur celles d'ici : un
 # script lit son argument en premier et ne retombe sur la variable qu'à défaut.
+#
+# Même contrat que load_config (A20) : les variables sont exportées. Le fichier
+# est d'abord lu dans un sous-shell (A21) : s'il est illisible — variable non
+# définie sous set -u, erreur de syntaxe —, c'est le sous-shell qui meurt, et le
+# script s'arrête proprement au lieu de mourir avec allexport armé.
 if [ -f "$SCRIPTS_ROOT/config/server.env" ]; then
     # shellcheck source=/dev/null
+    if ! ( . "$SCRIPTS_ROOT/config/server.env" ) >/dev/null 2>&1; then
+        printf '[ERROR] Configuration illisible : config/server.env\n' >&2
+        exit 1
+    fi
+    case "$-" in *a*) _SERVER_ENV_ALLEXPORT="oui" ;; *) _SERVER_ENV_ALLEXPORT="non" ;; esac
+    set -a
+    # shellcheck source=/dev/null
     . "$SCRIPTS_ROOT/config/server.env"
+    if [ "$_SERVER_ENV_ALLEXPORT" = "non" ]; then set +a; fi
+    unset _SERVER_ENV_ALLEXPORT
 fi
 
 # --- Répertoire de logs ----------------------------------------------------
 # Deux niveaux : LOG_DIR issu de config/server.env s'il y est défini, sinon la
 # valeur par défaut ci-dessous, écrite en dur. Le dépôt reste ainsi fonctionnel
 # sans aucune configuration.
+#
+# LOG_DIR doit être un chemin absolu (A19) : une valeur relative ou commençant par
+# un tiret serait prise pour une option par mkdir, basename ou logrotate. Elle est
+# signalée et remplacée par la valeur par défaut.
+case "${LOG_DIR:-}" in
+    ""|/*) ;;
+    *) printf '[WARN] LOG_DIR ignoré, chemin absolu attendu : « %s »\n' "$LOG_DIR" >&2
+       LOG_DIR="" ;;
+esac
 if [ -z "${LOG_DIR:-}" ]; then
     if [ "$(id -u)" -eq 0 ]; then
         LOG_DIR="/var/log/mgnetworking"
@@ -95,7 +118,9 @@ _journal_hors_service() {
 #     un avertissement lisible.
 _journaliser() {
     local niveau="$1"; shift
-    if [ -z "$LOG_FILE" ]; then
+    # Sous enable_full_logging, tee recopie déjà la sortie d erreur dans le journal :
+    # écrire ici doublerait chaque ligne (TASK-039, A40).
+    if [ -z "$LOG_FILE" ] || [ -n "${_FULL_LOGGING:-}" ]; then
         return 0
     fi
     if { printf '%s [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$niveau" "$*" \
@@ -145,7 +170,8 @@ run_logged() {
     # le constate et vide LOG_FILE. Le test qui suit bascule alors de lui-même
     # sur la branche sans tee, plutôt que de relancer tee sur un fichier mort.
     info "Exécution : $*"
-    if [ -n "$LOG_FILE" ]; then
+    # Sous enable_full_logging, la sortie d erreur est déjà recopiée : pas de second tee (A40).
+    if [ -n "$LOG_FILE" ] && [ -z "${_FULL_LOGGING:-}" ]; then
         "$@" 2>&1 | tee -a "$LOG_FILE" >&2
         return "${PIPESTATUS[0]}"
     fi
@@ -252,6 +278,13 @@ load_config() {
     # sa dernière commande, le plus souvent 0. Le die ci-dessous ne se déclenche
     # que sur une erreur de syntaxe. Le risque reste théorique : config/README.md
     # prescrit des fichiers faits d'affectations, jamais de commandes.
+    # Lecture d'essai en sous-shell (A21) : un .env qui tuerait le shell — variable
+    # non définie sous set -u — tue le sous-shell, et allexport n'est jamais armé.
+    # shellcheck source=/dev/null
+    if ! ( . "$fichier" ) >/dev/null 2>&1; then
+        die "Configuration illisible : config/$nom.env"
+    fi
+
     local code=0
     set -a
     # shellcheck source=/dev/null
