@@ -4,3 +4,5 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-14 23:42:58	TASK-034	deepseek	deepseek-flash	80	91831	7670272	87055	2728	0	0.178
 2026-09-14 23:55:13	TASK-034	deepseek	deepseek-flash	69	72630	7015808	95960	465	0	0.179
 2026-09-15 01:07:36	TASK-037	sonnet	sonnet	1	0	0	0	3	1	
+2026-09-15 01:21:52	TASK-037	deepseek	deepseek-flash	102	182116	9239168	162350	818	0	0.305
+2026-09-15 01:31:14	TASK-037	deepseek	deepseek-flash	62	94015	5543296	81419	354	0	0.159

@@ -12,6 +12,7 @@ une fois, l'arbitre termine si nécessaire.
 | TASK-032 `create-network.sh` | modifie le système | Sonnet, sous-agent | 5/5 après correction | 36 | 148 + 147 | 270 602 jetons | 30 729 jetons | aucun |
 | TASK-033 `list-containers.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 57 | 364 + 252 → 168 + 219 | ≈ 0,25 $ pointe, 2 lancements | 45 011 jetons | relance agent, 2 majeurs corrigés |
 | TASK-034 `docker-disk-usage.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 52 | 150 + 149 → 150 + 150 | 2 lancements, 14,7 M cache | Opus 37 957 / Sonnet 47 098 | relance agent, 1 majeur corrigé |
+| TASK-037 `docker-cleanup.sh` | destructif | agent `deepseek` (sonnet non authentifié, A41) | 4/4 | 68 | 150 + 140 → 150 + 150 | 0,464 $, 2 lancements | Opus 41 816 | relance agent, 4 majeurs corrigés |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.

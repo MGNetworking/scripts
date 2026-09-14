@@ -1,7 +1,7 @@
 ---
 id: TASK-037
 title: "Écrire Docker/Cleanup/docker-cleanup.sh"
-status: in_progress
+status: completed
 priority: high
 depends_on:
   - TASK-034

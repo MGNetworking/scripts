@@ -58,7 +58,7 @@ de ce que cet ADR a tranché.
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-035](pending/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `ready` | moyenne | 029 | conteneur `debian` | **oui** |
 | [TASK-036](pending/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `ready` | moyenne | 029 | conteneur `systemd` | **oui** |
-| [TASK-037](pending/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `ready` | haute | 034 | conteneur `debian` | **oui** |
+| [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `completed` | haute | 034 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -131,7 +131,7 @@ Opus, écrit seul les README et ce backlog, et fusionne. Coûts et défauts au
 | Tâche | Agent |
 |---|---|
 | TASK-024, TASK-033, TASK-034, TASK-035 | `deepseek` |
-| TASK-025, TASK-026, TASK-036, TASK-037 | `sonnet` |
+| TASK-025, TASK-026, TASK-036 | `sonnet` (TASK-037 passée à `deepseek`, A41) |
 | TASK-039 | `orchestrateur` |
 
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
@@ -348,6 +348,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | [rapport](reports/TASK-033-report.md) |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | [rapport](reports/TASK-028-report.md) |
 | [TASK-034](completed/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | [rapport](reports/TASK-034-report.md) |
+| [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | [rapport](reports/TASK-037-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |

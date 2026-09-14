@@ -38,6 +38,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
 | [`Diagnostics/list-containers.sh`](Diagnostics/list-containers.sh) | inventaire des conteneurs : nom, image, état, identifiant, ports, réseaux — actifs par défaut, tous avec `--all` | aucun | non |
 | [`Diagnostics/docker-disk-usage.sh`](Diagnostics/docker-disk-usage.sh) | stockage consommé par Docker : images, conteneurs, volumes, cache de build, espace récupérable ; `--detail` pour le détail | aucun | non |
+| [`Cleanup/docker-cleanup.sh`](Cleanup/docker-cleanup.sh) | nettoie conteneurs arrêtés, réseaux inutilisés hors infrastructure et images orphelines ; volumes sur `--supprimer-volumes` | groupe docker | **oui**, destructif |
 
 ## Ordre d'utilisation
 
@@ -92,5 +93,10 @@ plus ne fige pas le diagnostic.
 installe cinq paquets et active un service. Il ne retire rien sans confirmation
 explicite, et `--dry-run` montre tout cela sans rien écrire.
 
-Quand `Cleanup/` arrivera, les volumes seront exclus du nettoyage général par
-défaut : ils portent les données.
+`docker-cleanup.sh` est **destructif** : il supprime les conteneurs arrêtés, les
+réseaux sans conteneur et les images orphelines, après avoir tout listé et demandé
+confirmation. Les volumes, qui portent les données, n'en font partie qu'avec
+`--supprimer-volumes` et une seconde confirmation. Les réseaux d'infrastructure
+listés dans `SRV_DOCKER_RESEAUX_PROTEGES` (et `SRV_DOCKER_NETWORK`) ne sont jamais
+touchés, et `docker network prune` n'est jamais employé. `--dry-run` montre tout
+sans rien supprimer ; `--yes` est le seul mode planifiable.
