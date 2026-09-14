@@ -56,7 +56,7 @@ de ce que cet ADR a tranché.
 | [TASK-034](completed/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-030](completed/TASK-030.md) | Écrire `Docker/Configuration/configure-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-032](completed/TASK-032.md) | Écrire `Docker/Configuration/create-network.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
-| [TASK-035](pending/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `ready` | moyenne | 029 | conteneur `debian` | **oui** |
+| [TASK-035](completed/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `completed` | moyenne | 029 | conteneur `debian` | **oui** |
 | [TASK-036](pending/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `ready` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `completed` | haute | 034 | conteneur `debian` | **oui** |
 
@@ -349,6 +349,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | [rapport](reports/TASK-028-report.md) |
 | [TASK-034](completed/TASK-034.md) | Écrire `Docker/Diagnostics/docker-disk-usage.sh` | [rapport](reports/TASK-034-report.md) |
 | [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | [rapport](reports/TASK-037-report.md) |
+| [TASK-035](completed/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | [rapport](reports/TASK-035-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |

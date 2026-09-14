@@ -13,6 +13,7 @@ une fois, l'arbitre termine si nécessaire.
 | TASK-033 `list-containers.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 57 | 364 + 252 → 168 + 219 | ≈ 0,25 $ pointe, 2 lancements | 45 011 jetons | relance agent, 2 majeurs corrigés |
 | TASK-034 `docker-disk-usage.sh` | lecture seule | agent `deepseek` (Claude Code) | 4/4 | 52 | 150 + 149 → 150 + 150 | 2 lancements, 14,7 M cache | Opus 37 957 / Sonnet 47 098 | relance agent, 1 majeur corrigé |
 | TASK-037 `docker-cleanup.sh` | destructif | agent `deepseek` (sonnet non authentifié, A41) | 4/4 | 68 | 150 + 140 → 150 + 150 | 0,464 $, 2 lancements | Opus 41 816 | relance agent, 4 majeurs corrigés |
+| TASK-035 `update-images.sh` | un effet | agent `deepseek` | 4/4 | 65 | 150 + 150 → 149 + 149 | 0,218 $, 2 lancements | Opus 36 207 | 2 cas de test corrigés par l'orchestrateur, 5 mineurs par l'agent |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.

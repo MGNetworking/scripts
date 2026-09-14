@@ -1,7 +1,7 @@
 ---
 id: TASK-035
 title: "Écrire Docker/Maintenance/update-images.sh"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-029
