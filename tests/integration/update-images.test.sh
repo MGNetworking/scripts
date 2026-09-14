@@ -32,7 +32,7 @@ printf '#!/bin/sh\nexit 0\n' > "$V1/docker-compose"; chmod +x "$V1/docker-compos
 P_IMAGES=$'exemple/api:1.0\nexemple/api:1.0\nexemple/web:2.3'   # l'api citée deux fois : deux services, une image
 TABLE_AVANT=$'exemple/api:1.0=sha256:aaaa0000111122223333\nexemple/web:2.3=sha256:bbbb4444555566667777'
 TABLE_APRES=$'exemple/api:1.0=sha256:cccc8888999900001111\nexemple/web:2.3=sha256:bbbb4444555566667777'
-export TRACE P_IMAGES TABLE_AVANT TABLE_APRES LOG_DIR="$LOGS" P_COMPOSE="2.29.7" P_DEMON="27.0.0"
+export TRACE P_IMAGES TABLE_AVANT TABLE_APRES P_CONFIG_KO="" LOG_DIR="$LOGS" P_COMPOSE="2.29.7" P_DEMON="27.0.0"
 
 CHEMIN="$BAC:$PATH"; REPOND=""; SORTIE=""; CODE=0
 lancer() {
