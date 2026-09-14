@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # tests/integration/list-containers.test.sh — Docker/Diagnostics/list-containers.sh.
-# TASK-033. Le conteneur de test n'a pas de démon Docker : les trois causes
-# d'échec sont éprouvées par un faux « docker » en tête de PATH, l'inventaire par
-# des réponses tabulées fabriquées, et la lecture seule par la trace des appels.
+# TASK-033. Pas de démon Docker ici : les causes d'échec sont éprouvées par un
+# faux « docker » en tête de PATH, l'inventaire par des réponses tabulées
+# fabriquées, et la lecture seule par la trace des appels.
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
@@ -15,11 +15,8 @@ BAC="$(mktemp -d)"
 TRACE="$BAC/appels"
 trap 'rm -rf "$BAC"' EXIT
 
-# -------------------------------------------------------------------
-# Faux docker
-# -------------------------------------------------------------------
-# Il trace ses arguments, puis rend STUB_SORTIE, STUB_ERREUR et STUB_CODE.
-# STUB_DELAI le fait patienter, pour éprouver la borne de temps du script.
+# Faux docker : il trace ses arguments, puis rend STUB_SORTIE, STUB_ERREUR et
+# STUB_CODE. STUB_DELAI le fait patienter, pour éprouver la borne de temps.
 cat > "$BAC/docker" <<'STUB'
 #!/bin/sh
 printf '%s\n' "$*" >> "$TRACE"
@@ -31,36 +28,31 @@ STUB
 chmod +x "$BAC/docker"
 
 # PATH maîtrisé, SANS docker : la preuve « commande absente » ne dépend donc pas
-# de ce que l'image porte, et vaudrait sur une machine qui installerait Docker.
-# Le script a besoin de ces quelques binaires ; ceux que l'image n'a pas manquent
-# simplement à l'appel, qui échoue alors pour une autre raison, visible.
+# de ce que l'image porte — elle vaudrait sur une machine qui installe Docker.
 SANS_DOCKER="$BAC/sans-docker"
 mkdir -p "$SANS_DOCKER"
-for b in dirname basename mkdir id date sleep timeout; do
+for b in dirname basename mkdir id date cat sleep timeout; do
     chemin="$(command -v "$b" 2>/dev/null || true)"
     [ -n "$chemin" ] && ln -s "$chemin" "$SANS_DOCKER/$b"
 done
 CHEMIN="$BAC:$PATH"
 
-# Lance le script. $1 sortie, $2 erreur, $3 code et $4 délai du faux docker, le
-# reste : arguments du script. Renseigne SORTIE et CODE — les passer par stdout
-# les perdrait dans un sous-shell.
+# Lance le script. $1 sortie, $2 erreur, $3 code du faux docker, le reste :
+# arguments du script. DELAI_STUB fait patienter le faux docker. Renseigne SORTIE
+# et CODE — les passer par stdout les perdrait dans un sous-shell.
 SORTIE=""
 CODE=0
+DELAI_STUB=0
 lancer() {
-    local o="$1" e="$2" c="$3" d="$4"
-    shift 4
-    SORTIE="$(STUB_SORTIE="$o" STUB_ERREUR="$e" STUB_CODE="$c" STUB_DELAI="$d" \
+    local o="$1" e="$2" c="$3"
+    shift 3
+    SORTIE="$(STUB_SORTIE="$o" STUB_ERREUR="$e" STUB_CODE="$c" STUB_DELAI="$DELAI_STUB" \
         TRACE="$TRACE" PATH="$CHEMIN" "$BASH_BIN" "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?
 }
 
-# -------------------------------------------------------------------
-# Réponses fabriquées
-# -------------------------------------------------------------------
-# Trois actifs et un arrêté. Les longueurs sont délibérément inégales : nom de 39
-# caractères, ports à rallonge, trois réseaux. « batch » n'a AUCUN port publié —
-# deux tabulations voisines, le piège du découpage. Les identifiants sont longs :
-# l'affichage doit n'en garder que douze caractères.
+# Trois actifs et un arrêté, aux longueurs délibérément inégales : nom de 39
+# caractères, ports à rallonge, trois réseaux, identifiants longs. « batch » n'a
+# AUCUN port publié — deux tabulations voisines, le piège du découpage.
 API=$'api\tregistre.exemple.net/equipe/api:2.14.0\tUp 3 hours\t0.0.0.0:8080->80/tcp, 0.0.0.0:8443->443/tcp, :::8080->80/tcp\tfrontend,backend,supervision\t9f8e7d6c5b4afedcba987654'
 BATCH=$'batch\texemple/batch:0.9\tUp 12 minutes\t\tlot-interne\ta1b2c3d4e5f6a1b2c3d4e5f6'
 COLLECTE=$'collecteur-de-metriques-du-site-principal\texemple/collecteur:1.0\tRestarting (1) 5 seconds ago\t127.0.0.1:9100->9100/tcp\tsupervision\t112233445566112233445566'
@@ -78,9 +70,6 @@ rang_de() {
     printf '%s' "${#ligne}"
 }
 
-# -------------------------------------------------------------------
-# Aide et erreurs d'usage
-# -------------------------------------------------------------------
 titre "Aide — lisible alors que docker n'est pas installé"
 
 CHEMIN="$SANS_DOCKER"
@@ -113,9 +102,6 @@ assert_absent "$SORTIE" "Usage" "l'aide n'est pas déversée"
 assert_egal "1" "$(printf '%s\n' "$SORTIE" | wc -l | tr -d ' ')" \
     "le refus tient sur une seule ligne"
 
-# -------------------------------------------------------------------
-# Les trois autres causes d'échec du client
-# -------------------------------------------------------------------
 titre "Le démon ne répond pas"
 
 lancer "" "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?" 1
@@ -136,7 +122,9 @@ assert_absent "$SORTIE" "permission denied" "le message brut du client ne filtre
 titre "Délai borné — un démon figé ne suspend pas l'inventaire"
 
 debut=$SECONDS
-lancer "" "" 0 60
+DELAI_STUB=60
+lancer "" "" 0
+DELAI_STUB=0
 ecoule=$(( SECONDS - debut ))
 assert_code 1 "$CODE" "un démon qui ne répond plus rend 1"
 assert_contient "$SORTIE" "ne répond pas" "et cette cause-là est nommée"
@@ -146,9 +134,6 @@ else
     ko "la main est rendue en ${ecoule}s : la borne de temps n'a pas joué"
 fi
 
-# -------------------------------------------------------------------
-# Inventaire
-# -------------------------------------------------------------------
 titre "Inventaire — les conteneurs en cours d'exécution, et eux seuls"
 
 lancer "$TOUS" "" 0
@@ -210,9 +195,6 @@ lancer "" "" 0 --all
 assert_code 0 "$CODE" "--all sans aucun conteneur rend 0 lui aussi"
 assert_contient "$SORTIE" "Aucun conteneur à afficher" "avec le même aveu"
 
-# -------------------------------------------------------------------
-# Lecture seule
-# -------------------------------------------------------------------
 titre "Lecture seule — ce que la trace des appels prouve"
 
 : > "$TRACE"

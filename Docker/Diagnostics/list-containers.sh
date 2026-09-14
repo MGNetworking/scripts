@@ -16,26 +16,20 @@ show_help() {
 Usage : list-containers.sh [--all] [--help]
 
 Inventaire des conteneurs Docker, en lecture seule : nom, image, état,
-identifiant court, ports publiés et réseaux de chacun. Sans option, seuls les
-conteneurs EN COURS D'EXÉCUTION sont affichés.
-
-Ni start, ni stop, ni restart, ni rm, ni prune. Aucun privilège root n'est
-requis : un compte membre du groupe docker suffit.
+identifiant court, ports publiés et réseaux. Sans option, seuls les conteneurs
+EN COURS D'EXÉCUTION sont affichés. Ni start, ni stop, ni rm, ni prune ; aucun
+privilège root n'est requis — un compte du groupe docker suffit.
 
 Options :
       --all          ajouter les conteneurs arrêtés, dans une section distincte
   -h, --help         afficher cette aide
 
 Colonnes, dimensionnées sur leur contenu — aucune valeur n'est tronquée :
-  NOM          nom du conteneur
-  IMAGE        image dont il est issu, étiquette comprise
-  ETAT         état annoncé par Docker : « Up 3 hours », « Exited (0) 2 days ago »
-  IDENTIFIANT  douze premiers caractères de l'identifiant
-  PORTS        mappages de ports publiés, liste complète
-  RESEAUX      réseaux auxquels le conteneur est rattaché
+  NOM, IMAGE, ETAT (« Up 3 hours », « Exited (0) 2 days ago »)
+  IDENTIFIANT (douze premiers caractères), PORTS, RESEAUX
 
 Codes de retour :
-  0  inventaire produit, même lorsqu'il n'y a aucun conteneur à afficher
+  0  inventaire produit, même sans aucun conteneur à afficher
   1  inventaire impossible : « docker » absente, démon qui ne répond pas, ou
      socket dont l'accès est refusé — trois causes, trois messages distincts
   2  option inconnue — seul cas de 2
@@ -76,7 +70,7 @@ OPTIONS=(ps)
 OPTIONS+=(--format "$GABARIT")
 
 # Borne de temps quand « timeout » est là : un démon figé ne doit pas suspendre
-# l'inventaire. Sans lui, l'appel direct reste le repli.
+# l'inventaire.
 BORNE=()
 command -v timeout >/dev/null 2>&1 && BORNE=(timeout "$DELAI")
 
@@ -92,21 +86,15 @@ REPONSE="$(LC_ALL=C "${BORNE[@]}" docker "${OPTIONS[@]}" 2>&1)" || CODE_DOCKER=$
 # qu'à l'affichage, là où sept tableaux parallèles devaient rester d'accord.
 ACTIFS=()
 ARRETES=()
-
-analyser() {
-    local ligne nom image statut
-    while IFS= read -r ligne; do
-        [ -n "$ligne" ] || continue
-        IFS=$'\t' read -r nom image statut _ <<< "$ligne"
-        case "$statut" in
-            Up*|Restarting*) ACTIFS+=("$ligne") ;;
-            # Seconde barrière : sans --all, le client ne rend déjà que ce qui
-            # tourne, mais un arrêté glissé dans sa réponse serait écarté ici.
-            *) if [ "$TOUS" = "oui" ]; then ARRETES+=("$ligne"); fi ;;
-        esac
-    done <<< "$1"
-}
-analyser "$REPONSE"
+while IFS= read -r ligne; do
+    [ -n "$ligne" ] || continue
+    IFS=$'\t' read -r _ _ statut _ <<< "$ligne"
+    case "$statut" in
+        Up*|Restarting*) ACTIFS+=("$ligne") ;;
+        # Seconde barrière : sans --all, le client ne rend déjà que ce qui tourne.
+        *) if [ "$TOUS" = "oui" ]; then ARRETES+=("$ligne"); fi ;;
+    esac
+done <<< "$REPONSE"
 
 C=()
 # Découpe une ligne en six champs, tabulations VIDES comprises : « IFS=$'\t'
@@ -119,9 +107,8 @@ champs() {
     [ "${#C[@]}" -eq 6 ]
 }
 
-# Largeurs relevées sur le contenu, jamais inférieures à celles des en-têtes.
-# Les en-têtes sont sans accent : leur largeur se compte en octets dès que la
-# locale n'est pas multibyte, et « ÉTAT » décalerait le tableau.
+# Largeurs relevées sur le contenu. Les en-têtes sont sans accent : leur largeur
+# se compte en octets dès que la locale n'est pas multibyte.
 L_NOM=3; L_IMAGE=5; L_ETAT=4; L_PORTS=5; L_ID=12
 largeurs() {
     local ligne
@@ -132,6 +119,9 @@ largeurs() {
         [ "${#C[2]}" -gt "$L_ETAT" ]  && L_ETAT="${#C[2]}"
         [ "${#C[3]}" -gt "$L_PORTS" ] && L_PORTS="${#C[3]}"
     done
+    # Sans ce retour, le dernier test du dernier tour — souvent faux — ferait
+    # sortir la fonction en 1, et set -e emporterait le script.
+    return 0
 }
 largeurs "${ACTIFS[@]}" "${ARRETES[@]}"
 
@@ -142,9 +132,8 @@ cellule() {
     printf '%s%*s' "$texte" "$remplissage" ""
 }
 
-# Une seule fonction pour l'en-tête et pour les lignes. L'identifiant y est
-# ramené à douze caractères ; ports et réseaux restent en dernier, seuls champs
-# de longueur imprévisible, et s'affichent en entier.
+# Une seule fonction pour l'en-tête et pour les lignes ; l'identifiant y est
+# ramené à douze caractères, et ports et réseaux restent les dernières colonnes.
 rangee() {
     printf '  %s%s%s%s%s%s\n' \
         "$(cellule "$1" "$L_NOM")" "$(cellule "$2" "$L_IMAGE")" \
@@ -156,30 +145,24 @@ afficher() {
     local titre="$1" ligne
     shift
     printf '\n%s — %d\n%s\n' "$titre" "$#" "------------------------------------------------------------"
-    if [ "$#" -eq 0 ]; then
-        printf '  Aucun.\n'
-        return 0
-    fi
+    if [ "$#" -eq 0 ]; then printf '  Aucun.\n'; return 0; fi
     rangee NOM IMAGE ETAT IDENTIFIANT PORTS RESEAUX
     for ligne in "$@"; do
         champs "$ligne" || continue
-        rangee "${C[@]}"
+        # Le gabarit suit l'ordre de Docker, où l'identifiant ferme la ligne ;
+        # le tableau, lui, le place avant les deux colonnes de longueur libre.
+        rangee "${C[0]}" "${C[1]}" "${C[2]}" "${C[5]}" "${C[3]}" "${C[4]}"
     done
 }
 
 info "Inventaire des conteneurs Docker — lecture seule."
 
-# Le cas vide rend 0 : une machine sans conteneur n'est pas en panne. Un
-# diagnostic rend compte, il ne juge pas.
+# Le cas vide rend 0 : une machine sans conteneur n'est pas en panne.
 if [ "${#ACTIFS[@]}" -eq 0 ] && [ "${#ARRETES[@]}" -eq 0 ]; then
-    if [ "$TOUS" = "oui" ]; then
-        printf "Aucun conteneur à afficher : cette machine n'en compte aucun, ni en cours d'exécution ni arrêté.\n"
-    else
-        printf "Aucun conteneur à afficher : aucun n'est en cours d'exécution (--all montre aussi les arrêtés).\n"
-    fi
+    AVIS="aucun n'est en cours d'exécution (--all montre aussi les arrêtés)"
+    [ "$TOUS" = "oui" ] && AVIS="cette machine n'en compte aucun, ni actif ni arrêté"
+    printf 'Aucun conteneur à afficher : %s.\n' "$AVIS"
 else
     afficher "Conteneurs en cours d'exécution" "${ACTIFS[@]}"
-    if [ "$TOUS" = "oui" ]; then
-        afficher "Conteneurs arrêtés" "${ARRETES[@]}"
-    fi
+    if [ "$TOUS" = "oui" ]; then afficher "Conteneurs arrêtés" "${ARRETES[@]}"; fi
 fi
