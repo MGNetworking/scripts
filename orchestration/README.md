@@ -5,28 +5,18 @@ ce que Claude Code impose de trouver dans `.claude/`.
 
 ## Le principe
 
-**Claude Code est l'orchestrateur et le harness.** Votre session Claude Code
+**Claude Code est l'orchestrateur et le harness.** La session Claude Code de `user`
 (Opus) répartit les tâches du backlog entre des agents. Chaque agent est une autre
 instance de Claude Code, lancée sans interface, qui travaille avec **le modèle
 choisi pour la tâche** : DeepSeek, Sonnet, ou tout autre modèle ajouté plus tard.
 Mêmes outils, mêmes règles ; seul le modèle change.
 
-```text
-Maxime : /tache TASK-033
-   │
-   ▼
-ORCHESTRATEUR — votre session Claude Code (Opus)
-   lit la fiche ─► champ « agent: deepseek »
-   │
-   ▼  lancer-agent.sh deepseek TASK-033
-AGENT — Claude Code + DeepSeek, dans sa propre copie du dépôt
-   écrit le script et ses tests ─► les lance ─► corrige (3 fois au plus) ─► commit
-   │
-   ▼
-ORCHESTRATEUR
-   relance les tests lui-même ─► vérifie périmètre et tests figés
-   ─► relecture Opus ─► si défauts : agent relancé une fois
-   ─► rapport, README, backlog, journal ─► fusion dans master
+![Schéma de l'orchestration des agents](schema/orchestration.png)
+
+Source modifiable : [schema/orchestration.svg](schema/orchestration.svg). Après modification, régénérer le PNG :
+
+```bash
+msedge --headless=new --hide-scrollbars --screenshot=orchestration/schema/orchestration.png --window-size=1400,960 orchestration/schema/orchestration.svg
 ```
 
 ## Qui fait quoi

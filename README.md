@@ -24,28 +24,18 @@ cluster quelle que soit son origine.
 
 ## Scripts disponibles
 
-| Script | Rôle |
-|---|---|
-| [`Linux/System/system-info.sh`](Linux/System/system-info.sh) | état du système, en lecture seule |
-| [`Linux/System/update-system.sh`](Linux/System/update-system.sh) | mise à jour des paquets |
-| [`Linux/System/configure-logging.sh`](Linux/System/configure-logging.sh) | répertoire des journaux et rotation logrotate |
-| [`Linux/System/configure-hostname.sh`](Linux/System/configure-hostname.sh) | nom d'hôte et cohérence de /etc/hosts |
-| [`Linux/System/configure-timezone.sh`](Linux/System/configure-timezone.sh) | fuseau horaire, avec validation |
-| [`Linux/System/configure-swap.sh`](Linux/System/configure-swap.sh) | fichier d'échange : état, création, redimensionnement |
-| [`Linux/System/configure-cron.sh`](Linux/System/configure-cron.sh) | planification des scripts automatiques dans /etc/cron.d |
-| [`Linux/System/check-disk.sh`](Linux/System/check-disk.sh) | diagnostic de stockage : systèmes de fichiers, inodes, périphériques, répertoires consommateurs |
-| [`Linux/System/check-memory.sh`](Linux/System/check-memory.sh) | diagnostic mémoire : mémoire vive, fichier d'échange, processus consommateurs |
-| [`Linux/System/check-services.sh`](Linux/System/check-services.sh) | diagnostic des services systemd : services actifs, services en échec, vérification d'un service nommé |
-| [`Docker/Installation/install-docker.sh`](Docker/Installation/install-docker.sh) | installe Docker Engine, containerd, Buildx et le plugin Compose depuis les dépôts officiels |
-| [`Docker/Configuration/configure-docker.sh`](Docker/Configuration/configure-docker.sh) | configure la rotation des journaux des conteneurs dans `/etc/docker/daemon.json` |
-| [`Docker/Configuration/create-network.sh`](Docker/Configuration/create-network.sh) | crée un réseau Docker nommé, partagé entre projets Compose indépendants |
-| [`Docker/Diagnostics/check-docker.sh`](Docker/Diagnostics/check-docker.sh) | diagnostic d'un environnement Docker : client et plugins, socket, service, démon, stockage — en lecture seule |
-| [`Docker/Diagnostics/list-containers.sh`](Docker/Diagnostics/list-containers.sh) | inventaire des conteneurs — actifs, ou tous avec `--all` — en lecture seule |
-| [`Synology/Plex/organize-series.sh`](Synology/Plex/organize-series.sh) | organisation des séries Plex (hérité, pas encore au standard) |
-| [`Synology/Plex/update-plex.sh`](Synology/Plex/update-plex.sh) | mise à jour de Plex (hérité, pas encore au standard) |
+Chaque domaine décrit ses scripts, leurs prérequis, leurs risques et leur ordre
+d'utilisation dans son propre README.
 
-Détail par domaine : [Linux/System/README.md](Linux/System/README.md),
-[Docker/README.md](Docker/README.md).
+| Domaine | Contenu | État |
+|---|---|---|
+| [Linux/](Linux/README.md) | système de base, sécurité, distribution K3s | `System` : 10 scripts ; `Security`, `K3s` à venir |
+| [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 5 scripts |
+| `Kubernetes/` | installation, configuration et maintenance d'un cluster | à venir |
+| [Synology/](Synology/README.md) | NAS Synology : Plex, administration DSM | 2 scripts hérités |
+
+Socle commun : [config/](config/README.md) pour les configurations,
+[tests/](tests/README.md) pour les validations.
 
 ## Installation sur un serveur
 
