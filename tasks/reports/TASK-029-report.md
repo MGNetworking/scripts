@@ -74,3 +74,24 @@ installation qu'on vient de faire, conteneur de test à l'appui.
 
 `TASK-030` et `TASK-032` sont débloquées par cette tâche, ainsi que `TASK-035` et
 `TASK-036`.
+
+## Correction après relecture Opus — 2026-09-14
+
+Relue par Opus avec la grille appliquée à TASK-030 : *fusionnable après
+corrections*, 2 défauts majeurs et 5 mineurs. Tous corrigés.
+
+| Défaut | Correction |
+|---|---|
+| MAJEUR — noyau affiché, jamais contrôlé | refus en 1 sous 3.10, minimum historique de Docker Engine |
+| MAJEUR — chemins modifiants non testés | retrait des conflits, `enable`/`start`, échec d'`apt-get update` et échec de la clé éprouvés par faux binaires |
+| `MIN_MEMOIRE_MO=1024` au lieu de 512 | aligné sur la fiche |
+| `apt-get remove` avant `DEBIAN_FRONTEND` | export déplacé avant le premier `apt-get` |
+| clé écrite directement par `curl` | temporaire, contrôle de non-vacuité, puis `mv` |
+| `df` illisible passé sous silence | `[WARN]` |
+| échec d'`apt-get update` attribué à la seule suite | message élargi ; la clé est retirée si le script venait de la poser |
+
+Tests creux retirés : faux `os-release` que rien ne lisait, `grep -c` comparé à
+« 1 ». Directive `shellcheck disable=SC2016` justifiée en tête du fichier de cas.
+
+**Validations** : les cinq à **0**. Fichier de cas : **43 vérifications, 0 échec,
+0 sautée** — contre 26 et une sautée avant. Script 199 lignes, cas 149.
