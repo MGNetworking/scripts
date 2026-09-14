@@ -1,12 +1,12 @@
 ---
 id: TASK-036
 title: "Écrire Docker/Maintenance/update-docker.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on:
   - TASK-029
 environment: container-systemd
-agent: sonnet
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer la mise à jour du moteur Docker et de ses composants — Engine, CLI,

@@ -131,7 +131,7 @@ Opus, écrit seul les README et ce backlog, et fusionne. Coûts et défauts au
 | Tâche | Agent |
 |---|---|
 | TASK-024, TASK-033, TASK-034, TASK-035 | `deepseek` |
-| TASK-025, TASK-026, TASK-036 | `sonnet` (TASK-037 passée à `deepseek`, A41) |
+| TASK-025, TASK-026 | `sonnet` (TASK-036 et TASK-037 passées à `deepseek`, A41) |
 | TASK-039 | `orchestrateur` |
 
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
