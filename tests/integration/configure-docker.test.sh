@@ -104,6 +104,7 @@ titre "Valeurs mal formées — refus avant toute écriture"
 
 nettoyer_daemon
 for mauvais in "--log-driver syslog" "--log-max-size 10x" "--log-max-file zero" "--log-max-file 0"; do
+    # Découpage voulu : chaque valeur mal formée porte une option et son argument.
     # shellcheck disable=SC2086
     bash "$CIBLE" $mauvais >/dev/null 2>&1 && code=0 || code=$?
     assert_code 2 "$code" "« $mauvais » est refusé en 2"

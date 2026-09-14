@@ -47,24 +47,24 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 
 | État | Id | P | Anomalie | Source | Traitement |
 |---|---|---|---|---|---|
-| [ ] | A01 | P1 | Acceptance TASK-011 rouge : 4 directives `shellcheck` sans justification au-dessus (`configure-docker.sh` l.91, 141 ; `install-docker.sh` l.145 ; `configure-docker.test.sh` l.107) et `ASSUME_YES` lue hors `lib/common.sh` | TASK-028, ex-TASK-038 | orchestrateur |
-| [ ] | A02 | P1 | `juger.sh` ne lance pas les règles transverses de l'acceptance : agents et relecteur n'ont pas vu A01 | TASK-028 | orchestrateur |
+| [x] | A01 | P1 | Acceptance TASK-011 rouge : 4 directives `shellcheck` sans justification au-dessus (`configure-docker.sh` l.91, 141 ; `install-docker.sh` l.145 ; `configure-docker.test.sh` l.107) et `ASSUME_YES` lue hors `lib/common.sh` | TASK-028, ex-TASK-038 | fait — directives justifiées au-dessus, garde sur `OUI` au lieu d'`ASSUME_YES` ; acceptance TASK-011 : 0 échec |
+| [x] | A02 | P1 | `juger.sh` ne lance pas les règles transverses de l'acceptance : agents et relecteur n'ont pas vu A01 | TASK-028 | fait — `juger.sh` lance `TASK-011-analyse-statique.sh`, un 1 fait échouer le juge |
 | [ ] | A03 | P1 | `tests/lint.sh` sort en 0 sur l'hôte en annonçant NON EXÉCUTÉ (pas de `shellcheck`) : un validateur conclut PASS | TASK-002, 012, 018, backlog | orchestrateur |
-| [ ] | A04 | P1 | `docker info` sans borne de temps dans trois fichiers d'acceptance (`TASK-002:181`, `TASK-011:145`, `TASK-012:589`) : un démon qui démarre suspend le niveau | TASK-013 | orchestrateur |
+| [x] | A04 | P1 | `docker info` sans borne de temps dans trois fichiers d'acceptance (`TASK-002:181`, `TASK-011:145`, `TASK-012:589`) : un démon qui démarre suspend le niveau | TASK-013 | fait — `timeout 30` sur les trois sondes |
 | [ ] | A05 | P2 | ~70 sauts non qualifiés (`saute` nu) dans `unit` et `integration` : leur nature n'est pas établie | TASK-013 | tâche à atomiser |
 | [ ] | A06 | P2 | Exécutions concurrentes non maîtrisées (conteneur tué en 137, assertions « aucun conteneur résiduel » fausses en parallèle) — préalable au parallélisme des agents | TASK-002, 012, 014 | tâche à atomiser |
-| [ ] | A07 | P2 | Tâches hors script (README, schéma, documentation) non couvertes par le circuit d'agent : `limites.json` et `juger.sh` ne le permettent pas | orchestration | décision de `user` |
+| [x] | A07 | P2 | Tâches hors script (README, schéma, documentation) non couvertes par le circuit d'agent : `limites.json` et `juger.sh` ne le permettent pas | orchestration | décision 41 — la documentation reste à l'orchestrateur |
 | [ ] | A08 | P2 | Premier jet de TASK-034 : 2 728 s et 80 tours, contre 315 s pour TASK-033 ; cause non identifiée | TASK-034 | orchestrateur |
 | [ ] | A09 | P2 | Coût réel des agents non calculé : `lancer-agent.sh` relève les jetons, pas le prix ; estimations à confirmer sur le tableau de bord DeepSeek | TASK-033, 034 | orchestrateur |
 | [ ] | A10 | P2 | `.claude/agents/relecteur.md` : `model: sonnet` et « lance les validations », alors que `/tache` impose Opus en lecture seule — Opus confirmé par l'essai de TASK-034 | TASK-034 | orchestrateur, reporté par `user` en fin de corrections |
-| [ ] | A11 | P2 | Docker Desktop tombé en cours de session : aucune reprise possible sans humain ; `DELAI_DISPONIBILITE` (300 s) jamais mesuré | points en suspens §11, TASK-027 | décision de `user` |
+| [x] | A11 | P2 | Docker Desktop tombé en cours de session : aucune reprise possible sans humain ; `DELAI_DISPONIBILITE` (300 s) jamais mesuré | points en suspens §11, TASK-027 | décision 42 — arrêt signalé, limite assumée |
 | [ ] | A12 | P2 | `run-in-container.sh` : message de démon injoignable tronqué, `--profil --dry-run` mal analysé | TASK-002, backlog | orchestrateur |
 | [ ] | A13 | P2 | Profil `systemd` en `--privileged` sans preuve qu'il soit indispensable ; plafond de 30 s du lancement détaché jugé, non mesuré | points en suspens §9, §10, TASK-020 | tâche à atomiser |
 | [ ] | A14 | P2 | Aucune garde contre la récursion du niveau `acceptance` : un fichier de cas qui l'appelle boucle sans fin | TASK-012 | orchestrateur |
 | [ ] | A15 | P2 | Les gardes de `run-unit.sh` ne sont vérifiées par aucune suite en continu | TASK-003 | orchestrateur |
 | [ ] | A16 | P2 | Les liens entre tâches cassent à chaque changement de statut (le répertoire fait partie du chemin) | backlog | orchestrateur |
 | [ ] | A17 | P2 | Piège du commentaire commençant par `shellcheck` : seul `tests/lint.sh` en est protégé | TASK-011, backlog | orchestrateur |
-| [ ] | A18 | P2 | Aucune intégration continue | backlog | décision de `user` |
+| [x] | A18 | P2 | Aucune intégration continue | backlog | décision 43 — pas de CI pendant le chantier |
 | [ ] | A19 | P3 | `LOG_DIR` validé par personne : une valeur commençant par un tiret traverse le socle | points en suspens §6 | orchestrateur, `lib/common.sh` |
 | [ ] | A20 | P3 | Asymétrie de chargement : `server.env` par `source` nu, `load_config` avec `set -a` — même écriture, effets différents | TASK-015, backlog | orchestrateur, `lib/common.sh` |
 | [ ] | A21 | P3 | `set +a` non rétabli quand le `source` d'un `.env` tue le shell sous `set -u` | TASK-015, backlog | orchestrateur, `lib/common.sh` |
@@ -76,16 +76,16 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A27 | P3 | `swap_actif()` ne déséchappe pas `/proc/swaps` (`\040`) : un chemin avec espace n'est pas reconnu | TASK-019 | tâche agent |
 | [ ] | A28 | P3 | Groupe `swap-fstab` fragile : dépend de l'absence de `/dev/sdc` dans le conteneur | TASK-019 | tâche agent |
 | [ ] | A29 | P3 | Branche morte dans `configure-logging.sh` : `[dry-run] Créerait …` inatteignable | TASK-011, backlog | tâche agent |
-| [ ] | A30 | P3 | `update-system.sh:133` : `\|\| true` laisse une chaîne vide au `[ -gt 0 ]` — vérifier si le §8 des points en suspens l'a bien fermé | TASK-018 | orchestrateur |
+| [x] | A30 | P3 | `update-system.sh:133` : `\|\| true` laisse une chaîne vide au `[ -gt 0 ]` — vérifier si le §8 des points en suspens l'a bien fermé | TASK-018 | vérifié sans objet — `grep -c` imprime 0 même en échec, `restant` n'est jamais vide |
 | [ ] | A31 | P3 | Septième issue de `check-services.sh` (« unité non chargée ») documentée, jamais éprouvée | points en suspens §12 | tâche agent |
 | [ ] | A32 | P3 | `create-network.sh` : règle de nom à deux caractères empruntée aux conteneurs, non vérifiée pour les réseaux | TASK-032 | orchestrateur |
 | [ ] | A33 | P3 | Test de `configure-cron.sh` : `demon_cron_present()` duplique `chemin_demon_cron()`, les deux peuvent dériver | TASK-009 | tâche agent |
-| [ ] | A34 | P4 | `tests/README.md` fait 84 Ko : à scinder par niveau | points en suspens §14 | décision de `user` |
+| [x] | A34 | P4 | `tests/README.md` fait 84 Ko : à scinder par niveau | points en suspens §14 | décision 44 — non scindé |
 | [ ] | A35 | P4 | `tests/README.md` en retard sur la couverture de `configure-swap.sh` (section 5, groupe 3 bis) | TASK-017 | orchestrateur |
 | [ ] | A36 | P4 | `recensement-substitutions.md` ignore `check-disk.sh`, `check-memory.sh`, `check-services.sh` | points en suspens §13, TASK-021 | orchestrateur |
 | [ ] | A37 | P4 | README de `configure-cron.sh` muet sur le contrôle secondaire du répertoire | TASK-009 | orchestrateur |
 | [ ] | A38 | P4 | En-têtes de colonnes sans accents : `ETAT`, `RESEAUX` (`list-containers.sh`), `CATEGORIE`, `RECUPERABLE` (`docker-disk-usage.sh`) | relectures TASK-033, 034 | tâche agent |
-| [ ] | A39 | P4 | Commit d'activation `chore: TASK-XXX en cours` fait sur `master`, alors que `regles.md` §9 interdit tout commit de travail sur `master` : règle à préciser | TASK-033, 034 | orchestrateur |
+| [x] | A39 | P4 | Commit d'activation `chore: TASK-XXX en cours` fait sur `master`, alors que `regles.md` §9 interdit tout commit de travail sur `master` : règle à préciser | TASK-033, 034 | fait — `regles.md` §9 : activation et clôture sur `master`, jamais le code |
 
 ## Suivi, pas des défauts
 
