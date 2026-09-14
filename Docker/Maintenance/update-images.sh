@@ -27,11 +27,11 @@ commande exacte de redéploiement, et ne la lance jamais.
   -h, --help              afficher cette aide
 
 Jamais exécutés : down, stop, rm, ni rien qui supprime une image ou touche à un
-volume. L'ancienne image reste sur le disque, retenue par les conteneurs qui
-tournent encore dessus — la libérer est le travail de docker-cleanup.sh.
+volume. L'ancienne image reste sur le disque, retenue par les conteneurs.
 
 Codes de retour : 0 récupération faite, simulée ou annulée ; 1 docker absent,
-greffon Compose v2 absent, ou démon injoignable hors --dry-run ; 2 usage.
+greffon Compose v2 absent, ou démon injoignable ; 1 également hors --dry-run
+pour un projet sans image ou une récupération en échec ; 2 usage.
 AIDE
 }
 while [ "${1:-}" != "" ]; do
@@ -46,8 +46,7 @@ while [ "${1:-}" != "" ]; do
 done
 [ -n "$PROJET" ] || die "Option --project obligatoire : elle nomme le projet Compose dont les images sont à récupérer." 2
 
-# Un chemin inexistant ou un répertoire sans fichier Compose est une erreur de
-# l'appelant : le message dit ce qui a été cherché, et où.
+# Chemin inexistant ou répertoire sans fichier Compose : erreur de l'appelant, dont le message dit ce qui a été cherché.
 resoudre_projet() {
     local nom
     [ -d "$PROJET" ] || die "Chemin introuvable : « $PROJET » — ni fichier, ni répertoire." 2
@@ -57,11 +56,13 @@ resoudre_projet() {
     die "Aucun fichier Compose dans « $PROJET » : cherché ${FICHIERS_COMPOSE// /, }." 2
 }
 if [ -f "$PROJET" ]; then FICHIER_COMPOSE="$PROJET"; else resoudre_projet; fi
+# Chemin absolu : la commande de redéploiement annoncée doit rester valable depuis n'importe où.
+PROJET="$(cd "$(dirname "$FICHIER_COMPOSE")" && pwd)"
+FICHIER_COMPOSE="$PROJET/$(basename "$FICHIER_COMPOSE")"
 
 # Sonde bornée : un démon muet se dit, et ne se confond pas avec une machine vide.
 BORNE=()
 if command -v timeout >/dev/null 2>&1; then BORNE=(timeout "$DELAI_SONDE"); fi
-BLOQUE=""; IMAGES=()
 sonde() {
     if ! command -v docker >/dev/null 2>&1; then
         BLOQUE="la commande « docker » est introuvable"; return 0
@@ -81,27 +82,32 @@ sonde() {
         BLOQUE="le démon Docker ne répond pas : les images ne peuvent être ni identifiées ni récupérées"
     fi
 }
-# La liste vient du fichier Compose : « config --images » ne contacte aucun registre.
+# « config --images » lit le fichier Compose, sans contacter aucun registre ; une
+# image citée par plusieurs services n'y est retenue qu'une fois.
 resoudre_images() {
     local code=0 img
     LISTE="$("${BORNE[@]}" docker compose -f "$FICHIER_COMPOSE" config --images)" || code=$?
     if [ "$code" -ne 0 ]; then
-        BLOQUE="« docker compose config --images » a échoué (code $code) : la liste des images n'a pas pu être résolue"
-        return 0
+        BLOQUE="« docker compose config --images » a échoué (code $code)"; return 0
     fi
-    while IFS= read -r img; do [ -n "$img" ] || continue; IMAGES+=("$img"); done <<< "$LISTE"
+    IMAGES_INCONNUES="false"
+    while IFS= read -r img; do
+        [ -n "$img" ] || continue
+        case " ${IMAGES[*]-} " in *" $img "*) continue ;; esac
+        IMAGES+=("$img")
+    done <<< "$LISTE"
     [ "${#IMAGES[@]}" -gt 0 ] || BLOQUE="le fichier Compose ne déclare aucune image"
 }
+BLOQUE=""; IMAGES=(); LISTE=""; IMAGES_INCONNUES="true"
 sonde
 [ -n "$BLOQUE" ] || resoudre_images
 
-printf '\nProjet retenu   : %s\nFichier Compose : %s\n' "$(dirname "$FICHIER_COMPOSE")" "$FICHIER_COMPOSE"
+printf '\nProjet retenu   : %s\nFichier Compose : %s\n' "$PROJET" "$FICHIER_COMPOSE"
 if [ -n "$BLOQUE" ]; then
     warn "$BLOQUE."
-    if [ "$DRY_RUN" != "true" ]; then
-        die "Récupération impossible : $BLOQUE. Relancer avec --dry-run pour voir l'état établi." 1
-    fi
-    warn "La liste des images n'a pas pu être résolue : rien n'est annoncé ici sur ce qui changerait."
+    # Liste vide et liste irrésoluble ne disent pas la même chose : la première est établie, la seconde manque.
+    [ "$IMAGES_INCONNUES" = "false" ] || warn "La liste des images n'a pas pu être résolue : rien n'est annoncé ici sur ce qui changerait."
+    [ "$DRY_RUN" = "true" ] || die "Récupération impossible : $BLOQUE. Relancer avec --dry-run pour voir l'état établi." 1
 else
     printf 'Images à récupérer — %d :\n' "${#IMAGES[@]}"
     printf '  %s\n' "${IMAGES[@]}"
@@ -112,24 +118,17 @@ if [ "$DRY_RUN" = "true" ]; then
     exit 0
 fi
 
-# Identifiant court d'une image, ou « absente » : c'est la comparaison avant /
-# après qui dit si l'étiquette a réellement changé de contenu.
+# Identifiant court, ou « absente » : c'est lui qui dit si l'étiquette a changé de contenu.
 etat_image() {
     local code=0 id
     id="$("${BORNE[@]}" docker image inspect --format '{{.Id}}' "$1" 2>/dev/null)" || code=$?
     if [ "$code" -ne 0 ] || [ -z "$id" ]; then printf 'absente'; else printf '%s' "${id:0:19}"; fi
 }
-table_etats() {
-    local img
-    while IFS= read -r img; do
-        [ -n "$img" ] || continue
-        printf '%s\t%s\n' "$img" "$(etat_image "$img")"
-    done <<< "$LISTE"
-}
-avant_de() { awk -F'\t' -v i="$1" '$1 == i { print $2 }' <<< "$AVANT"; }
+table_etats() { local img; for img in "${IMAGES[@]}"; do printf '%s\t%s\n' "$img" "$(etat_image "$img")"; done; }
+avant_de() { awk -F'\t' -v i="$1" '$1 == i { print $2 }' <<<"$AVANT"; }
 AVANT="$(table_etats)"
 
-confirm "Récupérer ${#IMAGES[@]} image(s) pour le projet « $(dirname "$FICHIER_COMPOSE") » ?" \
+confirm "Récupérer ${#IMAGES[@]} image(s) pour le projet « $PROJET » ?" \
     || { info "Récupération annulée : rien n'a été téléchargé."; exit 0; }
 run_logged docker compose -f "$FICHIER_COMPOSE" pull \
     || die "« docker compose pull » a échoué : certaines images n'ont pas été récupérées." 1

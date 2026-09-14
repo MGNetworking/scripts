@@ -1,30 +1,23 @@
 #!/usr/bin/env bash
 # tests/integration/update-images.test.sh — Docker/Maintenance/update-images.sh, TASK-035.
-# Pas de démon Docker ici : un faux « docker » en tête de PATH trace les arguments
-# reçus et répond ce qu'on lui demande. Aucun registre n'est contacté, et rien
-# n'est écrit dans config/.
+# Pas de démon Docker : un faux « docker » en tête de PATH trace ses arguments et répond à sa place.
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
 source "$SCRIPTS_ROOT/tests/lib/assert.sh"
-
 BASH_BIN="$(command -v bash)"; CIBLE="$SCRIPTS_ROOT/Docker/Maintenance/update-images.sh"
 BAC="$(mktemp -d)"; TRACE="$BAC/appels"; LOGS="$BAC/journal"
 trap 'rm -rf "$BAC"' EXIT
-
-# Le faux docker rend les identifiants AVANT tant qu'aucun « pull » n'est tracé,
-# les APRÈS ensuite : c'est ce qui permet d'éprouver le tableau avant / après.
+# Le faux docker rend les identifiants AVANT tant qu'aucun « pull » n'est tracé, les APRÈS ensuite.
 cat > "$BAC/docker" <<'STUB'
 #!/bin/sh
 printf '%s\n' "$*" >> "$TRACE"
-ident() {
-    table="$TABLE_AVANT"; grep -q ' pull$' "$TRACE" && table="$TABLE_APRES"
-    for l in $table; do case "$l" in "$1="*) printf '%s' "${l#*=}"; return 0 ;; esac; done
-}
+ident() { table="$TABLE_AVANT"; grep -q ' pull$' "$TRACE" && table="$TABLE_APRES"
+    for l in $table; do case "$l" in "$1="*) printf '%s' "${l#*=}"; return 0 ;; esac; done; }
 case "$*" in
     "compose version"*)               [ -n "$P_COMPOSE" ] || exit 1; printf 'Docker Compose version %s\n' "$P_COMPOSE" ;;
     "version --format"*)              [ -n "$P_DEMON" ] || exit 1; printf '%s\n' "$P_DEMON" ;;
-    "compose -f "*" config --images") [ -z "$P_IMAGES" ] || printf '%s\n' "$P_IMAGES" ;;
+    "compose -f "*" config --images") [ -z "$P_CONFIG_KO" ] || exit 1; [ -z "$P_IMAGES" ] || printf '%s\n' "$P_IMAGES" ;;
     "compose -f "*" pull")            printf 'Image pulled\n' ;;
     "image inspect"*)                 ident "${*##* }" ;;
     *)                                exit 1 ;;
@@ -36,8 +29,7 @@ for b in dirname basename mkdir id date awk sed grep cat timeout; do
 done; V1="$BAC/v1"; PROJET="$BAC/mon-projet"; VIDE="$BAC/repertoire-vide"
 mkdir -p "$V1" "$PROJET" "$VIDE"; : > "$PROJET/compose.yaml"; chmod +x "$BAC/docker"
 printf '#!/bin/sh\nexit 0\n' > "$V1/docker-compose"; chmod +x "$V1/docker-compose"
-
-P_IMAGES=$'exemple/api:1.0\nexemple/web:2.3'
+P_IMAGES=$'exemple/api:1.0\nexemple/api:1.0\nexemple/web:2.3'   # l'api citée deux fois : deux services, une image
 TABLE_AVANT=$'exemple/api:1.0=sha256:aaaa0000111122223333\nexemple/web:2.3=sha256:bbbb4444555566667777'
 TABLE_APRES=$'exemple/api:1.0=sha256:cccc8888999900001111\nexemple/web:2.3=sha256:bbbb4444555566667777'
 export TRACE P_IMAGES TABLE_AVANT TABLE_APRES LOG_DIR="$LOGS" P_COMPOSE="2.29.7" P_DEMON="27.0.0"
@@ -47,8 +39,8 @@ lancer() {
     SORTIE="$(printf '%s\n' "$REPOND" | PATH="$CHEMIN" "$BASH_BIN" "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?
 }
 appels() { awk -v m="$*" 'index($0, m) { n++ } END { printf "%d", n + 0 }' "$TRACE"; }
-# Liste blanche, et non liste noire : toute sous-commande inattendue — donc
-# destructrice — tombe ici.
+pos() { awk -v m="$1" 'index($0, m) { n=NR; exit } END { print n + 0 }' <<<"$SORTIE"; }   # rang du motif, 0 s'il est absent
+# Liste blanche, et non liste noire : toute sous-commande inattendue — donc destructrice — tombe ici.
 fautives() { awk '!/^(compose version|version --format |compose -f .* (config --images|pull)|image inspect )/' "$TRACE"; }
 
 titre "L'aide, puis les refus d'usage — --project est obligatoire"
@@ -57,6 +49,7 @@ assert_code 0 "$CODE" "--help rend 0 sans consulter le moindre démon"
 assert_contient "$SORTIE" "--project <chemin>" "l'aide nomme l'option obligatoire"
 assert_contient "$SORTIE" "deux actes distincts" "elle distingue récupération et redéploiement"
 assert_contient "$SORTIE" "Codes de retour" "elle documente les codes de retour"
+assert_contient "$SORTIE" "pour un projet sans image ou une récupération en échec" "elle nomme les deux causes du code 1 hors --dry-run"
 lancer
 assert_code 2 "$CODE" "sans --project, le script rend 2"
 assert_contient "$SORTIE" "--project obligatoire" "le message nomme l'option manquante"
@@ -110,7 +103,7 @@ titre "--dry-run — la cible, les images, la commande, aucun geste"
 assert_code 0 "$CODE" "--dry-run rend 0 sur un démon qui répond"
 assert_contient "$SORTIE" "Projet retenu   : $PROJET" "le projet retenu est affiché"
 assert_contient "$SORTIE" "Fichier Compose : $PROJET/compose.yaml" "le fichier Compose aussi"
-assert_contient "$SORTIE" "Images à récupérer — 2" "le nombre d'images est annoncé"
+assert_contient "$SORTIE" "Images à récupérer — 2" "le nombre d'images est annoncé, l'image citée deux fois ne comptant qu'une"
 assert_contient "$SORTIE" "exemple/api:1.0" "les images sont nommées, une par ligne"
 assert_contient "$SORTIE" "docker compose -f $PROJET/compose.yaml pull" "la commande exacte est annoncée"
 assert_absent "$SORTIE" "up -d" "mais rien n'annonce un redéploiement exécuté"
@@ -118,9 +111,13 @@ assert_egal "0" "$(appels " pull")" "et rien n'est récupéré"
 : > "$TRACE"; P_IMAGES=""; lancer --project "$PROJET" --dry-run
 assert_code 0 "$CODE" "--dry-run rend 0 sur un projet sans image"
 assert_contient "$SORTIE" "ne déclare aucune image" "il dit pourquoi la liste est vide"
+assert_absent "$SORTIE" "n'a pas pu être résolue" "une liste vide n'est pas une liste irrésoluble"
 lancer --project "$PROJET"
 assert_code 1 "$CODE" "hors --dry-run, un projet sans image rend 1"
-P_IMAGES=$'exemple/api:1.0\nexemple/web:2.3'
+: > "$TRACE"; P_CONFIG_KO=1; lancer --project "$PROJET"
+assert_code 1 "$CODE" "un « config --images » en échec rend 1 hors --dry-run"
+assert_contient "$SORTIE" "config --images » a échoué" "le message nomme la commande en échec"
+P_CONFIG_KO=""; P_IMAGES=$'exemple/api:1.0\nexemple/api:1.0\nexemple/web:2.3'
 
 titre "Chemin nominal — confirmation, récupération, puis avant / après"
 : > "$TRACE"; REPOND="n"; lancer --project "$PROJET"
@@ -132,6 +129,7 @@ assert_egal "0" "$(appels " pull")" "et rien n'est récupéré"
 : > "$TRACE"; REPOND="o"; lancer --project "$PROJET"
 assert_code 0 "$CODE" "confirmée, la récupération rend 0"
 assert_egal 1 "$(appels " pull")" "la récupération a lieu une fois pour les deux images"
+assert_egal "oui" "$([ "$(pos 'Images à récupérer')" -lt "$(pos ' pull')" ] && echo oui)" "la liste des images est affichée avant la récupération"
 assert_contient "$SORTIE" "CHANGÉE" "celle dont l'identifiant a bougé est dite changée"
 assert_contient "$SORTIE" "inchangée" "celle qui n'a pas bougé est dite inchangée"
 assert_contient "$SORTIE" "sha256:cccc88889999" "et le tableau montre l'identifiant court d'après"
@@ -147,4 +145,5 @@ assert_egal "" "$(fautives)" "aucun appel destructeur : ni down, ni rm, ni stop,
 assert_egal 1 "$(appels " pull")" "et une seule récupération, quel que soit le nombre d'images"
 lancer --project "$PROJET/compose.yaml" --dry-run
 assert_code 0 "$CODE" "--project accepte le chemin direct d'un fichier Compose"
+assert_contient "$SORTIE" "Fichier Compose : $PROJET/compose.yaml" "et le retient tel quel, en chemin absolu"
 bilan "TASK-035 / update-images.sh"
