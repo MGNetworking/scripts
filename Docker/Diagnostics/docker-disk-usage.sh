@@ -63,8 +63,7 @@ diagnostiquer() {
     exit 1
 }
 
-BORNE=()
-command -v timeout >/dev/null 2>&1 && BORNE=(timeout "$DELAI")
+BORNE=(); command -v timeout >/dev/null 2>&1 && BORNE=(timeout "$DELAI")
 
 # Interroge le démon, et meurt en 1 s'il ne répond pas. La capture précède le
 # découpage : sous « pipefail », « docker … | awk » mourrait avant d'avoir écrit
@@ -129,12 +128,13 @@ SORTIE_DF=""
 if [ -n "$RACINE" ] && [ -d "$RACINE" ] && ! SORTIE_DF="$(df -P -h -- "$RACINE" 2>/dev/null)"; then
     SORTIE_DF=""
 fi
-if [ -n "$SORTIE_DF" ]; then
-    read -r _ TAILLE_FS UTILISE_FS LIBRE_FS POURCENT MONTAGE <<< "$(awk 'NR == 2' <<< "$SORTIE_DF")"
+BLOC="$(awk 'NR == 2' <<< "$SORTIE_DF")"
+if [ -z "$BLOC" ]; then
+    printf '  %-14s%s\n' "Occupation" "non disponible — chemin invisible depuis cette machine"
+else
+    read -r _ TAILLE_FS UTILISE_FS LIBRE_FS POURCENT MONTAGE <<< "$BLOC"
     printf '  %-14s%s\n' "Occupation" "$POURCENT occupés — $UTILISE_FS utilisés sur $TAILLE_FS, $LIBRE_FS libres"
     printf '  %-14s%s\n' "Monte sur" "$MONTAGE"
-else
-    printf '  %-14s%s\n' "Occupation" "non disponible — chemin invisible depuis cette machine"
 fi
 
 printf '\nCe que cette mesure ne compte pas\n  %s\n' \
