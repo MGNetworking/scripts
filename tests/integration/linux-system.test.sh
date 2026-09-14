@@ -2013,6 +2013,7 @@ else
     ko "garde : le faux « awk » muet RÉUSSIT et ne produit rien sur /proc/partitions" \
         "le stub a échoué, ou a produit une table — la branche « lue et vide » ne serait pas atteinte"
 fi
+# « $1 » est un champ awk, entre guillemets simples pour atteindre awk tel quel.
 # shellcheck disable=SC2016
 if [ -n "$("$REP_STUB_AWK_MUET/awk" '{ print $1 }' /proc/uptime)" ]; then
     ok "garde : le faux « awk » muet délègue tout le reste au vrai awk"

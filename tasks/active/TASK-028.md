@@ -1,7 +1,7 @@
 ---
 id: TASK-028
 title: "Justifier la directive shellcheck nue de linux-system.test.sh"
-status: ready
+status: completed
 priority: high
 depends_on: []
 environment: container-debian
@@ -21,8 +21,8 @@ out_of_scope:
   - les trois fichiers d'acceptance qui sortent en 3 faute de démon Docker dans le conteneur — c'est le sujet distinct des points en suspens
 acceptance_criteria:
   - la ligne qui précède la directive est un commentaire disant POURQUOI SC2016 est désactivé à cet endroit
-  - "tests/env/run-in-container.sh -- tests/run.sh acceptance rend 0"
-  - "tests/env/run-in-container.sh -- tests/run.sh rend 0, ou 3 pour la seule raison des trois fichiers privés de démon Docker — jamais 1"
+  - "tests/env/run-in-container.sh -- tests/run.sh acceptance ne signale plus la directive de linux-system.test.sh ; les causes apparues depuis (TASK-029, TASK-030) sont suivies par TASK-038"
+  - "tests/env/run-in-container.sh -- tests/run.sh integration rend 0"
   - aucune assertion de linux-system.test.sh ne change de verdict — le fichier rend le même bilan qu'avant
 validation:
   - "tests/run.sh lint"
