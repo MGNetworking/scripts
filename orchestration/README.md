@@ -74,3 +74,28 @@ permissions. Aucune règle métier.
 
   Condition : son API accepte le format d'Anthropic. La clé se pose dans la
   variable d'environnement nommée, jamais dans le dépôt.
+
+## Points ouverts
+
+Décidés ou constatés, pas encore faits. À relire avant de lancer une tâche.
+
+1. **Essai comparatif de relecture — décidé le 2026-09-14, à faire sur la
+   prochaine tâche.** Le même travail est relu deux fois : par Opus (référence)
+   et par un modèle moins cher (Sonnet en sous-agent, ou DeepSeek). On compare les
+   défauts trouvés et les jetons, dans `mesures/journal.md`. Opus reste le
+   relecteur tant que l'essai n'a pas tranché.
+2. **`.claude/agents/relecteur.md` déclare encore `model: sonnet`** : `/tache`
+   impose Opus à l'appel, donc sans effet. Alignement reporté à la fin des
+   corrections, selon le résultat de l'essai 1.
+3. **Consignes d'agent non encore éprouvées** : limite de 150 lignes comptée
+   avant le commit, figement des tests levé par les retours de relecture
+   (ajoutées après TASK-033).
+4. **Tâches hors script** (README, schéma, documentation) : le circuit d'agent ne
+   les couvre pas — `limites.json` interdit les README et `docs/`, `juger.sh`
+   attend un script et son fichier de cas. L'orchestrateur les fait lui-même.
+5. **Coût réel de TASK-033** estimé à ≈ 0,25 $ ; à confirmer sur le tableau de
+   bord DeepSeek.
+6. **Parallélisme** : fermé jusqu'à trois tâches passées sans incident
+   (1 sur 3 : TASK-033).
+7. **`git push`** : groupé en fin de domaine Docker, rien n'est poussé depuis le
+   début de ces travaux.
