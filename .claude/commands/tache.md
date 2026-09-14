@@ -52,9 +52,13 @@ Dans la copie `../script-agents/$1` :
 1. `bash orchestration/outils/juger.sh tasks/active/$1.md` — tu relances toi-même ;
 2. **périmètre** : `git diff --name-only master...agent/$1` ne contient que des
    fichiers du `scope` ;
-3. **tests figés** : `git diff <premier jet>..agent/$1 -- tests/` est vide, le
-   premier jet étant le commit `feat: premier jet ($1)` ;
-4. les commandes du champ `validation`, codes réels consignés.
+3. **tests figés** : `git diff <point de figement>..agent/$1 -- tests/` est vide.
+   Le point de figement est le commit `feat: premier jet ($1)`, ou, après une
+   relance avec retours, le dernier commit `fix: retours de relecture ($1)` ;
+4. **longueur** : `wc -l` du script et du fichier de cas. Au-delà de 150 lignes
+   sans raison donnée sur la ligne `VERDICT`, c'est un défaut à signaler au
+   relecteur ;
+5. les commandes du champ `validation`, codes réels consignés.
 
 Périmètre débordé ou tests modifiés : travail rejeté, tâche bloquée.
 

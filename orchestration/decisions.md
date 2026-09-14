@@ -45,7 +45,8 @@ par `orchestration/limites.json` : pas d'écriture dans `tasks/`, `docs/`,
 
 ```text
 agent : premier jet ─► juger.sh ─► jusqu'à 3 corrections du script
-        (fichier de cas figé après le premier jet, arrêt si les FAIL ne baissent plus)
+        (150 lignes au plus, comptées avant le commit ; fichier de cas figé après le premier
+        jet ou après les retours de relecture ; arrêt si les FAIL ne baissent plus)
 orchestrateur : juger.sh relancé ─► périmètre ─► tests figés ─► relecture Opus
         défauts ─► agent relancé 1 fois ─► sinon l'orchestrateur finit ou bloque
 ```

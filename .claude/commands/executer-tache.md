@@ -14,7 +14,10 @@ personne ne répondra à une question.
 - un script existant de même nature que celui à écrire, et son fichier de cas
   dans `tests/integration/` — c'est ton modèle de forme et de longueur ;
 - si un second argument est donné (`$2`) : ce fichier porte les défauts relevés
-  par la relecture. **Corrige-les, ne touche à rien d'autre.**
+  par la relecture. **Corrige-les, ne touche à rien d'autre.** Ces retours
+  lèvent le figement du fichier de cas (§3) pour les seuls points qui le visent ;
+  commite-les en `fix: retours de relecture ($1)`, qui devient le nouveau point
+  de figement.
 
 `CLAUDE.md` est déjà chargé. Ne parcours pas le reste du dépôt.
 
@@ -24,7 +27,14 @@ personne ne répondra à une question.
   cas, un éventuel `config/*.env.example` ;
 - jamais les README, `tasks/`, `docs/`, `lib/`, `CLAUDE.md` — ils sont à
   l'orchestrateur ;
-- environ 150 lignes par script et par fichier de cas.
+- **150 lignes au plus par script et par fichier de cas.** Pas de bandeaux de
+  section, pas de commentaire qui répète le code : un commentaire ne dit que ce
+  que le code ne dit pas seul. L'aide `--help` tient en une vingtaine de lignes.
+
+**Avant de commiter, compte** : `wc -l <script> <fichier de cas>`. Au-delà de
+150, raccourcis d'abord — commentaires, aide, code en double. Si un fichier
+dépasse encore, garde-le, et donne la raison en une phrase sur la ligne de
+verdict.
 
 Puis `git add` de ces fichiers seulement, et `git commit -m "feat: premier jet ($1)"`.
 
@@ -36,8 +46,8 @@ bash orchestration/outils/juger.sh tasks/active/$1.md
 
 Code 0 : terminé. Sinon, lis les lignes `FAIL` et corrige **le script**.
 
-- **Le fichier de cas est figé après le premier commit.** Tu ne le modifies
-  plus. L'orchestrateur le vérifie : un fichier de cas modifié après ce commit
+- **Le fichier de cas est figé après le premier commit** — ou après le commit
+  des retours de relecture (§1). Tu ne le modifies plus. L'orchestrateur le vérifie : un fichier de cas modifié après ce commit
   fait rejeter tout le travail. S'il te semble faux, arrête-toi et dis en quoi
   sur la ligne de verdict.
 - Après chaque correction, relance le juge et commite (`fix: passage N ($1)`).
@@ -51,5 +61,5 @@ Code 0 : terminé. Sinon, lis les lignes `FAIL` et corrige **le script**.
 Termine par une seule ligne, sans autre commentaire :
 
 ```text
-VERDICT PASSE|ECHEC — passages N — FAIL restants K
+VERDICT PASSE|ECHEC — passages N — FAIL restants K — lignes S + C [— raison du dépassement]
 ```
