@@ -32,12 +32,9 @@ Les autres scripts prévus (`manage-users.sh`, `reboot-system.sh`) restent à
 
 Relevé technique du domaine :
 [recensement-substitutions.md](recensement-substitutions.md) — toutes les
-affectations `var="$(…)"` des sept scripts qu'il couvre, une par une, avec leur
+affectations `var="$(…)"` des dix scripts du domaine, une par une, avec leur
 verdict et sa raison. À lire avant toute affirmation sur le doublement du
-`trap ERR`, décrit plus bas sous « Codes de retour ». Le relevé s'arrête à ces
-sept scripts : **aucun des trois diagnostics écrits depuis n'y est versé** —
-`check-disk.sh`, `check-memory.sh` et `check-services.sh` —, toutes leurs
-affectations étant en contexte de condition, aucune en forme nue.
+`trap ERR`, décrit plus bas sous « Codes de retour ».
 
 ## Utilisation
 
@@ -231,6 +228,10 @@ répertoire est fourni par `e2fsprogs` — `dpkg -S /etc/cron.d` le confirme —
 existe donc même sans cron. Seul `--dry-run` fait exception : il n'écrit rien,
 se contente d'un avertissement et affiche l'aperçu, ce qui permet de lire le
 fichier avant d'installer cron.
+
+**Un second contrôle porte sur le répertoire lui-même** : démon trouvé mais
+`/etc/cron.d` absent, le script s'arrête en 1 — « installation de cron
+incomplète » —, là encore sauf sous `--dry-run`, qui n'écrit rien.
 
 **Le bit d'exécution n'est pas un prérequis de la planification**, la ligne
 déposée passant par `bash`. Depuis le 2026-09-02, il n'en est plus un non plus
