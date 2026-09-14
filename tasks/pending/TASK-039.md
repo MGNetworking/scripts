@@ -34,6 +34,9 @@ implementation_notes:
 
 Exception assumée à la règle des 30 lignes : c'est un registre, pas une fiche.
 
+**Registre vidé le 2026-09-15** ([rapport](../reports/TASK-039-report.md)). La fiche
+reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain Axx.
+
 ## Règle d'entrée
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
