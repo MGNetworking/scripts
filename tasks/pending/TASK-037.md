@@ -6,6 +6,8 @@ priority: high
 depends_on:
   - TASK-034
 environment: container-debian
+niveau: N3
+executor: sonnet
 human_approval_required: true
 objective: |
   Livrer l'orchestrateur de nettoyage des ressources Docker inutilisées. Il
@@ -18,8 +20,6 @@ scope:
   - Docker/Cleanup/docker-cleanup.sh
   - tests/integration/docker-cleanup.test.sh
   - config/server.env.example — la variable listant les réseaux d'infrastructure protégés
-  - Docker/README.md — la ligne du tableau pour ce script, et la création du fichier s'il n'existe pas encore
-  - README.md — la ligne du tableau des scripts disponibles
 out_of_scope:
   - le branchement de la notification d'échec — notify-failure.sh n'existe pas encore (TASK-024) ; l'appel se fera dans une tâche distincte
   - les quatre scripts de nettoyage spécialisés — cleanup-images.sh, cleanup-containers.sh, cleanup-networks.sh, cleanup-volumes.sh — que la section 10 du plan prévoit séparément

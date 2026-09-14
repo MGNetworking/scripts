@@ -1,7 +1,7 @@
 # ADR-0005 — Orchestration des tâches entre plusieurs LLM
 
 **Date** : 2026-09-14
-**Statut** : proposé — en attente des choix de Maxime
+**Statut** : accepté le 2026-09-14
 **Décideur** : Maxime Ghalem
 **S'appuie sur** : [ADR-0004](ADR-0004-sobriete.md) décision 29, et les mesures du
 [journal de comparaison](../mesures/journal.md)
@@ -87,20 +87,21 @@ exécutant ─► validations ─┬─ lint en échec ─► renvoi des lignes 
 Plafond ferme : **une génération, une correction automatique, une correction sur
 relecture.** Au-delà, l'arbitre reprend la main ou bloque la tâche.
 
-## Décision 33 — Appeler les exécutants par l'API, pas en sous-agent
+## Décision 33 — DeepSeek par l'API, Sonnet en sous-agent borné
 
 Mesure de TASK-032 : un sous-agent Sonnet a consommé 270 602 jetons en 31 appels
 d'outils, parce qu'il relit tout son contexte à chaque action. DeepSeek, appelé
 une fois avec les fichiers joints, n'a pas ce coût.
 
-`docs/agent/mesures/deleguer.mjs` devient le **lanceur unique**, pour tous les
-fournisseurs : les fichiers nécessaires sont joints à un appel, la réponse est
-écrite derrière la liste blanche, les jetons d'entrée et de sortie sont consignés
-**séparément** dans `appels.tsv`. Le coût de chaque tâche devient exact, Claude
-compris.
+**DeepSeek** passe par `docs/agent/outils/executer.sh`, qui appelle `deleguer.mjs`
+avec les fichiers joints et consigne entrée et sortie séparément dans
+`docs/agent/mesures/appels.tsv`. Coût exact par tâche.
 
-Conséquence : appeler Sonnet par l'API demande une clé `ANTHROPIC_API_KEY` et se
-facture sur le compte API, distinct de l'abonnement Claude Code.
+**Sonnet reste en sous-agent** — Maxime a choisi, le 2026-09-14, de ne pas créer
+de clé `ANTHROPIC_API_KEY`, facturée sur un compte distinct de l'abonnement Claude
+Code. Pour contenir sa consommation, la consigne du sous-agent est fixe : la liste
+exacte des fichiers à lire, une seule lecture de chacun, aucune commande. Son coût
+reste connu en total seulement, sans répartition entrée/sortie.
 
 ## Décision 34 — Ce que porte une fiche
 
@@ -140,15 +141,16 @@ circuit sans incident. Les conteneurs de test portent déjà un nom unique.
 | Étape | Contenu | Coût estimé |
 |---|---|---|
 | 1 | Champs `niveau`, `executor`, `effort` ; retrait des fichiers partagés du périmètre des fiches restantes ; `/tache` lit le niveau et suit les décisions 31 et 32 | une session courte, sans appel externe |
-| 2 | `deleguer.mjs` multi-fournisseur (DeepSeek, Anthropic) ; boucle automatique « lint → renvoi » | une session, un appel de contrôle |
+| 2 | `executer.sh` et `juger.sh` : appel DeepSeek, validations, renvoi automatique des lignes en échec | une session, un appel de contrôle |
 | 3 | Premier passage réel : TASK-033 (N1) puis TASK-035 (N2) dans le circuit complet | le coût des deux tâches |
 | 4 | Révision du routage sur les chiffres du journal | lecture du journal |
 | 5 | Parallélisme par worktrees, si la décision 35 est remplie | — |
 
 ## Ce qui reste incertain
 
-- **Sonnet appelé par l'API** n'a pas encore été mesuré : l'économie annoncée par
-  la décision 33 est déduite, pas prouvée. L'étape 3 la mesure.
+- **Le sous-agent Sonnet borné** n'a pas encore été mesuré : l'économie attendue
+  de la consigne fixe de la décision 33 est déduite, pas prouvée. L'étape 3 la
+  mesure.
 - **Sonnet corrigeant un premier jet de DeepSeek** (N2) n'a jamais été éprouvé.
 - **Deux tâches par niveau au plus** ont été mesurées. Le classement N1 à N4 est
   une hypothèse de travail, à réviser à l'étape 4.

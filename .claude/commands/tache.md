@@ -32,22 +32,19 @@ champ signale ce qui mérite une lecture attentive ; il ne suspend pas
 l'exécution. Un script destructif s'écrit comme un autre : il ne s'exécutera
 jamais ailleurs que dans un conteneur jetable.
 
-### Choisir le cycle : complet ou léger
+### Lire le niveau : qui exécute, qui relit
 
-ADR-0003, décision 5.
+ADR-0005, décisions 31 et 32. La fiche porte `niveau`, `executor` et `effort`.
 
-| La tâche | Cycle |
-|---|---|
-| produit un script en **lecture seule** — `check-*`, `audit-*`, `*-status` | **léger** |
-| ne touche que de la **documentation** | **léger** |
-| produit ou modifie un script qui **écrit sur le système** | **complet** |
-| touche `lib/common.sh`, `tests/` ou `.claude/` | **complet**, sans exception |
+| Niveau | Exécutant | Juge automatique | Relecture Opus | Correction après relecture |
+|---|---|---|---|---|
+| **N1** lecture seule | DeepSeek, par `executer.sh` | oui | **non** | — |
+| **N2** un effet simple | DeepSeek, par `executer.sh` | oui | oui | **Sonnet**, sous-agent |
+| **N3** effets enchaînés, destructif | **Sonnet**, sous-agent | oui | oui | Sonnet |
+| **N4** décision, `lib/common.sh`, `tests/`, `.claude/` | **toi, l'arbitre** | oui | selon la tâche | toi |
 
-**Cycle léger** : étapes 5 et 6, validations, puis étape 8. Pas de relecteur.
-**Cycle complet** : toutes les étapes, relecteur compris.
-
-Dans le doute, prends le cycle complet. Annonce lequel tu as retenu, et
-pourquoi, avant de commencer.
+**Une fiche sans `niveau`** : classe-la toi-même selon ce tableau, écris les trois
+champs dans la fiche, et annonce le classement avant de commencer.
 
 ## 3. Préparer
 
@@ -64,53 +61,60 @@ validations à lancer. Annonce-le avant d'agir.
 Si le plan sort du `scope` de la tâche, **arrête-toi**. Le périmètre ne
 s'élargit pas en cours de route.
 
-## 5. Rédiger
+## 5. Faire écrire
 
-Délègue au sous-agent **`redacteur-script`** : script et documentation.
+L'exécutant écrit le script, son fichier de cas et le `*.env.example`. **Jamais les
+README ni le backlog** : ils sont à toi, à l'étape 9.
 
-Passe-lui la tâche entière, il ne connaît pas la conversation.
+**N1 et N2 — DeepSeek.** Une commande, qui génère, juge, et renvoie une fois les
+lignes en échec :
 
-## 6. Tester
+```bash
+bash docs/agent/outils/executer.sh tasks/active/$1.md --exemple <script de même nature> --exemple <son fichier de cas>
+```
 
-Délègue au sous-agent **`redacteur-tests`** : tests du travail produit.
+Code 0 : les validations passent. Code 1 : elles échouent encore après la
+correction automatique — va à l'étape 7, correction par Sonnet.
 
-Passe-lui la tâche et ce qu'a produit l'étape précédente.
+**N3 — Sonnet**, sous-agent `general-purpose`, modèle `sonnet`. Consigne fixe,
+pour contenir sa consommation : la liste exacte des fichiers à lire (fiche,
+`CLAUDE.md`, `lib/common.sh`, `tests/lib/assert.sh`, deux exemples de même nature),
+les trois fichiers à écrire, **aucune commande**. Puis lance toi-même
+`bash docs/agent/outils/juger.sh tasks/active/$1.md` ; en échec, renvoie-lui ses
+lignes une fois.
 
-## 7. Valider et relire
+**N4 — toi.** Écris directement.
 
-**Cycle léger** : lance les commandes du champ `validation`, consigne leurs
-codes de retour réels, et passe à l'étape 8. Une validation en échec reste un
-échec — le mode léger allège la relecture, jamais la preuve.
+## 6. Juger
 
-**Cycle complet** : délègue au sous-agent **`relecteur`**. Il est en lecture
-seule : il constate, il ne répare pas.
+`bash docs/agent/outils/juger.sh tasks/active/$1.md` : `shellcheck` et le fichier
+de cas, en conteneur. 0 jeton. Puis les commandes du champ `validation`, codes
+réels consignés. Une validation en échec reste un échec, quel que soit le niveau.
 
-**Selon son verdict :**
+## 7. Relire et corriger
 
-- **CONFORME** → étape 8 ;
-- **NON CONFORME** → boucle de correction ci-dessous ;
-- **cinq tentatives atteintes** → la tâche est bloquée, va directement à
-  l'étape 8 avec le statut `blocked`.
+**N1** : pas de relecture — étape 8.
+
+**N2 et N3** : sous-agent `relecteur`, modèle `opus`, grille fixe — critères de la
+fiche un par un, défauts classés BLOQUANT / MAJEUR / MINEUR avec « vu par les
+tests », tests creux, verdict. Une lecture, aucune correction. Relève ses jetons.
+
+**Plafond — ADR-0005 décision 32** : une génération, une correction automatique,
+une correction sur relecture. La correction sur relecture est **toujours faite par
+Sonnet**, même en N2. Si elle ne suffit pas, termine toi-même ou bloque la tâche ;
+ne relance aucun exécutant.
 
 ### Boucle de correction
 
 ```text
-verdict NON CONFORME
-        ↓
-diagnostic : QUI a tort, le script ou le test ?
-        ↓
-   ┌────┴────┐
-script      test
-   ↓          ↓
-redacteur   redacteur       ← on redélègue, on ne bricole pas soi-même
--script     -tests
-   └────┬────┘
-        ↓
-    relecteur     tentative += 1
-        ↓
-  CONFORME ? → étape 8    sinon, on reboucle
-        ↓
-  5 tentatives → BLOCKED
+exécutant ─► juger.sh ─┬─ échec ─► lignes exactes renvoyées à l'exécutant (1 fois)
+                       └─ passe ─► relecture Opus (N2, N3)
+                                      │
+                                      ├─ FUSIONNABLE ─► étape 8
+                                      └─ défauts ────► Sonnet corrige (1 fois) ─► juger.sh
+                                                          │
+                                                          ├─ passe ─► étape 8
+                                                          └─ échec ─► toi, ou BLOCKED
 ```
 
 ### Le diagnostic, avant toute correction
@@ -128,13 +132,10 @@ test » sans justification est un aveu, pas une correction.
 
 ### Qui corrige
 
-Redélègue au sous-agent concerné plutôt que de corriger toi-même :
-
-- défaut dans le script ou sa documentation → **`redacteur-script`** ;
-- défaut dans un test → **`redacteur-tests`**, avec le diagnostic ci-dessus ;
-- défaut dans le backlog, un lien, un statut → tu le corriges directement.
-
-Passe-lui le verdict complet du relecteur : il n'a pas suivi la conversation.
+- défaut relevé par le juge automatique → **l'exécutant**, une fois, sur ses lignes en échec ;
+- défaut relevé par la relecture → **Sonnet**, sous-agent, avec la grille complète
+  et le diagnostic ci-dessus : il n'a pas suivi la conversation ;
+- défaut qui subsiste ensuite, ou dans le backlog, un lien, un statut → **toi**.
 
 ### Règles de la boucle
 
@@ -197,6 +198,10 @@ n'écris pas « comme vu plus haut ».
   mets son `status` en cohérence ;
 - mets à jour le tableau de `tasks/backlog.md`, y compris la section « Terminé »
   et les tâches que celle-ci débloque en `ready` ;
+- écris toi-même la ligne du script dans le `README.md` du domaine et dans celui
+  de la racine — aucun exécutant n'y touche (ADR-0005 décision 34) ;
+- ajoute la ligne de la tâche au journal `docs/agent/mesures/journal.md` :
+  niveau, exécutant, validations, lignes, coût, jetons de relecture, rattrapage ;
 - `git add` et `git commit` sur la branche `agent/$1`, message conventionnel en
   français, avec la ligne `Tâche : $1` ;
 - **si la tâche est `completed`** : `git switch master`, puis

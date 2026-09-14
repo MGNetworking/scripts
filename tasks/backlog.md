@@ -120,6 +120,21 @@ de déléguer à `redacteur-script` et `redacteur-tests`. Les huit fichiers de
 tâche Docker restants comptent de 190 à 295 lignes — ils restent justes et
 exécutables, mais ils ne servent pas de modèle de longueur.
 
+**[ADR-0005](../docs/agent/decisions/ADR-0005-orchestration-multi-llm.md) répartit
+les tâches entre plusieurs LLM depuis le 2026-09-14.** Chaque fiche porte un
+`niveau` et un `executor` : N1 lecture seule et N2 un effet simple écrits par
+DeepSeek, N3 effets enchaînés ou destructif écrits par Sonnet, N4 décision gardée
+par Opus. L'arbitre écrit seul les README et ce backlog. Circuit : `executer.sh`
+fait écrire et juge, Opus relit en N2 et N3, Sonnet corrige. Coûts et défauts de
+chaque tâche au [journal](../docs/agent/mesures/journal.md).
+
+| Tâche | Niveau | Exécutant |
+|---|---|---|
+| TASK-033, TASK-034 | N1 | `deepseek-flash` |
+| TASK-024, TASK-035 | N2 | `deepseek-flash` |
+| TASK-025, TASK-026, TASK-036, TASK-037 | N3 | Sonnet |
+| TASK-028 | N4 | Opus |
+
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
 ni sa configuration n'apparaissent dans un script. `create-network.sh` prend le
 nom du réseau en argument ; il ignore que ce réseau servira un reverse proxy.
