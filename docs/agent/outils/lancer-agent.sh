@@ -2,7 +2,8 @@
 # lancer-agent.sh — fait exécuter une tâche par un agent (ADR-0006).
 #
 # L'agent est une instance de Claude Code, sans interface, pilotée par le modèle
-# de son profil (docs/agent/profils/<profil>.env). Il travaille dans une copie
+# de son profil (docs/agent/profils/<profil>.env), ou par un modèle Claude
+# (sonnet, opus, haiku) sur l'abonnement. Il travaille dans une copie
 # séparée du dépôt (git worktree) sur la branche agent/<TASK>, et n'y fait que
 # ce que permet docs/agent/profils/agent-settings.json.
 #
@@ -17,21 +18,25 @@ racine="$(cd "$ici/../../.." && pwd)"
 profil="${1:-}" tache="${2:-}" retours="${3:-}"
 
 usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]" >&2; exit 2; }
-if [ ! -f "$ici/../profils/$profil.env" ] || [[ ! "$tache" =~ ^TASK-[0-9]{3}$ ]]; then usage; fi
+case "$profil" in sonnet|opus|haiku) ;; *) [ -f "$ici/../profils/$profil.env" ] || usage ;; esac
+[[ "$tache" =~ ^TASK-[0-9]{3}$ ]] || usage
 [ -f "$racine/tasks/active/$tache.md" ] || { echo "tasks/active/$tache.md absent : l'orchestrateur active la fiche avant." >&2; exit 2; }
 if [ -n "$retours" ] && [ ! -f "$retours" ]; then
     echo "Fichier de retours introuvable : $retours" >&2; exit 2
 fi
 command -v claude >/dev/null || { echo "claude introuvable dans le PATH." >&2; exit 2; }
 
-# Le profil ne définit que trois variables ; lu ligne à ligne, jamais exécuté.
-ADRESSE="" MODELE="" VARIABLE_CLE=""
-while IFS='=' read -r cle valeur; do
-    case "$cle" in ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;; esac
-done < "$ici/../profils/$profil.env"
+# Un modèle Claude passe par l'abonnement, sans profil. Un autre modèle a son
+# profil, qui ne définit que trois variables ; lu ligne à ligne, jamais exécuté.
+ADRESSE="" MODELE="$profil" VARIABLE_CLE=""
+if [ -f "$ici/../profils/$profil.env" ]; then
+    while IFS='=' read -r cle valeur; do
+        case "$cle" in ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;; esac
+    done < "$ici/../profils/$profil.env"
+fi
 [ -n "$MODELE" ] || { echo "Profil $profil : MODELE vide." >&2; exit 2; }
 
-# Environnement de l'agent. Profil sans adresse : l'abonnement Claude, rien à régler.
+# Environnement de l'agent. Sans adresse : l'abonnement Claude, rien à régler.
 env_agent=(env -u ANTHROPIC_BASE_URL -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN)
 if [ -n "$ADRESSE" ]; then
     [ -n "${!VARIABLE_CLE:-}" ] || { echo "Profil $profil : la variable $VARIABLE_CLE est vide." >&2; exit 2; }

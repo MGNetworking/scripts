@@ -127,7 +127,7 @@ la demande.
 | `implementation_notes` | non | liste |
 | `blocked_reason` | si `blocked` | bloc littéral |
 | `attempts` | non | entier, tenu pendant l'exécution |
-| `agent` | oui, depuis ADR-0006 | un profil de `docs/agent/profils/` (`deepseek`, `sonnet`…), ou `orchestrateur` |
+| `agent` | oui, depuis ADR-0006 | un profil de `docs/agent/profils/` (`deepseek`), un modèle Claude (`sonnet`, `opus`, `haiku`), ou `orchestrateur` |
 
 Le `scope` d'une fiche ne contient pas les README ni le backlog : l'orchestrateur
 les écrit à la clôture (ADR-0006 décision 36).

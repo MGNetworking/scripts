@@ -41,8 +41,8 @@ Greffer un modèle, c'est écrire un profil. Condition : que son API accepte le
 format d'Anthropic. Un modèle qui ne l'accepte pas demandera un relais de
 traduction ; ce cas sera tranché le jour où il se présentera.
 
-Profils au 2026-09-14 : `deepseek` (clé `DEEPSEEK_API_KEY`), `sonnet` (abonnement
-Claude, sans clé).
+Profil au 2026-09-14 : `deepseek` (clé `DEEPSEEK_API_KEY`). Les modèles Claude
+(`sonnet`, `opus`, `haiku`) passent par l'abonnement, sans profil.
 
 ## Décision 38 — La fiche désigne son agent
 

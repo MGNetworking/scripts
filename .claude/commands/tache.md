@@ -22,8 +22,8 @@ Refuse et explique pourquoi si :
   une analyse statique ;
 - l'arbre Git de `master` n'est pas propre. Ne remise rien : signale.
 
-**Le champ `agent`** désigne un profil de `docs/agent/profils/` (`deepseek`,
-`sonnet`…) ou `orchestrateur`. Fiche sans ce champ : choisis, écris-le dans la
+**Le champ `agent`** désigne un profil de `docs/agent/profils/` (`deepseek`), un modèle
+Claude (`sonnet`, `opus`, `haiku`) ou `orchestrateur`. Fiche sans ce champ : choisis, écris-le dans la
 fiche, annonce-le. `human_approval_required: true` ne bloque pas (ADR-0003
 décision 2).
 
