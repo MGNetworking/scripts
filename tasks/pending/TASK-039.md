@@ -49,7 +49,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 |---|---|---|---|---|---|
 | [x] | A01 | P1 | Acceptance TASK-011 rouge : 4 directives `shellcheck` sans justification au-dessus (`configure-docker.sh` l.91, 141 ; `install-docker.sh` l.145 ; `configure-docker.test.sh` l.107) et `ASSUME_YES` lue hors `lib/common.sh` | TASK-028, ex-TASK-038 | fait — directives justifiées au-dessus, garde sur `OUI` au lieu d'`ASSUME_YES` ; acceptance TASK-011 : 0 échec |
 | [x] | A02 | P1 | `juger.sh` ne lance pas les règles transverses de l'acceptance : agents et relecteur n'ont pas vu A01 | TASK-028 | fait — `juger.sh` lance `TASK-011-analyse-statique.sh`, un 1 fait échouer le juge |
-| [ ] | A03 | P1 | `tests/lint.sh` sort en 0 sur l'hôte en annonçant NON EXÉCUTÉ (pas de `shellcheck`) : un validateur conclut PASS | TASK-002, 012, 018, backlog | orchestrateur |
+| [x] | A03 | P1 | `tests/lint.sh` sort en 0 sur l'hôte en annonçant NON EXÉCUTÉ (pas de `shellcheck`) : un validateur conclut PASS | TASK-002, 012, 018, backlog | fait — `tests/lint.sh` rend 3 sans `shellcheck` ; `/tache` le lit comme NON EXÉCUTÉ |
 | [x] | A04 | P1 | `docker info` sans borne de temps dans trois fichiers d'acceptance (`TASK-002:181`, `TASK-011:145`, `TASK-012:589`) : un démon qui démarre suspend le niveau | TASK-013 | fait — `timeout 30` sur les trois sondes |
 | [ ] | A05 | P2 | ~70 sauts non qualifiés (`saute` nu) dans `unit` et `integration` : leur nature n'est pas établie | TASK-013 | tâche à atomiser |
 | [ ] | A06 | P2 | Exécutions concurrentes non maîtrisées (conteneur tué en 137, assertions « aucun conteneur résiduel » fausses en parallèle) — préalable au parallélisme des agents | TASK-002, 012, 014 | tâche à atomiser |
@@ -70,7 +70,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A21 | P3 | `set +a` non rétabli quand le `source` d'un `.env` tue le shell sous `set -u` | TASK-015, backlog | orchestrateur, `lib/common.sh` |
 | [ ] | A22 | P3 | `lib/common.sh` crée et écrit `LOG_DIR` dès le `source` : `--help` et `--dry-run` ne sont jamais sans effet de bord | TASK-004, 011 | orchestrateur, `lib/common.sh` |
 | [ ] | A23 | P3 | `enable_full_logging` sans aucune couverture de test | TASK-003, 015 | orchestrateur |
-| [ ] | A24 | P3 | Trois commentaires de `lib/common.sh` (l.87, 229, 294) citent « ADR-0003 », retiré | refonte orchestration | orchestrateur, `lib/common.sh` |
+| [ ] | A24 | P3 | Trois commentaires de `lib/common.sh` (l.87, 229, 294) citent « ADR-0003 », retiré | refonte orchestration | fait — renvois vers `orchestration/decisions.md` |
 | [ ] | A25 | P3 | `check-disk.sh` : `df` se fige sur un montage réseau injoignable | points en suspens §10 | tâche agent |
 | [ ] | A26 | P3 | `configure-swap.sh` : `FICHIER_SWAP` jamais contrôlé non vide après validation | TASK-017 | tâche agent |
 | [ ] | A27 | P3 | `swap_actif()` ne déséchappe pas `/proc/swaps` (`\040`) : un chemin avec espace n'est pas reconnu | TASK-019 | tâche agent |
