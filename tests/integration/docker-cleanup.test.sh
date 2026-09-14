@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# tests/integration/docker-cleanup.test.sh — Docker/Cleanup/docker-cleanup.sh.
-# TASK-037. Pas de démon Docker ici : un faux « docker » en tête de PATH trace les
-# arguments reçus et répond des relevés fixés — aucune suppression réelle, et rien
-# n'est écrit dans config/ : le réseau protégé passe par l'environnement.
+# tests/integration/docker-cleanup.test.sh — Docker/Cleanup/docker-cleanup.sh, TASK-037.
+# Pas de démon Docker ici : un faux « docker » en tête de PATH trace les arguments reçus et
+# répond des relevés fixés. Rien n'est écrit dans config/ : la protection passe par l'env.
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
@@ -12,8 +11,7 @@ BASH_BIN="$(command -v bash)"; CIBLE="$SCRIPTS_ROOT/Docker/Cleanup/docker-cleanu
 BAC="$(mktemp -d)"; TRACE="$BAC/appels"; LOGS="$BAC/journal"
 trap 'rm -rf "$BAC"' EXIT
 
-# Le faux docker répond AVANT puis APRÈS nettoyage : un « prune » ou un « rm » déjà
-# tracé fait basculer l'état. Un démon réel se comporterait de même.
+# Le faux docker répond AVANT puis APRÈS : un prune ou un rm déjà tracé fait basculer l'état.
 cat > "$BAC/docker" <<'STUB'
 #!/bin/sh
 printf '%s\n' "$*" >> "$TRACE"
@@ -35,10 +33,10 @@ SANS_DOCKER="$BAC/sans-docker"; mkdir -p "$SANS_DOCKER"
 for b in dirname basename mkdir id date; do ln -s "$(command -v "$b")" "$SANS_DOCKER/$b"; done
 
 export TRACE LOG_DIR="$LOGS" STUB_VERSION="27.0.0" SRV_DOCKER_RESEAUX_PROTEGES="mon-infra reseau-perime"
-DF_AVANT=$'Images|3|1.5GB|1.2GB\nContainers|2|48.5MB|48.5MB\nLocal Volumes|1|210MB|210MB\nBuild Cache|0|0B|0B'
+DF_AVANT=$'Images|3|1.5GB|1.2GB (80%)\nContainers|2|48.5MB|48.5MB (100%)\nLocal Volumes|1|210MB|210MB (100%)\nBuild Cache|0|0B|0B'
 DF_APRES=$'Images|1|300MB|0B\nContainers|0|0B|0B\nLocal Volumes|0|0B|0B\nBuild Cache|0|0B|0B'
 DF_VIDE=$'Images|0|0B|0B\nContainers|0|0B|0B\nLocal Volumes|0|0B|0B\nBuild Cache|0|0B|0B'
-CONTENEURS=$'a1b2c3   ancien-web   nginx:1.27\nd4e5f6   bac-a-sable   alpine:3.20'
+CONTENEURS=$'a1b2c3   ancien-web   exemple/app:1.0\nd4e5f6   bac-a-sable   alpine:3.20'
 ATTACHES='reseau-utilise'; VOLUMES='donnees-a-sauver'
 IMAGES=$'0a1b2c  120MB\n3d4e5f   45MB'
 RESEAUX=$'bridge\nmon-infra\nreseau-utilise\nreseau-orphelin\nreseau-perime'
@@ -48,9 +46,11 @@ CHEMIN="$BAC:$PATH"; REPOND=""; SORTIE=""; CODE=0
 lancer() {
     SORTIE="$(printf '%s\n' "$REPOND" | PATH="$CHEMIN" "$BASH_BIN" "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?
 }
-# Nombre d'appels tracés contenant ce motif. awk et non grep -c : un compte nul n'est pas
-# une erreur, et n'a pas à armer le trap ERR du socle.
+# Nombre d'appels tracés contenant ce motif. awk et non grep -c : un compte nul n'est pas une
+# erreur, et n'a pas à armer le trap ERR du socle.
 appels() { awk -v m="$*" 'index($0, m) { n++ } END { printf "%d", n + 0 }' "$TRACE"; }
+# Toute suppression, quelle qu'elle soit : ne compter que « prune » laisserait passer les rm.
+suppressions() { awk '/prune| rm / { n++ } END { printf "%d", n + 0 }' "$TRACE"; }
 
 titre "Sans docker installé — l'aide d'abord, puis la dépendance nommée"
 CHEMIN="$SANS_DOCKER"; lancer --help
@@ -93,13 +93,14 @@ assert_contient "$SORTIE" "bridge, host, none" "les réseaux prédéfinis du dé
 assert_contient "$SORTIE" "reseau-orphelin" "le réseau réellement inutilisé est proposé"
 assert_absent "$SORTIE" "reseau-utilise" "celui qu'un conteneur retient n'est pas proposé"
 assert_contient "$SORTIE" "à l'instant où il a été fait" "le relevé dit qu'il est daté"
-assert_egal "0" "$(appels "prune")" "et rien n'est supprimé"
+assert_egal "0" "$(suppressions)" "et rien n'est supprimé — ni prune, ni rm"
 titre "Confirmation refusée — rien n'est supprimé, et ce n'est pas une erreur"
 : > "$TRACE"; REPOND="n"; lancer
 assert_code 0 "$CODE" "un refus rend 0"
 assert_contient "$SORTIE" "annulé" "le script dit le nettoyage annulé"
+assert_contient "$SORTIE" "[o/N]" "l'invite de confirmation est bien posée"
 assert_contient "$SORTIE" "2 conteneur(s) arrêté(s), 1 réseau(x) inutilisé(s) et 2 image(s)" "la question rappelle les totaux par catégorie"
-assert_egal "0" "$(appels "prune")" "et ne lance aucune suppression"
+assert_egal "0" "$(suppressions)" "et ne lance aucune suppression — ni prune, ni rm"
 : > "$TRACE"; REPOND="o"; lancer
 assert_egal 1 "$(appels "container prune")" "la même exécution, confirmée, supprime bien"
 titre "Sous --yes — un réseau à la fois, rien de protégé, récapitulatif au journal"
@@ -120,6 +121,16 @@ assert_contient "$SORTIE" "images sans étiquette : 2 supprimée(s), espace réc
 assert_contient "$(cat "$LOGS/docker-cleanup.log")" "Récapitulatif — volumes inutilisés" "le journal porte le récapitulatif"
 assert_contient "$(cat "$LOGS/docker-cleanup.log")" "Deleted network reseau-orphelin" "et la liste des objets réellement supprimés"
 assert_egal "$(printf '%s\n' 'container prune -f' 'network rm reseau-orphelin' 'image prune -f')" "$(awk '/prune|network rm/' "$TRACE")" "l'ordre est conteneurs, réseaux, images — et rien d'autre"
+titre "Garde de contraste — la protection tient, et son retrait se voit"
+SRV_DOCKER_RESEAUX_PROTEGES=""
+: > "$TRACE"; REPOND=""; lancer --yes
+assert_contient "$(cat "$TRACE")" "network rm mon-infra" "sans SRV_DOCKER_RESEAUX_PROTEGES, le réseau épargné tombe"
+assert_contient "$(cat "$TRACE")" "network rm reseau-perime" "et le second de la liste aussi"
+assert_absent "$(cat "$TRACE")" "network rm reseau-utilise" "celui qu'un conteneur retient reste épargné"
+export SRV_DOCKER_NETWORK="reseau-orphelin"; : > "$TRACE"; lancer --yes
+assert_absent "$(cat "$TRACE")" "network rm reseau-orphelin" "SRV_DOCKER_NETWORK protège le sien"
+assert_contient "$(cat "$TRACE")" "network rm mon-infra" "et les autres réseaux partent"
+unset SRV_DOCKER_NETWORK; SRV_DOCKER_RESEAUX_PROTEGES="mon-infra reseau-perime"
 titre "--supprimer-volumes — une confirmation de plus, qui nomme les volumes"
 : > "$TRACE"; REPOND=$'o\nn'; lancer --supprimer-volumes
 assert_code 0 "$CODE" "refuser la confirmation des volumes n'est pas une erreur"
@@ -136,5 +147,4 @@ assert_code 0 "$CODE" "une machine vide rend 0"
 assert_egal "4" "$(awk '/0 objet\(s\)/ { n++ } END { printf "%d", n + 0 }' <<< "$SORTIE")" "les quatre catégories sont à zéro"
 assert_absent "$SORTIE" "[o/N]" "aucune confirmation n'est demandée"
 assert_egal "0" "$(appels "prune")" "et rien n'est lancé"
-
 bilan "TASK-037 / docker-cleanup.sh"
