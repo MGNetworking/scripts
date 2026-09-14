@@ -17,7 +17,7 @@
 #   *   au moins un critère est en défaut (ÉCHEC)
 #
 # Le verdict 3 ne se confond pas avec 0 : « pas pu vérifier » n'est pas
-# « vérifié ». C'est la règle d'AGENTS.md §10, appliquée fichier par fichier.
+# « vérifié ». C'est la règle de orchestration/regles.md §10, appliquée fichier par fichier.
 #
 # Le 4 sépare deux natures de saut que le 3 confondait : « le conteneur n'a pas
 # systemd, sept cas sur cent cinquante-six sont hors de portée » n'est pas

@@ -38,7 +38,7 @@ source "$_dir/lib/common.sh"
 
 TESTS_DIR="$SCRIPTS_ROOT/tests"
 
-# Niveaux dans leur ordre d'exécution. Voir AGENTS.md §10.
+# Niveaux dans leur ordre d'exécution. Voir orchestration/regles.md §10.
 NIVEAUX="lint unit integration environment acceptance"
 
 # -------------------------------------------------------------------

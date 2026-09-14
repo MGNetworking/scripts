@@ -22,7 +22,7 @@ out_of_scope:
   - la diffusion d'un message aux sessions ouvertes par wall
   - l'arrêt ordonné préalable des charges applicatives — conteneurs Docker, nœud K3s, drain Kubernetes
   - toute exécution du script sous le profil systemd, où un redémarrage réel détruirait la suite en cours
-  - un repli sur shutdown, reboot ou telinit lorsque systemctl est absent — ADR-0003 décision 14 pose systemd partout
+  - un repli sur shutdown, reboot ou telinit lorsque systemctl est absent — decisions.md décision 14 pose systemd partout
   - la remise en service et la vérification d'état après redémarrage
 acceptance_criteria:
   - sans --yes, le script demande une confirmation et n'entreprend rien si la réponse n'est pas affirmative
@@ -45,7 +45,7 @@ validation:
   - "tests/env/run-in-container.sh -- bash Linux/System/reboot-system.sh --help"
   - "tests/env/run-in-container.sh -- bash Linux/System/reboot-system.sh --dry-run --yes"
 implementation_notes:
-  - ADR-0003 décision 2 — un script destructif s'écrit et s'exécute quand même, parce qu'il ne s'exécute que dans un conteneur jetable ; AGENTS.md §7 ne change pas
+  - decisions.md décision 2 — un script destructif s'écrit et s'exécute quand même, parce qu'il ne s'exécute que dans un conteneur jetable ; orchestration/regles.md §7 ne change pas
   - le profil debian n'a pas systemctl — le chemin nominal y est inatteignable par accident, et c'est une propriété à conserver
   - le fichier de cas ne doit jamais être lancé sous le profil systemd, où un redémarrage réel tuerait le conteneur en pleine suite
   - /run/reboot-required est posé par apt et needrestart sur Debian et Ubuntu ; /var/run en est un lien symbolique
@@ -129,7 +129,7 @@ propriété à **conserver**, pas un manque à combler.
 
 ## Décisions que cette tâche tranche
 
-**`systemctl reboot`, et rien d'autre.** ADR-0003 décision 14 pose `systemd`
+**`systemctl reboot`, et rien d'autre.** decisions.md décision 14 pose `systemd`
 partout sur les cibles supportées. Un repli sur `shutdown -r now` doublerait la
 surface de test pour un cas qui ne se présente pas ; l'absence de `systemctl`
 est traitée comme n'importe quelle dépendance manquante, en 1.
@@ -142,7 +142,7 @@ donc un état à suivre : c'est un autre script, et le domaine ne le réclame pa
 planifiée utiliserait, derrière `update-system.sh`. Ne rien avoir à faire n'est
 pas un échec.
 
-Ces choix sont réversibles et locaux au sens d'`AGENTS.md` §14 ; ils sont fixés
+Ces choix sont réversibles et locaux au sens de `orchestration/regles.md` §14 ; ils sont fixés
 ici pour ne pas être rediscutés à l'exécution, et à consigner dans le rapport.
 
 ## Pièges connus

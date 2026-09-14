@@ -1,5 +1,5 @@
 ---
-description: Consigne d'un agent exécutant — écrire, tester, corriger, s'arrêter (ADR-0006)
+description: Consigne d'un agent exécutant — écrire, tester, corriger, s'arrêter (orchestration/README.md)
 argument-hint: <TASK-XXX> [RETOURS-TASK-XXX.md]
 ---
 
@@ -31,7 +31,7 @@ Puis `git add` de ces fichiers seulement, et `git commit -m "feat: premier jet (
 ## 3. Tester et corriger — 3 passages au plus
 
 ```bash
-bash docs/agent/outils/juger.sh tasks/active/$1.md
+bash orchestration/outils/juger.sh tasks/active/$1.md
 ```
 
 Code 0 : terminé. Sinon, lis les lignes `FAIL` et corrige **le script**.

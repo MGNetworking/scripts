@@ -60,7 +60,7 @@ Tests creux signalés : « sans root » testé en root, faux `jq empty` toujours
   il consomme tout le plafond de sortie. Utiliser `--effort low`.
 - **La consommation de sortie reste haute même en `low`** : 52 000 à 56 000
   jetons pour ~500 lignes de code.
-- **Les fichiers dépassent nettement la cible de 150 lignes** de l'ADR-0004.
+- **Les fichiers dépassent nettement la cible de 150 lignes** de decisions.md.
 
 ### Limites de la comparaison
 
@@ -181,7 +181,7 @@ chiffre exact tant que la répartition n'est pas relevée dans la console Anthro
 ### Ce qu'on en retient
 
 - **Sonnet livre mieux** : moins de défauts, aucun comportement faux, une
-  correction sans régression, et la sobriété de l'ADR-0004 respectée sans effort.
+  correction sans régression, et la sobriété de decisions.md respectée sans effort.
 - **DeepSeek coûte nettement moins cher par appel**, probablement 3 à 10 fois
   moins, mais son travail demande une relecture qui coûte le même prix et un
   rattrapage que Sonnet n'a pas demandé.

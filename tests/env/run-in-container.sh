@@ -58,7 +58,7 @@ REPERTOIRE_ENV="$SCRIPTS_ROOT/tests/env"
 # commandes exécutées : les chemins relatifs des exemples ci-dessus en dépendent.
 MONTAGE="/depot"
 
-# Préfixe imposé par AGENTS.md §8 : les commandes Docker de l'agent ne portent
+# Préfixe imposé par orchestration/regles.md §8 : les commandes Docker de l'agent ne portent
 # que sur les images et conteneurs préfixés « mgnet-test- ». Tout ce que ce
 # script crée doit donc l'être, sans exception.
 PREFIXE="mgnet-test-"

@@ -127,10 +127,10 @@ la demande.
 | `implementation_notes` | non | liste |
 | `blocked_reason` | si `blocked` | bloc littéral |
 | `attempts` | non | entier, tenu pendant l'exécution |
-| `agent` | oui, depuis ADR-0006 | un profil de `docs/agent/profils/` (`deepseek`), un modèle Claude (`sonnet`, `opus`, `haiku`), ou `orchestrateur` |
+| `agent` | oui, décision 38 | un modèle externe de `orchestration/modeles/` (`deepseek`), un modèle Claude (`sonnet`, `opus`, `haiku`), ou `orchestrateur` |
 
 Le `scope` d'une fiche ne contient pas les README ni le backlog : l'orchestrateur
-les écrit à la clôture (ADR-0006 décision 36).
+les écrit à la clôture (decisions.md décision 36).
 
 ---
 
@@ -151,7 +151,7 @@ Transitions normales :
 ```text
 pending → ready → in_progress → validating → completed
                        ↑             ↓
-                       └─── (3 corrections au plus, ADR-0006)
+                       └─── (3 corrections au plus, decisions.md)
                                      ↓
                                   blocked
 ```
@@ -160,7 +160,7 @@ pending → ready → in_progress → validating → completed
 moment où l'on constate que le périmètre et les validations tiennent debout.
 
 **La délégation a été donnée le 2026-09-02** par
-[ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+[décisions](../orchestration/decisions.md),
 décision 3. L'agent ouvre donc lui-même les tâches qu'il a écrites, lorsqu'il
 constate qu'elles tiennent debout.
 
@@ -180,7 +180,7 @@ Une tâche n'est prise par `/tache` que si :
 2. toutes ses `depends_on` sont `completed` ;
 3. son `human_approval_required` est `false`, ou l'accord a été donné — et
    l'accord général l'a été le 2026-09-02 par
-   [ADR-0003](../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md),
+   [décisions](../orchestration/decisions.md),
    décision 2 : ce champ ne suspend plus l'exécution ;
 4. l'environnement qu'elle réclame est disponible.
 
@@ -320,4 +320,4 @@ comme réussie.
 5. ajouter la ligne correspondante dans `backlog.md` ;
 6. passer en `ready` seulement quand les points 3 et 4 tiennent.
 
-Voir [AGENTS.md](../AGENTS.md) pour le contrat de travail complet.
+Voir [regles.md](../orchestration/regles.md) pour le contrat de travail complet.

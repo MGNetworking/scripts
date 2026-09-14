@@ -229,10 +229,10 @@ fi
 # Aucun privilège n'est exigé — « systemctl show » et « systemctl list-units »
 # répondent à n'importe quel compte —, et aucune distribution n'est imposée : ce
 # qui compte n'est pas le nom de l'OS mais la présence de systemd, que
-# require_cmd établit. ADR-0003 décision 14 pose systemd partout, sans repli sur
+# require_cmd établit. decisions.md décision 14 pose systemd partout, sans repli sur
 # SysV ni OpenRC.
 #
-# require_cmd sort en 1 avec un message nommant la dépendance (ADR-0003
+# require_cmd sort en 1 avec un message nommant la dépendance (decisions.md
 # décision 10) : la ligne de commande était juste, c'est la machine qui n'a pas
 # ce qu'il faut. Rien n'est redéfini ici, le socle le fait déjà.
 #

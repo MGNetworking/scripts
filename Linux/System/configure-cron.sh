@@ -21,7 +21,7 @@
 # conserve le bit d'exécution que si l'index le porte, et les fichiers de ce
 # dépôt étaient enregistrés en 100644 quand ce script a été écrit. Sur un serveur
 # issu d'un « git clone », un appel direct rendait alors 126 à chaque passage, en
-# silence. Ils sont en 100755 depuis le 2026-09-02 (ADR-0003, décision 11), mais
+# silence. Ils sont en 100755 depuis le 2026-09-02 (decisions.md, décision 11), mais
 # la forme est conservée : elle vaut aussi pour un dépôt déployé par copie ou par
 # archive, où le bit se perd.
 #

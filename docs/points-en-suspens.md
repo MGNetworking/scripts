@@ -80,7 +80,7 @@ qui laisse ouverte la première piste du point n° 2 ci-dessous.
 **Soulevé le** 2026-08-26, conséquence directe du point 1.
 **Indexé au backlog le** 2026-08-27 : [tasks/backlog.md](../tasks/backlog.md) §3.
 **Tranché le** 2026-09-02 par
-[ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md), décision 15 :
+[décisions](../orchestration/decisions.md), décision 15 :
 **un script de notification appelé en cas d'échec**, émettant vers `ntfy` ou un
 webhook dont l'URL vit dans un `.env` non versionné.
 
@@ -187,7 +187,7 @@ lisaient déjà le 3 sans le maquiller. Seuls leurs messages ont été précisé
 
 **Soulevé le** 2026-09-01, pendant TASK-013.
 **Tranché le** 2026-09-02 par
-[ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md), décision 13 :
+[décisions](../orchestration/decisions.md), décision 13 :
 **le §1 est retiré**, deuxième des trois voies ci-dessous.
 
 `tests/README.md` §1 annonçait déjà sa disparition, et le niveau `integration`
@@ -230,7 +230,7 @@ fichier de cas qui prétendrait contrôler un diff après son commit.
 **Soulevé le** 2026-09-02, au terme de la session qui a produit la couche
 agentique et les dix premières tâches.
 **Tranché le** 2026-09-02 par
-[ADR-0003](agent/decisions/ADR-0003-cadrage-execution-autonome.md), décisions 5
+[décisions](../orchestration/decisions.md), décisions 5
 et 6 : **mode léger pour les scripts qui ne modifient rien** — lecture seule et
 corrections documentaires — et **rapport court par défaut**.
 
@@ -250,7 +250,7 @@ demandé plusieurs tours de correction.
 
 **Un sous-agent démarre à froid.** Il ne connaît pas la conversation : c'est ce
 qui le rend fiable, et c'est ce qui coûte. Il relit à chaque invocation
-`AGENTS.md`, `CLAUDE.md`, la tâche, les fichiers concernés. Le cycle en fait
+`orchestration/regles.md`, `CLAUDE.md`, la tâche, les fichiers concernés. Le cycle en fait
 travailler trois au minimum, souvent cinq ou six avec les corrections.
 
 ### Ce que ce coût achète, et qu'il faut se garder de rogner
@@ -569,7 +569,7 @@ borne à réviser, et non une panne du démon.
 Toute validation comportementale de ce dépôt passe par un conteneur. Si Docker
 Desktop est arrêté ou en panne, **aucun niveau au-dessus de `lint` ne peut
 s'exécuter** — ni `unit`, ni `integration`, ni `environment`, ni la moitié de
-l'`acceptance`. L'agent s'arrête et le signale, conformément à `AGENTS.md` §7.
+l'`acceptance`. L'agent s'arrête et le signale, conformément à `orchestration/regles.md` §7.
 
 **Ce qui a été tenté, et mesuré.** TASK-027 devait rendre l'agent capable de
 démarrer Docker Desktop lui-même. Deux tentatives réelles le 2026-09-04 :
@@ -642,7 +642,7 @@ fabriquée dans `/etc/systemd/system` — le groupe 7 en pose déjà une, pour l
 « service en échec » — donc un second chemin de restitution à vérifier avant que
 `systemd.test.sh` ne tourne derrière. Aucun critère d'acceptation de TASK-023 ne
 l'exigeait, et élargir le périmètre pour l'ajouter aurait contrevenu à
-`AGENTS.md` §12.
+`orchestration/regles.md` §12.
 
 **Pourquoi ce n'est pas urgent.** Le comportement est mesuré et juste ; ce qui
 manque est sa non-régression. Le coût d'un retour en arrière silencieux se
@@ -727,7 +727,7 @@ les agents qui suivront.
 ### Ce qui a été fait
 
 Les trois définitions de `.claude/agents/` ont été corrigées — autorisation
-permanente d'ADR-0003, §5 d'`AGENTS.md` : « l'agent les fait évoluer quand
+permanente de decisions.md, §5 de `orchestration/regles.md` : « l'agent les fait évoluer quand
 l'usage révèle une règle mal formulée ».
 
 - **`redacteur-tests`** : lit `tests/README.md` **par sections**, avec le tableau

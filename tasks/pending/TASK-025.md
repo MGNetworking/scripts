@@ -48,7 +48,7 @@ validation:
   - "tests/env/run-in-container.sh -- bash Linux/System/manage-users.sh --help"
   - "tests/env/run-in-container.sh -- bash Linux/System/manage-users.sh --utilisateur essai --dry-run"
 implementation_notes:
-  - ADR-0003 décision 20 — configure-ssh.sh et disable-root-login.sh refuseront d'agir sans un compte non-root disposant de sudo et d'une clé exploitable ; ce script est celui qui crée ce compte
+  - decisions.md décision 20 — configure-ssh.sh et disable-root-login.sh refuseront d'agir sans un compte non-root disposant de sudo et d'une clé exploitable ; ce script est celui qui crée ce compte
   - useradd vient du paquet passwd, présent partout ; adduser est un script Debian dont la présence est moins sûre dans une image minimale
   - le groupe sudo n'existe pas dans l'image de test — c'est le cas nominal du refus, et le fichier de cas doit le créer lui-même pour éprouver le chemin nominal
   - ssh-keygen n'est pas dans l'image de test — le contrôle de forme d'une clé ne peut pas en dépendre
@@ -66,7 +66,7 @@ stocker de mots de passe dans le script.*
 
 ## Le rôle de ce script dans la chaîne — l'ordre compte
 
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+[décisions](../../orchestration/decisions.md)
 décision 20 pose une garde qu'il faut connaître avant d'écrire une ligne :
 
 > `configure-ssh.sh` et `disable-root-login.sh` **refusent d'agir** tant qu'ils
@@ -93,7 +93,7 @@ bonne posture pour un dépôt public. Mais `sudo` demande par défaut le mot de
 passe de l'utilisateur — un compte qui n'en a pas ne peut donc pas élever ses
 droits de façon interactive.
 
-**Décision retenue**, réversible et locale au sens d'`AGENTS.md` §14 :
+**Décision retenue**, réversible et locale au sens de `orchestration/regles.md` §14 :
 
 - le script **ne dépose aucune règle `NOPASSWD` par défaut** ;
 - il **avertit explicitement**, en fin d'exécution, que tant qu'un mot de passe
@@ -154,11 +154,11 @@ mesurerait le montage, pas le script. Les fixtures se créent hors de `/depot`.
 
 | Question | Réponse | Source |
 |---|---|---|
-| cibles | Debian 12 et 13, Ubuntu 22.04 et 24.04 | ADR-0003 décision 14 |
-| privilège insuffisant | code 1 | ADR-0003 décision 10 |
+| cibles | Debian 12 et 13, Ubuntu 22.04 et 24.04 | decisions.md décision 14 |
+| privilège insuffisant | code 1 | decisions.md décision 10 |
 | valeur refusée, option inconnue | code 2, avant toute action | TASK-016 |
-| valeurs propres à la machine | `config/server.env` | ADR-0003 décision 24 |
-| tâche sensible | s'exécute quand même, en conteneur jetable | ADR-0003 décision 2 |
+| valeurs propres à la machine | `config/server.env` | decisions.md décision 24 |
+| tâche sensible | s'exécute quand même, en conteneur jetable | decisions.md décision 2 |
 
 ## Codes de retour attendus des validations
 

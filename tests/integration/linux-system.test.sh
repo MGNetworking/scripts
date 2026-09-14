@@ -26,7 +26,7 @@
 #
 # et la non-régression qui les borne, groupe « 1 ter » : sans privilège mais
 # avec des arguments valides, un script rend toujours 1 — un privilège
-# insuffisant est un échec d'exécution, pas une erreur d'usage (ADR-0003,
+# insuffisant est un échec d'exécution, pas une erreur d'usage (decisions.md,
 # décision 10). Avec une option inconnue ou une valeur invalide, il rend 2 :
 # les arguments sont vérifiés avant les privilèges.
 #
@@ -1222,7 +1222,7 @@ else
     # Même ordre pour une VALEUR invalide : la validation précède require_root.
     # Ces trois cas sont le pendant exact des trois précédents — mêmes scripts,
     # mêmes arguments, mais valides — et c'est leur mise en regard qui prouve la
-    # frontière d'ADR-0003 décision 10 : 1 quand la commande est juste et que
+    # frontière de decisions.md décision 10 : 1 quand la commande est juste et que
     # seul le privilège manque, 2 dès que la commande elle-même est fautive.
     sans_root bash "$HOSTNAME_SH" mon_serveur
     assert_code 2 "$CODE" "configure-hostname.sh sans privilège : le nom invalide prime, code 2"
@@ -4841,7 +4841,7 @@ titre "5. Hors de portée de cet environnement"
 #
 # « configure-timezone.sh appliquant le fuseau par timedatectl » et
 # « configure-hostname.sh changeant réellement le nom de la machine »
-# attendaient le profil « systemd » depuis ADR-0001. TASK-020 l'a construit —
+# attendaient le profil « systemd » depuis decisions.md. TASK-020 l'a construit —
 # tests/env/Dockerfile.systemd — et les deux cas sont désormais EXÉCUTÉS, aux
 # groupes 3 et 4 de tests/environment/systemd.test.sh :
 #

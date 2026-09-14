@@ -152,7 +152,7 @@ toucher au moindre registre.
 
 Deux précautions :
 
-- **aucun accès réseau pendant les validations.** [AGENTS.md](../../AGENTS.md)
+- **aucun accès réseau pendant les validations.** [regles.md](../../orchestration/regles.md)
   §8 borne ce que l'agent lance ; un `pull` réel, même d'une image minuscule,
   sort du cadre. Le faux `docker` couvre tout ;
 - `lib/common.sh` charge `config/server.env`, lequel peut redéfinir `PATH`. Le
@@ -191,7 +191,7 @@ récupérer est le travail de `cleanup-images.sh` (section 10 du plan), et la
 confusion entre « image `dangling` » et « image simplement inutilisée » y est
 traitée — la seconde catégorie est bien plus large.
 
-Ces trois choix sont réversibles et locaux au sens d'[AGENTS.md](../../AGENTS.md)
+Ces trois choix sont réversibles et locaux au sens de [regles.md](../../orchestration/regles.md)
 §14 ; ils sont fixés ici pour ne pas être rediscutés pendant l'exécution, et à
 consigner dans le rapport.
 
@@ -227,7 +227,7 @@ tout message utile : capturer d'abord, découper ensuite.
 La dernière ligne crée un projet minimal dans `/tmp` — un fichier
 `compose.yaml` vide suffit à franchir le contrôle de chemin — puis éprouve le
 chemin « `--dry-run` sans démon ». Elle ne touche ni `config/`, ni le dépôt
-monté : `AGENTS.md` §5 place `config/*.env` en zone interdite, et un fichier de
+monté : `orchestration/regles.md` §5 place `config/*.env` en zone interdite, et un fichier de
 cas ne doit pas y écrire.
 
 `--help` sort **avant tout préflight** : dans le conteneur de test, `docker`
@@ -249,6 +249,6 @@ C'est cette liste qui détermine que la commande est `docker compose` et non
 `Docker/README.md` est créé par le lot A. S'il n'existe pas encore, **la
 créer** : rôle du domaine, prérequis, systèmes supportés — Debian 12 et 13,
 Ubuntu 22.04 et 24.04 LTS par
-[ADR-0003](../../docs/agent/decisions/ADR-0003-cadrage-execution-autonome.md)
+[décisions](../../orchestration/decisions.md)
 décision 14 —, tableau des scripts, ordre d'utilisation et risques. Ne pas y
 documenter les scripts du lot A.
