@@ -1,7 +1,7 @@
 ---
 id: TASK-043
 title: "Écrire Linux/Security/security-check.sh"
-status: ready
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

@@ -9,6 +9,7 @@ Debian 12 et 13, Ubuntu 22.04 et 24.04 LTS (décision 14).
 |---|---|---|---|
 | `audit-users.sh` | audit des comptes : UID 0, shells de connexion, membres de sudo, adm et docker, mots de passe vides si `/etc/shadow` est lisible | aucun | non |
 | `audit-ports.sh` | ports TCP et UDP en écoute, adresse et processus ; « exposé » ou « local », nombre de ports exposés | aucun (processus complets en root) | non |
+| `security-check.sh` | bilan PASS, WARNING, FAIL, INFO : SSH, ufw, fail2ban, comptes à UID 0, mises à jour ; code 1 dès un FAIL, pour cron | root conseillé (sans root : INFO) | non |
 
 ## Ordre d'utilisation
 
@@ -29,4 +30,5 @@ ouverte pendant leur exécution.
 ./Linux/Security/audit-users.sh           # sans root : shadow non lu, signalé
 ./Linux/Security/audit-ports.sh           # sans root : processus « inconnu (root requis) »
 sudo ./Linux/Security/audit-users.sh      # audit complet
+sudo ./Linux/Security/security-check.sh   # bilan ; code 1 dès un FAIL
 ```
