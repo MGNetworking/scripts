@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A46**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A48**.
 
 ## Registre
 
@@ -95,6 +95,8 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [x] | A43 | P2 | Aucun contrôle automatique ne vérifie `set -Eeuo pipefail` en ligne 2 ni la longueur des fichiers : seule la relecture Opus les voit (TASK-025 : 266 + 465 lignes, `set` en ligne 11) | TASK-025 | fait — TASK-011 vérifie que `set -Eeuo pipefail` est la première commande (commentaires admis au-dessus, norme des scripts existants) ; `juger.sh` signale toute longueur au-delà de 150 |
 | [x] | A44 | P4 | `manage-users.sh` (179 lignes) et surtout son fichier de cas (419 lignes) dépassent la sobriété visée malgré une relance : factoriser la reconnaissance d’environnement dans `tests/lib`, fusionner les blocs if/ok/ko | TASK-025 | fait — TASK-040 : script 179 → 150 lignes, comportement identique (relu) ; fichier de cas 419 → 296 lignes, vérifications 125 → 138 |
 | [x] | A45 | P1 | `ASSUME_YES` héritée de l’environnement : un script lancé par un parent qui l’exporte confirme tout seul (`confirm` de `lib/common.sh` la lit sans qu’elle ait été posée par `--yes`) — vu sur `reboot-system.sh`, probable sur tous les scripts à confirmation | relecture TASK-026 | décision 45 — le socle garde l'héritage (contrat testé) ; les scripts destructifs posent `ASSUME_YES=false` avant leurs options : fait pour `docker-cleanup.sh`, demandé à TASK-026 pour `reboot-system.sh` |
+| [ ] | A46 | P3 | `configure-firewall.sh` n'est prouvé qu'avec un faux `ufw` : jamais exécuté sur une machine réelle avec ufw actif, ni avec sshd écoutant sur plusieurs ports ; la seconde version et le correctif IPv6 de l'orchestrateur n'ont pas été relus par Opus | TASK-045 | à éprouver sur une VM jetable, session SSH ouverte, avant usage en production |
+| [ ] | A47 | P2 | Jetons de relecture perdus quand la session s'interrompt entre la relecture et la clôture : `/tache` ne les consigne qu'à l'étape 8 (TASK-045 : « non relevé ») | TASK-045 | [TASK-048](TASK-048.md) |
 
 ## Suivi, pas des défauts
 

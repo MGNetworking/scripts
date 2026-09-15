@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-048**.
+Prochain identifiant libre : **TASK-049**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -55,9 +55,10 @@ de ce que cet ADR a tranché.
 | [TASK-042](completed/TASK-042.md) | Écrire `Linux/Security/audit-ports.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-043](completed/TASK-043.md) | Écrire `Linux/Security/security-check.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-044](pending/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-045](pending/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | `ready` | haute | — | conteneur `debian` | **oui** |
+| [TASK-045](completed/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | `completed` | haute | — | conteneur `debian` | **oui** |
 | [TASK-046](pending/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | `ready` | haute | 025 | conteneur `debian` | **oui** |
 | [TASK-047](pending/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `pending` | haute | 046 | conteneur `debian` | **oui** |
+| [TASK-048](pending/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` (A47) | `ready` | moyenne | — | hôte | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -240,7 +241,7 @@ côté ; elles restent non sélectionnables.
 | `audit-ports.sh` | atomisée : [TASK-042](completed/TASK-042.md) |
 | `security-check.sh` | atomisée : [TASK-043](completed/TASK-043.md) |
 | `configure-fail2ban.sh` | atomisée : [TASK-044](pending/TASK-044.md) |
-| `configure-firewall.sh` | atomisée : [TASK-045](pending/TASK-045.md) — **peut couper l'accès à la machine** |
+| `configure-firewall.sh` | atomisée : [TASK-045](completed/TASK-045.md) — **peut couper l'accès à la machine** |
 | `configure-ssh.sh` | atomisée : [TASK-046](pending/TASK-046.md) — **peut couper l'accès à la machine** |
 | `disable-root-login.sh` | atomisée : [TASK-047](pending/TASK-047.md) |
 
@@ -369,6 +370,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-041](completed/TASK-041.md) | Écrire `Linux/Security/audit-users.sh` | [rapport](reports/TASK-041-report.md) |
 | [TASK-042](completed/TASK-042.md) | Écrire `Linux/Security/audit-ports.sh` | [rapport](reports/TASK-042-report.md) |
 | [TASK-043](completed/TASK-043.md) | Écrire `Linux/Security/security-check.sh` | [rapport](reports/TASK-043-report.md) |
+| [TASK-045](completed/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | [rapport](reports/TASK-045-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
