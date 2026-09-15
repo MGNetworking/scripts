@@ -2,6 +2,9 @@
 # tests/integration/update-docker.test.sh — Docker/Maintenance/update-docker.sh, TASK-036.
 # Pas de démon Docker dans le conteneur : faux docker, dpkg-query, apt-get et
 # systemctl en tête de PATH, qui répondent à sa place et tracent leurs appels.
+# Les corps des faux binaires sont entre apostrophes : leurs $ appartiennent au
+# faux programme, exécuté plus tard, et non à ce fichier.
+# shellcheck disable=SC2016
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
@@ -10,9 +13,6 @@ BASH_BIN="$(command -v bash)"; CIBLE="$SCRIPTS_ROOT/Docker/Maintenance/update-do
 BAC="$(mktemp -d)"; T_APT="$BAC/apt"; T_DOCKER="$BAC/docker.trace"
 APRES="$BAC/apres"; LOGS="$BAC/journal"
 trap 'rm -rf "$BAC"' EXIT
-# shellcheck disable=SC2016
-# Les corps des faux binaires sont entre apostrophes : leurs $ appartiennent au
-# faux programme, exécuté plus tard, et non à ce fichier.
 faux() { printf '#!/bin/sh\n%s\n' "$2" > "$BAC/$1"; chmod +x "$BAC/$1"; }
 
 faux dpkg-query 'last=""; for a in "$@"; do last="$a"; done
@@ -33,7 +33,7 @@ faux systemctl 'case "$*" in "is-active docker") echo "$P_SERVICE"; [ "$P_SERVIC
 # PATH restreint : les outils du script, moins ceux que l'appelant nomme.
 outils() {
     local d="$BAC/$1"; shift; mkdir -p "$d"; local b c PATH="$BAC:$PATH"
-    for b in dirname basename mkdir id date awk sed grep cat tr wc tee apt-get dpkg-query docker systemctl; do
+    for b in dirname basename mkdir id date uname awk sed grep cat tr wc tee apt-get dpkg-query docker systemctl; do
         case " $* " in *" $b "*) continue ;; esac
         c="$(command -v "$b" 2>/dev/null || true)"; [ -n "$c" ] || continue
         ln -sf "$c" "$d/$b"
@@ -52,7 +52,7 @@ appels() { awk -v m="$*" 'index($0, m) { n++ } END { printf "%d", n + 0 }' "$T_A
 d_appels() { awk -v m="$*" 'index($0, m) { n++ } END { printf "%d", n + 0 }' "$T_DOCKER"; }
 # Liste blanche : tout apt-get hors de ces deux formes — « upgrade »,
 # « dist-upgrade » — tombe ici.
-fautives() { grep -vE '^(update|install --only-upgrade -y (docker-ce|docker-ce-cli|containerd\.io|docker-buildx-plugin|docker-compose-plugin))$' "$T_APT"; }
+fautives() { grep -vE '^(update|install --only-upgrade -y( (docker-ce|docker-ce-cli|containerd\.io|docker-buildx-plugin|docker-compose-plugin))+)$' "$T_APT"; }
 outils sans-apt apt-get; outils sans-systemctl systemctl
 
 titre "L'aide, puis les refus d'usage"
