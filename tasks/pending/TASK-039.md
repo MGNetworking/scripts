@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A42**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A43**.
 
 ## Registre
 
@@ -91,6 +91,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [x] | A39 | P4 | Commit d'activation `chore: TASK-XXX en cours` fait sur `master`, alors que `regles.md` §9 interdit tout commit de travail sur `master` : règle à préciser | TASK-033, 034 | fait — `regles.md` §9 : activation et clôture sur `master`, jamais le code |
 | [x] | A40 | P3 | Sous `enable_full_logging`, chaque message et chaque sortie de `run_logged` sont écrits deux fois dans le journal (par `_journaliser` ou `tee`, et par la capture complète) | test de A23 | fait — `_journaliser` et `run_logged` n'écrivent plus sous capture complète ; testé |
 | [ ] | A41 | P2 | L’agent `sonnet` lancé sans interface échoue : « OAuth session expired and could not be refreshed » ; le Claude Code de `user` doit être reconnecté, ce que l’orchestrateur n’a pas le droit de faire | TASK-037 | `user` : relancer `claude` et se reconnecter ; en attendant, les tâches `sonnet` passent à `deepseek` |
+| [x] | A42 | P2 | Le figement du fichier de cas dès le premier commit bloque l’agent quand son propre test est mal construit (TASK-035, TASK-036 : arrêts sur des erreurs de test) | TASK-035, 036 | fait — le test reste corrigeable jusqu’au premier PASSE, sans retrait d’assertion ; `/tache` compte les assertions |
 
 ## Suivi, pas des défauts
 

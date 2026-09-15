@@ -46,10 +46,13 @@ bash orchestration/outils/juger.sh tasks/active/$1.md
 
 Code 0 : terminé. Sinon, lis les lignes `FAIL` et corrige **le script**.
 
-- **Le fichier de cas est figé après le premier commit** — ou après le commit
-  des retours de relecture (§1). Tu ne le modifies plus. L'orchestrateur le vérifie : un fichier de cas modifié après ce commit
-  fait rejeter tout le travail. S'il te semble faux, arrête-toi et dis en quoi
-  sur la ligne de verdict.
+- **Le fichier de cas ne perd jamais une vérification.** Tant que le juge n'a
+  jamais rendu PASSE, tu peux corriger une erreur de CONSTRUCTION du test —
+  directive shellcheck mal placée, outil manquant dans un PATH restreint, faux
+  binaire qui répond mal — en écrivant la raison dans le message de commit
+  (`test: …`). Tu ne retires, n'affaiblis ni ne commentes aucune assertion.
+  Après le premier PASSE, ou après le commit des retours de relecture (§1), le
+  fichier est figé. L'orchestrateur compte les assertions et lit chaque diff.
 - Après chaque correction, relance le juge et commite (`fix: passage N ($1)`).
 - **Arrête-toi** si le nombre de lignes `FAIL` ne baisse pas d'un passage au
   suivant, ou après le troisième passage.

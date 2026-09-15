@@ -52,9 +52,11 @@ Dans la copie `../script-agents/$1` :
 1. `bash orchestration/outils/juger.sh tasks/active/$1.md` — tu relances toi-même ;
 2. **périmètre** : `git diff --name-only master...agent/$1` ne contient que des
    fichiers du `scope` ;
-3. **tests figés** : `git diff <point de figement>..agent/$1 -- tests/` est vide.
-   Le point de figement est le commit `feat: premier jet ($1)`, ou, après une
-   relance avec retours, le dernier commit `fix: retours de relecture ($1)` ;
+3. **tests** : lis `git diff <premier jet>..agent/$1 -- tests/`. Le nombre de lignes
+   `assert_`, `ok`, `ko`, `saute` ne baisse jamais (`grep -cE` sur les deux
+   versions) ; toute modification est une correction de construction justifiée
+   dans son commit. Après le dernier commit `fix: retours de relecture ($1)`,
+   seules les modifications demandées par ces retours sont admises ;
 4. **longueur** : `wc -l` du script et du fichier de cas. Au-delà de 150 lignes
    sans raison donnée sur la ligne `VERDICT`, c'est un défaut à signaler au
    relecteur ;
