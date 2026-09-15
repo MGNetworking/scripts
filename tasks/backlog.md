@@ -1,10 +1,3 @@
-| `security-check.sh` | atomisée : [TASK-043](pending/TASK-043.md) |
-| `audit-ports.sh` | atomisée : [TASK-042](pending/TASK-042.md) |
-| `audit-users.sh` | atomisée : [TASK-041](pending/TASK-041.md) |
-| `configure-fail2ban.sh` | atomisée : [TASK-044](pending/TASK-044.md) |
-| `configure-firewall.sh` | atomisée : [TASK-045](pending/TASK-045.md) |
-| `disable-root-login.sh` | atomisée : [TASK-047](pending/TASK-047.md) |
-| `configure-ssh.sh` | atomisée : [TASK-046](pending/TASK-046.md) |
 # Backlog
 
 Index de tout le travail connu. Deux natures d'entrées y coexistent.
@@ -243,13 +236,13 @@ côté ; elles restent non sélectionnables.
 
 | Entrée | Note |
 |---|---|
-| `configure-ssh.sh` | **peut couper l'accès à la machine** — approbation humaine requise |
-| `disable-root-login.sh` | idem |
-| `configure-firewall.sh` | **peut couper l'accès à la machine** — approbation humaine requise |
-| `configure-fail2ban.sh` | approbation humaine |
-| `audit-users.sh` | lecture seule |
-| `audit-ports.sh` | lecture seule |
-| `security-check.sh` | lecture seule, destiné à cron |
+| `audit-users.sh` | atomisée : [TASK-041](pending/TASK-041.md) |
+| `audit-ports.sh` | atomisée : [TASK-042](pending/TASK-042.md) |
+| `security-check.sh` | atomisée : [TASK-043](pending/TASK-043.md) |
+| `configure-fail2ban.sh` | atomisée : [TASK-044](pending/TASK-044.md) |
+| `configure-firewall.sh` | atomisée : [TASK-045](pending/TASK-045.md) — **peut couper l'accès à la machine** |
+| `configure-ssh.sh` | atomisée : [TASK-046](pending/TASK-046.md) — **peut couper l'accès à la machine** |
+| `disable-root-login.sh` | atomisée : [TASK-047](pending/TASK-047.md) |
 
 ### Linux / Docker — plan §3 — abandonnée
 
