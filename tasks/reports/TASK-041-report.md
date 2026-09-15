@@ -1,5 +1,10 @@
 # TASK-041 — Rapport d'exécution
 
+## Compte rendu
+TASK-041 (`audit-users.sh`) est terminée et fusionnée : premier script du domaine `Linux/Security`, en lecture seule, écrit par l’agent DeepSeek pour 0,23 $.
+
+L’agent a livré un premier jet qui passait tous les tests (48 vérifications). La relecture Opus a relevé trois défauts mineurs : `sync` était signalé à tort comme compte à shell de connexion, les comptes dont `sudo` est le groupe principal passaient inaperçus, et une panne de la source de comptes se lisait comme « groupe absent ». Elle a aussi vu que le cas « `/etc/shadow` illisible » n’était pas réellement testé. Une relance a tout corrigé : 63 vérifications, 143 + 150 lignes. J’ai créé le README du domaine.
+
 ## Statut
 COMPLETED
 
