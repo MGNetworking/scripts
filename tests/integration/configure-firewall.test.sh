@@ -52,7 +52,6 @@ allow)
     [ "$2" = "${UFW_AVALE:-}" ] && exit 0
     inscrire() { grep -qxF "$1" "$e/ajoute" 2>/dev/null || printf '%s\n' "$1" >> "$e/ajoute"; }
     inscrire "ufw allow $2"
-    grep -q '^IPV6=yes' "${UFW_DEFAUT:-/etc/default/ufw}" 2>/dev/null && inscrire "ufw allow $2 (v6)"
     ;;
 --force)
     [ "$2" = enable ] && echo active > "$e/actif"
@@ -208,13 +207,13 @@ assert_contient "$SORTIE" "ufw deny 22/tcp" "le refus nomme la règle en place"
 assert_absent "$(cat "$UFW_LOG")" "force enable" "ufw n'est pas activé"
 assert_aucune_modification "rien n'est appliqué tant que la règle deny est là"
 
-titre "IPV6=yes — la règle v6 est attendue elle aussi"
+titre "IPV6=yes — « ufw show added » ne liste qu'une ligne pour v4 et v6 (mesuré)"
 etat_neuf
 printf 'IPV6=yes\n' > "$BAC/default-ufw"
 printf 'ufw allow 22/tcp\n' > "$UFW_ETAT/ajoute"
 lancer env UFW_DEFAUT="$BAC/default-ufw" bash "$CIBLE" -y
-assert_code 0 "$CODE" "règle v4 seule complétée : rend 0"
-assert_contient "$(cat "$UFW_ETAT/ajoute")" "ufw allow 22/tcp (v6)" "la règle v6 manquante est posée"
+assert_code 0 "$CODE" "IPV6=yes, règle SSH déjà présente : rend 0"
+assert_egal "1" "$(grep -c '22/tcp' "$UFW_ETAT/ajoute")" "la règle SSH n'est pas reposée, aucune ligne (v6) n'est attendue"
 
 titre "Règle SSH absente de « ufw show added » — refus d'activer"
 etat_neuf

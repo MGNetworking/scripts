@@ -11,8 +11,7 @@ source "$_dir/lib/common.sh"
 
 SSH_PORT="${SRV_SSH_PORT:-22}"
 PORTS="${SRV_FIREWALL_PORTS:-}"
-DEFAUT_UFW="${UFW_DEFAUT:-/etc/default/ufw}"
-DRY_RUN="false"; OUI="false"; ACTIVER="non"; LISIBLE="oui"; IPV6="non"
+DRY_RUN="false"; OUI="false"; ACTIVER="non"; LISIBLE="oui"
 ETAT=""; AJOUTE=""; DENY_SSH=""; PLAN=()
 
 usage() {
@@ -62,10 +61,10 @@ rafraichir() {
 }
 
 # Autorisation du port depuis n'importe où : une restriction — « from
-# 192.168.1.0/24 » — ne compte pas. Avec IPV6=yes, ufw pose aussi la règle v6.
+# 192.168.1.0/24 » — ne compte pas. « ufw show added » liste une seule ligne pour
+# IPv4 et IPv6 (mesuré le 2026-09-15 avec ufw 0.36) : pas de ligne « (v6) » à attendre.
 regle_presente() {
-    printf '%s\n' "$AJOUTE" | grep -qxF "ufw allow $1" || return 1
-    [ "$IPV6" = "non" ] || printf '%s\n' "$AJOUTE" | grep -qxF "ufw allow $1 (v6)"
+    printf '%s\n' "$AJOUTE" | grep -qxF "ufw allow $1"
 }
 
 # Décision 45 : un parent qui exporterait ASSUME_YES ne confirme pas ce script,
@@ -103,7 +102,6 @@ if [ "$DRY_RUN" != "true" ]; then
     fi
 fi
 
-if [ -r "$DEFAUT_UFW" ] && grep -q '^IPV6=yes' "$DEFAUT_UFW"; then IPV6="oui"; fi
 if command -v ufw >/dev/null 2>&1; then UFW="oui"; else UFW="non"; fi
 if [ "$UFW" = "non" ] && [ "$DRY_RUN" != "true" ]; then
     info "ufw absent : installation par apt-get."
