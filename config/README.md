@@ -6,6 +6,7 @@ script qui en a besoin :
 ```bash
 load_config docker      # -> config/docker.env
 load_config k3s         # -> config/k3s.env
+load_config notify      # -> config/notify.env (Linux/System/notify-failure.sh — l’URL y est un secret)
 ```
 
 ## `server.env` — la seule exception

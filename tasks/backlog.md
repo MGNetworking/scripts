@@ -45,7 +45,7 @@ de ce que cet ADR a tranché.
 | [TASK-027](completed/TASK-027.md) | Rendre le démon Docker disponible sans intervention humaine | `completed` | haute | — | hôte | **oui** |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | `completed` | moyenne | 020 | conteneur `systemd` | non |
-| [TASK-024](pending/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-024](completed/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-025](pending/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
@@ -351,6 +351,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | [rapport](reports/TASK-037-report.md) |
 | [TASK-035](completed/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | [rapport](reports/TASK-035-report.md) |
 | [TASK-036](completed/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | [rapport](reports/TASK-036-report.md) |
+| [TASK-024](completed/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | [rapport](reports/TASK-024-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |

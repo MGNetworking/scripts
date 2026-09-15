@@ -77,7 +77,7 @@ qui laisse ouverte la première piste du point n° 2 ci-dessous.
 
 ---
 
-## 2. Un échec en tâche planifiée passe inaperçu — tranché
+## 2. Un échec en tâche planifiée passe inaperçu — tranché, réalisé par TASK-024 (`notify-failure.sh`)
 
 **Soulevé le** 2026-08-26, conséquence directe du point 1.
 **Indexé au backlog le** 2026-08-27 : [tasks/backlog.md](../tasks/backlog.md) §3.

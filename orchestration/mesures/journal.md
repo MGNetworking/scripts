@@ -15,6 +15,7 @@ une fois, l'arbitre termine si nécessaire.
 | TASK-037 `docker-cleanup.sh` | destructif | agent `deepseek` (sonnet non authentifié, A41) | 4/4 | 68 | 150 + 140 → 150 + 150 | 0,464 $, 2 lancements | Opus 41 816 | relance agent, 4 majeurs corrigés |
 | TASK-035 `update-images.sh` | un effet | agent `deepseek` | 4/4 | 65 | 150 + 150 → 149 + 149 | 0,218 $, 2 lancements | Opus 36 207 | 2 cas de test corrigés par l'orchestrateur, 5 mineurs par l'agent |
 | TASK-036 `update-docker.sh` | effets enchaînés | agent `deepseek` (sonnet non authentifié, A41) | 5/5 | 76 | 148 + 150 → 150 + 148 | 0,409 $, 2 lancements | Opus 36 518 | 3 erreurs de test corrigées par l'orchestrateur (A42), 1 majeur et 6 mineurs par l'agent |
+| TASK-024 `notify-failure.sh` | un effet, secret | agent `deepseek` | 5/5 | 87 | 150 + 197 → 150 + 254 | 0,225 $, 2 lancements | Opus 29 609 | 1 majeur (URL en argument de curl) et 5 mineurs corrigés par l'agent |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.

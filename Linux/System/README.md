@@ -26,6 +26,7 @@ prime toujours sur la valeur du fichier.
 | `check-disk.sh` | diagnostic de stockage : systèmes de fichiers, inodes, périphériques, répertoires consommateurs | aucun | non |
 | `check-memory.sh` | diagnostic mémoire : mémoire vive, fichier d'échange, processus consommateurs | aucun | non |
 | `check-services.sh` | diagnostic des services systemd : inventaire des actifs, services en échec, vérification d'un service nommé | aucun | non |
+| `notify-failure.sh` | notifie l’échec d’un script planifié vers ntfy ou un webhook ; URL et jeton dans `config/notify.env`, jamais affichés ni passés en argument | aucun | non (émet une requête réseau) |
 
 Les autres scripts prévus (`manage-users.sh`, `reboot-system.sh`) restent à
 écrire — voir [le plan](../../docs/refactorisation-plan.md).
