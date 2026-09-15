@@ -16,7 +16,7 @@ sortie() { cat "$F_OUT"; }; erreur() { cat "$F_ERR"; }
 # champ <adresse> <port> <n> — le champ n de la ligne qui écoute là, ou rien.
 champ() { awk -v a="$1" -v p="$2" -v n="$3" '$3 == a && $4 == p {print $n; exit}' "$F_OUT"; }
 # processus <adresse> <port> — toute la colonne des détenants, espaces compris.
-processus() { awk -v a="$1" -v p="$2" '$3 == a && $4 == p {sub(/^([^ ]+ +){4}/, ""); print; exit}' "$F_OUT"; }
+processus() { awk -v a="$1" -v p="$2" '$3 == a && $4 == p {sub(/^[^ ]+ +[^ ]+ +[^ ]+ +[^ ]+ +/, ""); print; exit}' "$F_OUT"; }
 # combien <portée> — les lignes d'écoute de cette portée ; sans argument, toutes.
 combien() { awk -v p="${1:-}" '$1 ~ /^(tcp|udp)$/ && (p == "" || $2 == p) {n++} END {print n + 0}' "$F_OUT"; }
 journal_vide() { : > "$F_JOURNAL"; chmod 666 "$F_JOURNAL"; }
