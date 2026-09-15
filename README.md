@@ -9,7 +9,7 @@ configuration et de maintenance d'infrastructure.
 ## Architecture
 
 ```text
-Linux/       System (10 scripts) | Security | K3s
+Linux/       System | Security | K3s
 Kubernetes/  Installation | Configuration | Maintenance   (à venir)
 Docker/      Installation | Configuration | Maintenance | Cleanup | Diagnostics
 Synology/    Plex | Administration

@@ -51,7 +51,7 @@ de ce que cet ADR a tranché.
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
 | [TASK-039](pending/TASK-039.md) | Tenir le registre unique des anomalies et les traiter | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-040](completed/TASK-040.md) | Ramener `manage-users.sh` et son fichier de cas à la sobriété visée | `completed` | basse | 025 | conteneur `debian` | non |
-| [TASK-041](pending/TASK-041.md) | Écrire `Linux/Security/audit-users.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-041](completed/TASK-041.md) | Écrire `Linux/Security/audit-users.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-042](pending/TASK-042.md) | Écrire `Linux/Security/audit-ports.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-043](pending/TASK-043.md) | Écrire `Linux/Security/security-check.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-044](pending/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
@@ -236,7 +236,7 @@ côté ; elles restent non sélectionnables.
 
 | Entrée | Note |
 |---|---|
-| `audit-users.sh` | atomisée : [TASK-041](pending/TASK-041.md) |
+| `audit-users.sh` | atomisée : [TASK-041](completed/TASK-041.md) |
 | `audit-ports.sh` | atomisée : [TASK-042](pending/TASK-042.md) |
 | `security-check.sh` | atomisée : [TASK-043](pending/TASK-043.md) |
 | `configure-fail2ban.sh` | atomisée : [TASK-044](pending/TASK-044.md) |
@@ -366,6 +366,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |
+| [TASK-041](completed/TASK-041.md) | Écrire `Linux/Security/audit-users.sh` | [rapport](reports/TASK-041-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

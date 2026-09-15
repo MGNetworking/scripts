@@ -18,6 +18,7 @@ une fois, l'arbitre termine si nécessaire.
 | TASK-024 `notify-failure.sh` | un effet, secret | agent `deepseek` | 5/5 | 87 | 150 + 197 → 150 + 254 | 0,225 $, 2 lancements | Opus 29 609 | 1 majeur (URL en argument de curl) et 5 mineurs corrigés par l'agent |
 | TASK-025 `manage-users.sh` | effets enchaînés, sécurité | agent `deepseek` (sonnet non authentifié, A41) | 5/5 | 125 | 266 + 465 → 179 + 419 | 0,360 $, 2 lancements | Opus 40 226 | 3 majeurs (dont 2 de sécurité) corrigés ; sobriété non atteinte (A44) |
 | TASK-026 `reboot-system.sh` | destructif | agent `deepseek` (sonnet non authentifié, A41) | 5/5 | 63 | 133 + 150 → 145 + 149 | 0,300 $, 2 lancements | Opus 28 939 | 3 majeurs corrigés, dont la confirmation héritée (A45) ; validation de la fiche corrigée |
+| TASK-041 `audit-users.sh` | lecture seule | agent `deepseek` | 4/4 | 63 | 115 + 149 → 143 + 150 | 0,233 $, 2 lancements | Opus 21 409 | 3 mineurs et 2 tests creux corrigés |
 | TASK-040 sobriété `manage-users` | refonte sans changement | agent `deepseek` | 3/3 | 138 | 179 + 419 → 150 + 296 | 0,276 $, 2 lancements | Opus 35 683 | 2 messages rétablis, 5 trous de test comblés |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
