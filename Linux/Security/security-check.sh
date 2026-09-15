@@ -27,11 +27,11 @@ Bilan de sécurité en lecture seule, une ligne par contrôle :
   comptes à UID 0  aucun compte à UID 0 autre que root ;
   mises à jour     paquets en attente, d'après « apt-get -s upgrade ».
 
-« sshd -T », « ufw status » et « fail2ban-client status » demandent root : sans
-root, ces trois contrôles sortent en INFO « non vérifiable ». Un contrôle qu'on
-ne peut pas rendre — outil absent, commande injoignable ou muette — n'est jamais
-PASS ni FAIL : ufw et fail2ban valent alors WARNING, les autres INFO. Chaque
-commande est bornée (BORNE, 10 s), et apt-get n'est appelé qu'en simulation.
+« sshd -T », « ufw status » et « fail2ban-client status » demandent root.
+Ces trois commandes ne répondent pas sans root : leur contrôle sort alors en
+INFO « non vérifiable » ; un outil absent ou une commande muette n'est jamais
+PASS ni FAIL — ufw et fail2ban valent alors WARNING, les autres INFO. Chaque
+commande est bornée (BORNE, 10 s), et apt-get est appelé en simulation seule.
 Codes de retour : 0 aucun FAIL ; 1 au moins un FAIL ; 2 option inconnue ou
 BORNE invalide.
 AIDE

@@ -47,7 +47,8 @@ case "${0##*/}" in
             printf '%s\n' 'root:x:0:0:root:/root:/bin/bash' 'max:x:1000:1000:Max:/home/max:/bin/bash'
             if [ "${COMPTE_UID0:-}" = "oui" ]; then printf '%s\n' 'fauxroot:x:0:0:Faux:/home/fauxroot:/bin/sh'; fi ;;
     apt-get) [ "$*" = "-s upgrade" ] || exit 2
-             i=0; while [ "$i" -lt "${APT_MAJ:-0}" ]; do i=$((i + 1)); printf 'Inst paquet%s (1.0 deb) []\n' "$i"; done ;;
+             i=0; while [ "$i" -lt "${APT_MAJ:-0}" ]; do i=$((i + 1)); printf 'Inst paquet%s (1.0 deb) []\n' "$i"; done
+             printf '%s upgraded, 0 newly installed.\n' "$i" ;;
     *) exit 127 ;;
 esac
 FAUX_OUTIL
