@@ -1,7 +1,7 @@
 ---
 id: TASK-025
 title: "Écrire Linux/System/manage-users.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

@@ -27,8 +27,9 @@ prime toujours sur la valeur du fichier.
 | `check-memory.sh` | diagnostic mémoire : mémoire vive, fichier d'échange, processus consommateurs | aucun | non |
 | `check-services.sh` | diagnostic des services systemd : inventaire des actifs, services en échec, vérification d'un service nommé | aucun | non |
 | `notify-failure.sh` | notifie l’échec d’un script planifié vers ntfy ou un webhook ; URL et jeton dans `config/notify.env`, jamais affichés ni passés en argument | aucun | non (émet une requête réseau) |
+| `manage-users.sh` | compte d’administration : home, shell, groupes, sudo sur option, clé SSH publique ; aucun mot de passe, refuse les liens symboliques dans `~/.ssh` | root | oui |
 
-Les autres scripts prévus (`manage-users.sh`, `reboot-system.sh`) restent à
+Le dernier script prévu (`reboot-system.sh`) reste à
 écrire — voir [le plan](../../docs/refactorisation-plan.md).
 
 Relevé technique du domaine :

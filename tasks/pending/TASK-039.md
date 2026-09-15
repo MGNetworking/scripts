@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A44**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A45**.
 
 ## Registre
 
@@ -93,6 +93,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A41 | P2 | L’agent `sonnet` lancé sans interface échoue : « OAuth session expired and could not be refreshed » ; le Claude Code de `user` doit être reconnecté, ce que l’orchestrateur n’a pas le droit de faire | TASK-037 | `user` : relancer `claude` et se reconnecter ; en attendant, les tâches `sonnet` passent à `deepseek` |
 | [x] | A42 | P2 | Le figement du fichier de cas dès le premier commit bloque l’agent quand son propre test est mal construit (TASK-035, TASK-036 : arrêts sur des erreurs de test) | TASK-035, 036 | fait — le test reste corrigeable jusqu’au premier PASSE, sans retrait d’assertion ; `/tache` compte les assertions |
 | [x] | A43 | P2 | Aucun contrôle automatique ne vérifie `set -Eeuo pipefail` en ligne 2 ni la longueur des fichiers : seule la relecture Opus les voit (TASK-025 : 266 + 465 lignes, `set` en ligne 11) | TASK-025 | fait — TASK-011 vérifie que `set -Eeuo pipefail` est la première commande (commentaires admis au-dessus, norme des scripts existants) ; `juger.sh` signale toute longueur au-delà de 150 |
+| [ ] | A44 | P4 | `manage-users.sh` (179 lignes) et surtout son fichier de cas (419 lignes) dépassent la sobriété visée malgré une relance : factoriser la reconnaissance d’environnement dans `tests/lib`, fusionner les blocs if/ok/ko | TASK-025 | tâche agent |
 
 ## Suivi, pas des défauts
 
