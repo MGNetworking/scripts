@@ -1,7 +1,7 @@
 ---
 id: TASK-026
 title: "Écrire Linux/System/reboot-system.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

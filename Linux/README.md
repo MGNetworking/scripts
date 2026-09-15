@@ -6,7 +6,7 @@ indépendamment de Docker et de Kubernetes. Cibles : Debian 12 et 13, Ubuntu
 
 | Dossier | Rôle | État |
 |---|---|---|
-| [System/](System/README.md) | système de base : paquets, nom d'hôte, fuseau, swap, journaux, cron, diagnostics disque, mémoire et services, notification d’échec, comptes | 12 scripts |
+| [System/](System/README.md) | système de base : paquets, nom d'hôte, fuseau, swap, journaux, cron, diagnostics disque, mémoire et services, notification d’échec, comptes, redémarrage | 13 scripts |
 | `Security/` | SSH, firewall `ufw`, `fail2ban`, comptes | à venir |
 | `K3s/` | installer, mettre à niveau, désinstaller K3s | à venir |
 

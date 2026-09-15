@@ -28,9 +28,9 @@ prime toujours sur la valeur du fichier.
 | `check-services.sh` | diagnostic des services systemd : inventaire des actifs, services en échec, vérification d'un service nommé | aucun | non |
 | `notify-failure.sh` | notifie l’échec d’un script planifié vers ntfy ou un webhook ; URL et jeton dans `config/notify.env`, jamais affichés ni passés en argument | aucun | non (émet une requête réseau) |
 | `manage-users.sh` | compte d’administration : home, shell, groupes, sudo sur option, clé SSH publique ; aucun mot de passe, refuse les liens symboliques dans `~/.ssh` | root | oui |
+| `reboot-system.sh` | redémarre le système après confirmation : résumé, sessions ouvertes, refus pendant une opération de paquets ; `--si-necessaire`, `--dry-run` | root | **oui**, destructif |
 
-Le dernier script prévu (`reboot-system.sh`) reste à
-écrire — voir [le plan](../../docs/refactorisation-plan.md).
+Tous les scripts prévus au plan pour ce domaine sont écrits.
 
 Relevé technique du domaine :
 [recensement-substitutions.md](recensement-substitutions.md) — toutes les

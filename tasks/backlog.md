@@ -47,7 +47,7 @@ de ce que cet ADR a tranché.
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | `completed` | moyenne | 020 | conteneur `systemd` | non |
 | [TASK-024](completed/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-025](completed/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-026](pending/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-026](completed/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
 | [TASK-039](pending/TASK-039.md) | Tenir le registre unique des anomalies et les traiter | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
@@ -220,7 +220,7 @@ côté ; elles restent non sélectionnables.
 | `check-disk.sh` | atomisée : [TASK-021](completed/TASK-021.md) |
 | `check-memory.sh` | atomisée : [TASK-022](completed/TASK-022.md) |
 | `check-services.sh` | atomisée : [TASK-023](completed/TASK-023.md) |
-| `reboot-system.sh` | atomisée : [TASK-026](pending/TASK-026.md) |
+| `reboot-system.sh` | atomisée : [TASK-026](completed/TASK-026.md) |
 | brancher la notification sur la ligne de cron | laissé de côté par [TASK-024](completed/TASK-024.md) : changer la ligne déposée impose de reprendre `configure-cron.sh`, son fichier de cas et son README |
 | `df` sur un montage réseau injoignable | laissé de côté par [TASK-021](completed/TASK-021.md) : un `df` peut y suspendre l'exécution indéfiniment |
 
@@ -353,6 +353,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-036](completed/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | [rapport](reports/TASK-036-report.md) |
 | [TASK-024](completed/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | [rapport](reports/TASK-024-report.md) |
 | [TASK-025](completed/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | [rapport](reports/TASK-025-report.md) |
+| [TASK-026](completed/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | [rapport](reports/TASK-026-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |
