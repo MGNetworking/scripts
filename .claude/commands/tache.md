@@ -80,13 +80,25 @@ Si un défaut touche `lib/common.sh` : ne le corrige pas, consigne-le et bloque.
 
 ## 7. Rendre compte
 
-`tasks/reports/$1-report.md`, court par défaut (decisions.md décision 6) : fichiers
-produits, commandes et codes réels, verdict. Format complet de `tasks/README.md`
-§6 dès qu'il y a eu blocage, relance ou défaut. **Faits observés seulement.**
+`tasks/reports/$1-report.md`. Il **commence par « ## Compte rendu »** : ce qui a été
+réalisé, raconté à `user` exactement comme dans la conversation — contexte d'abord,
+déroulé, défauts trouvés et corrigés, coût, réserves, en français simple. Suivent
+les sections techniques de `tasks/README.md` §6 : fichiers, commandes et codes réels,
+validations, Git. **Faits observés seulement.**
 
 ### Verser ce qui survit à la tâche
 
-Le contexte de cette conversation disparaîtra. **Tout défaut non corrigé** — réserve
+Le contexte de cette conversation disparaîtra. Trois cas, selon ce que vise la
+correction découverte :
+
+- **liée à la tâche** (script, fichier de cas, fiche) : elle se fait dans la tâche ;
+- **liée aux agents ou à l'architecture du projet** (consignes, outils, socle,
+  harnais, règles) : crée une **fiche TASK** dans `tasks/pending/`, référencée par une
+  ligne du registre ;
+- **urgente** (elle fausse une validation, expose un secret, peut casser une
+  machine) : sa fiche porte `priority: high` et passe **avant** toute autre tâche prête.
+
+**Tout défaut non corrigé** — réserve
 du rapport, remarque du relecteur laissée de côté, piège, point ouvert — devient
 une ligne du registre `tasks/pending/TASK-039.md`, avec le prochain `Axx` libre ;
 la réserve du rapport cite cet `Axx`. Nulle part ailleurs : ni README, ni
@@ -121,9 +133,16 @@ ni de `push --force`. `git status` final.
 
 ## 9. Résumer et enchaîner
 
-Quelques lignes : fait, prouvé, en suspens, prochaine tâche prête. S'il en reste
-une `ready` **du même domaine**, reprends à l'étape 1 sans demander (decisions.md
-décision 4). Rappelle à Maxime qu'il peut taper `/clear` : tout est écrit.
+Quelques lignes : fait, prouvé, en suspens, prochaine tâche prête. Puis lis
+`orchestration/mode.json` :
+
+- **`automatique`** : reprends à l'étape 1 sur la tâche `ready` suivante, tous
+  domaines confondus, urgentes d'abord, sans demander (décision 46). Ne vide pas le
+  contexte : il se résume de lui-même, et tout est écrit ;
+- **`manuel`** : arrête-toi, et vide le contexte (`clear_session` sur `self`).
+
+Quand `user` demande l'arrêt du mode automatique, écris `"mode": "manuel"` dans le
+fichier, termine la tâche en cours, puis arrête-toi.
 
 Domaine achevé : `git push origin master` et point d'étape court.
 

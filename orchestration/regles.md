@@ -163,12 +163,17 @@ instruction.
 
 ## 17. Rapports
 
-`tasks/reports/TASK-XXX-report.md`, format de `tasks/README.md` §6. Faits observés
-seulement. Un rapport de blocage doit permettre de reprendre sans rejouer l'analyse.
+`tasks/reports/TASK-XXX-report.md`, format de `tasks/README.md` §6 : un compte rendu
+lisible par `user`, puis le détail technique. Faits observés seulement. Un rapport de blocage doit permettre de reprendre sans rejouer l'analyse.
 
 **Un seul registre des anomalies** : `tasks/pending/TASK-039.md`. Tout défaut non
 corrigé, toute réserve, tout point ouvert y devient une ligne `Axx`, que le rapport
-cite. Aucun autre fichier ne tient de liste de points ouverts.
+cite. Aucun autre fichier ne tient de liste de points ouverts. Une correction qui
+vise les agents ou l'architecture devient en plus une fiche TASK ; urgente, elle passe
+en tête (`priority: high`).
+
+**Mode d'enchaînement** : `orchestration/mode.json` — `automatique` ou `manuel`
+(décision 46).
 
 ## 18. Cycle de vie
 

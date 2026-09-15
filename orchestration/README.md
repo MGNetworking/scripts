@@ -50,6 +50,7 @@ tourner en parallèle, une fois trois tâches passées sans incident (décision 
 |---|---|
 | [regles.md](regles.md) | ce que orchestrateur et agents ont le droit de faire |
 | [decisions.md](decisions.md) | les décisions en vigueur, numérotées |
+| [mode.json](mode.json) | `automatique` ou `manuel` : enchaîner les tâches, ou s'arrêter et vider le contexte |
 | [limites.json](limites.json) | les droits techniques d'un agent (écriture, commandes) |
 | `modeles/` | un fichier par modèle **externe** : adresse d'API, nom, variable de clé |
 | `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons |

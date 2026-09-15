@@ -1,0 +1,4 @@
+{
+  "mode": "automatique",
+  "note": "automatique : l'orchestrateur enchaîne les tâches prêtes, tous domaines, sans vider le contexte. manuel : il s'arrête à la fin de la tâche en cours et vide le contexte. user bascule le mode en le demandant dans le terminal ; l'orchestrateur écrit ce fichier."
+}

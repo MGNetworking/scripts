@@ -247,8 +247,15 @@ exigence fautive. La distinction n'est pas de forme.
 
 Un rapport par tâche terminée ou bloquée, dans `tasks/reports/TASK-042-report.md`.
 
+Le rapport **commence par une section « Compte rendu »** : ce qui a été réalisé,
+raconté comme l'orchestrateur le rend à `user` dans la conversation. Les sections
+techniques suivent.
+
 ```markdown
 # TASK-042 — Rapport d'exécution
+
+## Compte rendu
+Contexte, déroulé, défauts trouvés et corrigés, coût, réserves — en français simple.
 
 ## Statut
 COMPLETED
