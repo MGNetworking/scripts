@@ -17,19 +17,20 @@ Relevé en lecture seule des ports TCP et UDP en écoute, par un unique appel à
   PROTO      tcp ou udp ;
   PORTÉE     exposé — l'écoute est joignable depuis le réseau ; local — elle
              ne l'est que depuis la machine ;
-  ADRESSE    adresse d'écoute, sans son port ;
+  ADRESSE    adresse d'écoute, telle que ss la donne, sans son port ;
   PORT       port d'écoute ;
   PROCESSUS  le ou les processus qui détiennent l'écoute, séparés par une
-             virgule.
+             virgule, un même nom n'étant retenu qu'une fois.
 
 Sont « exposées » les écoutes sur 0.0.0.0, [::] ou *, ainsi que sur toute
 adresse qui n'est pas la boucle locale : une adresse d'interface reste
-joignable depuis le réseau. Sont « locales » celles sur 127.0.0.0/8 ou [::1].
+joignable depuis le réseau. Sont « locales » celles sur 127.0.0.0/8, [::1] ou
+[::ffff:127.0.0.0/8], suffixe de portée (%eth0) mis à part.
 
 Le processus d'une écoute n'est lisible que par root : sans ce privilège, la
 colonne affiche « inconnu (root requis) », et « inconnu » si l'écoute n'en a
-aucun même en root. Le relevé se termine par un résumé et par la liste des
-ports exposés.
+aucun même en root. Le relevé se termine par un résumé — écoutes relevées,
+écoutes exposées, ports exposés distincts — puis par la liste de ces ports.
 
 Codes de retour :
   0  relevé produit, y compris s'il est vide ;
@@ -61,12 +62,13 @@ fi
 
 # users:(("sshd",pid=800,fd=3)) donne « sshd » ; plusieurs détenants, « a,b ».
 detenteurs() {
-    local reste="$1" noms=""
+    local reste="$1" noms="" nom
     reste="${reste//users:/}"
     while [ -n "$reste" ]; do
         case "$reste" in *'("'*) ;; *) break ;; esac
         reste="${reste#*(\"}"
-        noms="${noms:+$noms,}${reste%%\"*}"
+        nom="${reste%%\"*}"
+        case ",$noms," in *",$nom,"*) ;; *) noms="${noms:+$noms,}$nom" ;; esac
     done
     printf '%s\n' "${noms:-$PROCESSUS_INCONNU}"
 }
@@ -79,18 +81,22 @@ while read -r proto _ _ _ locale _ reste; do
     total=$(( total + 1 ))
     port="${locale##*:}"
     adresse="${locale%:*}"
-    case "$adresse" in
-        127.*|'[::1]') portee="local" ;;
-        *)             portee="exposé"; exposes+=("$port") ;;
+    # La portée se juge hors du suffixe %eth0 que ss accole aux adresses à zone.
+    case "${adresse%%\%*}" in
+        127.*|'[::1]'|'[::ffff:127.'*) portee="local" ;;
+        *)                             portee="exposé"; exposes+=("$port") ;;
     esac
     printf '%-5s %-7s %-22s %-6s %s\n' "$proto" "$portee" "$adresse" "$port" "$(detenteurs "$reste")"
 done <<< "$releve"
 
 if [ "$total" -eq 0 ]; then printf '  aucune écoute\n'; fi
-printf '\nRésumé : %d écoute(s) relevée(s), dont %d exposée(s).\n' "$total" "${#exposes[@]}"
 if [ "${#exposes[@]}" -eq 0 ]; then
-    printf 'Ports exposés : aucun\n'
+    liste="aucun"; distincts=0
 else
-    printf 'Ports exposés : %s\n' "$(printf '%s\n' "${exposes[@]}" | sort -nu | paste -sd, -)"
+    liste="$(printf '%s\n' "${exposes[@]}" | sort -nu | paste -sd, -)"
+    distincts="$(awk -F, '{print NF}' <<< "$liste")"
 fi
+printf '\nRésumé : %d écoute(s) relevée(s), dont %d exposée(s), sur %d port(s) exposé(s) distinct(s).\n' \
+    "$total" "${#exposes[@]}" "$distincts"
+printf 'Ports exposés : %s\n' "$liste"
 exit 0
