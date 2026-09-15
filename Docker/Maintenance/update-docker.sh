@@ -1,46 +1,42 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# update-docker.sh — met à jour le moteur Docker et ses composants, borné à ce
-# que le socle a installé : ni les images applicatives, ni les autres paquets.
+# update-docker.sh — met à jour le moteur Docker et ses composants, borné à ce que le socle a installé.
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
 
-# Même liste que Docker/Installation/install-docker.sh : une divergence
-# laisserait un composant installé que personne ne mettrait à jour.
+# Même liste que Docker/Installation/install-docker.sh : une divergence laisserait un composant installé que personne ne mettrait à jour.
 PAQUETS="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 DRY_RUN="false"
-
+# OUI dit si --yes a été passé ; lib/common.sh reste seul lecteur d'ASSUME_YES.
+OUI="false"
 show_help() {
     cat <<'AIDE'
 Usage : update-docker.sh [--dry-run] [-y|--yes] [--help]
 
-Met à jour le moteur Docker et ses composants — docker-ce, docker-ce-cli,
-containerd.io, docker-buildx-plugin, docker-compose-plugin — borné à ceux que
-le socle a réellement installé. Un composant absent est signalé et jamais
-installé au passage : installer relève d'install-docker.sh. Aucune image
-applicative n'est touchée, rien n'est redéployé.
+Met à jour le moteur Docker et ses composants — docker-ce, docker-ce-cli, containerd.io,
+docker-buildx-plugin, docker-compose-plugin — borné à ceux que le socle a réellement
+installé ; un composant absent est signalé, jamais installé au passage. Aucune image
+applicative n'est touchée. Cibles : Debian 12/13, Ubuntu 22.04/24.04 LTS.
 
-Le paquet du moteur redémarre le démon : les conteneurs en cours sont
-interrompus, sauf si live-restore est actif. Le script les compte, lit
-live-restore, annonce la coupure et attend une confirmation. Il ne modifie
-jamais /etc/docker/daemon.json et ne redémarre jamais le serveur.
+Mettre à jour le moteur redémarre le démon : les conteneurs en cours sont interrompus, sauf
+si live-restore est actif. Le script les compte, lit live-restore, annonce la coupure et
+attend une confirmation. Il ne modifie jamais /etc/docker/daemon.json.
 
       --dry-run   relever et annoncer, sans installer ni redémarrer
   -y, --yes       ne rien demander — seul mode utilisable d'une tâche planifiée
   -h, --help      afficher cette aide
 
-Codes : 0 mise à jour faite, simulée ou annulée ; 1 aucun composant installé
-hors --dry-run, apt-get absent, système hors cibles, ou service docker inactif
-après coup ; 2 usage.
+Codes : 0 mise à jour faite, simulée ou annulée ; 1 aucun composant installé hors --dry-run, système
+ou outil hors cibles, question impossible à poser, service docker inactif après coup ; 2 usage.
 AIDE
 }
 
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run) DRY_RUN="true"; shift ;;
-        -y|--yes)  export ASSUME_YES="true"; shift ;;
+        -y|--yes)  export ASSUME_YES="true"; OUI="true"; shift ;;
         -h|--help) show_help; exit 0 ;;
         *)         die "Option inconnue : $1" 2 ;;
     esac
@@ -48,25 +44,29 @@ done
 
 [ "$DRY_RUN" = "true" ] || require_root
 require_os debian ubuntu
+# Mêmes cibles qu'install-docker.sh, décidées une fois : orchestration/decisions.md, décision 14.
+case "$OS_ID $OS_VERSION" in
+    "debian 12"|"debian 13"|"ubuntu 22.04"|"ubuntu 24.04") ;;
+    *) die "Version non supportée : $OS_ID $OS_VERSION (attendu : Debian 12/13, Ubuntu 22.04/24.04)" ;;
+esac
 require_cmd apt-get dpkg-query
 # Sans cela, un dialogue apt suspendrait indéfiniment une tâche planifiée.
 export DEBIAN_FRONTEND=noninteractive
 
-# Version installée du paquet, vide s'il ne l'est pas. dpkg-query -W est une
-# lecture ; l'échec y est NOMINAL — un paquet absent rend 1 — et le « || » le traite.
+# Version installée du paquet, vide s'il ne l'est pas : lire un paquet absent rend 1, échec NOMINAL que le « || » traite.
 version_paquet() {
     local ligne
     ligne="$(dpkg-query -W -f='${Status} ${Version}' "$1" 2>/dev/null)" || ligne=""
     case "$ligne" in *"ok installed "*) printf '%s' "${ligne##* }" ;; esac
 }
 
-# systemctl is-active écrit son état ET rend un code non nul quand le service ne
-# l'est pas : la sortie prime sur le code. Vide — hors d'un init systemd, ou
-# systemctl absent — elle vaut « inconnu », et ce n'est pas un échec du script.
+# systemctl is-active écrit son état ET rend un code non nul quand le service ne l'est pas : la sortie prime sur le code.
 etat_service() { local e; e="$(systemctl is-active docker 2>/dev/null)" || e="${e:-inconnu}"; printf '%s' "$e"; }
+
+# Ces deux lectures rendent une chaîne VIDE quand le démon ne répond pas : « illisible », jamais « zéro
+# conteneur » ni « live-restore inactif » ; live-restore est LU, jamais écrit — daemon.json appartient à configure-docker.sh.
 conteneurs_en_cours() { local n; n="$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')" || n=""; printf '%s' "$n"; }
-# live-restore est LU dans « docker info », jamais écrit : daemon.json appartient à configure-docker.sh.
-live_restore_actif() { local v; v="$(docker info --format '{{.LiveRestoreEnabled}}' 2>/dev/null)" || v=""; [ "$v" = "true" ]; }
+live_restore() { local v; v="$(docker info --format '{{.LiveRestoreEnabled}}' 2>/dev/null)" || v=""; printf '%s' "$v"; }
 
 # Relevé, en une passe : il remplit INSTALLES et la table AVANT « paquet=version ».
 relever() {
@@ -75,12 +75,8 @@ relever() {
     printf '\nComposants Docker — état relevé :\n'
     for p in $PAQUETS; do
         v="$(version_paquet "$p")"
-        if [ -n "$v" ]; then
-            INSTALLES+=("$p"); AVANT="$AVANT $p=$v"
-            printf '  %-24s %s\n' "$p" "$v"
-        else
-            printf "  %-24s absent — non installé, et ce script ne l'installe jamais\n" "$p"
-        fi
+        if [ -n "$v" ]; then INSTALLES+=("$p"); AVANT="$AVANT $p=$v"; printf '  %-24s %s\n' "$p" "$v"
+        else printf "  %-24s absent — non installé, et ce script ne l'installe jamais\n" "$p"; fi
     done
     printf '  %-24s %s\n' "service docker" "$(etat_service)"
 }
@@ -93,47 +89,53 @@ if [ "${#INSTALLES[@]}" -eq 0 ]; then
     die "Rien à mettre à jour : aucun composant Docker n'est installé." 1
 fi
 
-# L'interruption est annoncée AVANT la confirmation, jamais découverte après.
-CONTENEURS="$(conteneurs_en_cours)"
+# Annoncé AVANT la confirmation, jamais découvert après : décompte illisible, parc vide et live-restore
+# actif ne disent pas la même chose à qui doit répondre. Chaque cas pose aussi son libellé de confirmation.
+LIVE="$(live_restore)"; CONTENEURS="$(conteneurs_en_cours)"
 if [ -z "$CONTENEURS" ]; then
-    warn "Démon Docker injoignable : le nombre de conteneurs en cours n'a pas pu être relevé."
+    COUPURE="L'état des conteneurs en cours n'a pas pu être relevé."
+    warn "Démon Docker injoignable : ni le nombre de conteneurs en cours ni l'état de live-restore n'ont pu être lus — live-restore est illisible, non inactif."
 elif [ "$CONTENEURS" = "0" ]; then
-    info "Aucun conteneur en cours : le redémarrage du démon n'interrompra rien."
+    COUPURE="Aucun conteneur en cours d'exécution."; info "Aucun conteneur en cours : le redémarrage du démon n'interrompra rien."
+elif [ "$LIVE" = "true" ]; then
+    COUPURE="live-restore est actif : les conteneurs en cours devraient survivre."; info "live-restore est actif : les $CONTENEURS conteneur(s) en cours survivent au redémarrage du démon. Que containerd n'y est pas sensible n'a PAS été mesuré ici : sa mise à jour peut les interrompre."
 else
-    warn "$CONTENEURS conteneur(s) en cours d'exécution seront INTERROMPUS par la mise à jour du moteur."
-fi
-if live_restore_actif; then
-    info "live-restore est actif : les conteneurs survivent au redémarrage du démon. containerd n'y est pas sensible — le mettre à jour les interrompt."
-else
-    warn "live-restore n'est pas actif : le démon redémarré à l'installation emportera les conteneurs en cours. Ce script ne l'active pas : cela relève de Docker/Configuration/configure-docker.sh."
+    COUPURE="Les conteneurs en cours seront interrompus."; warn "$CONTENEURS conteneur(s) en cours d'exécution seront INTERROMPUS par la mise à jour du moteur : live-restore n'est pas actif, et ce script ne l'active pas — cela relève de Docker/Configuration/configure-docker.sh."
 fi
 
-printf '\nComposants à mettre à jour — %d :\n' "${#INSTALLES[@]}"
-printf '  %s\n' "${INSTALLES[@]}"
+A_JOUR=("${INSTALLES[@]}")
+if [ "$DRY_RUN" = "true" ]; then
+    # Index rafraîchi même en simulation : « apt-get -s » a besoin d'un index à jour, et cet update ne fait que lire le cache.
+    run_logged apt-get update || warn "Index des paquets non rafraîchi : la liste ci-dessous peut être incomplète."
+    # « apt-get -s » simule ; les crochets de « Inst p <ancienne> » séparent une mise à niveau d'une installation, hors de ce ressort.
+    simulation="$(apt-get -s install --only-upgrade "${INSTALLES[@]}" 2>/dev/null || true)"
+    mapfile -t A_JOUR < <(printf '%s\n' "$simulation" | awk '/^Inst / && $3 ~ /^\[/ {print $2}')
+fi
+
+printf '\nComposants à mettre à jour — %d :\n' "${#A_JOUR[@]}"
+[ "${#A_JOUR[@]}" -eq 0 ] || printf '  %s\n' "${A_JOUR[*]}"
 
 if [ "$DRY_RUN" = "true" ]; then
-    printf '\nCommandes qui seraient exécutées :\n  apt-get update\n  apt-get install --only-upgrade -y %s\n' "${INSTALLES[*]}"
+    printf '\nCommandes qui seraient exécutées :\n  apt-get update\n'
+    [ "${#A_JOUR[@]}" -eq 0 ] || printf '  apt-get install --only-upgrade -y %s\n' "${A_JOUR[*]}"
     info "[dry-run] Aucun paquet installé, aucun démon redémarré, aucune image touchée."
     exit 0
 fi
 
-confirm "Mettre à jour ces ${#INSTALLES[@]} composant(s) ? Les conteneurs en cours seront interrompus." \
-    || { info "Mise à jour annulée : rien n'a été installé, aucun démon redémarré."; exit 0; }
+[ -t 0 ] || [ "$OUI" = "true" ] || die "Mise à jour à confirmer, et aucun terminal n'est disponible. Relancer avec --yes." 1
+confirm "Mettre à jour ces ${#A_JOUR[@]} composant(s) ? $COUPURE" || { info "Mise à jour annulée : rien n'a été installé, aucun démon redémarré."; exit 0; }
 
-# L'index n'est rafraîchi qu'ici : avec des composants installés, une mise à
-# jour lue sur un index périmé ne vaut rien ; et un refus n'aura rien déclenché.
+# L'index n'est rafraîchi qu'ici, après le feu vert : un refus n'aura rien déclenché.
 run_logged apt-get update
 # --only-upgrade borne la mise à jour à cette liste : « apt-get upgrade » emporterait tout le système.
 run_logged apt-get install --only-upgrade -y "${INSTALLES[@]}"
 
 printf '\nComposants — avant / après :\n'
 for p in $PAQUETS; do
-    a="$(version_avant "$p")"; b="$(version_paquet "$p")"
-    if [ -z "$a" ] && [ -z "$b" ]; then etat="absent avant comme après"
-    elif [ -z "$a" ]; then etat="APPARU"
+    a="$(version_avant "$p")"; b="$(version_paquet "$p")"; etat="inchangé"
+    if [ -z "$a" ]; then etat="absent avant comme après"; [ -z "$b" ] || etat="APPARU"
     elif [ -z "$b" ]; then etat="RETIRÉ"
-    elif [ "$a" = "$b" ]; then etat="inchangé"
-    else etat="mis à jour"
+    elif [ "$a" != "$b" ]; then etat="mis à jour"
     fi
     printf '  %-24s %-22s %s → %s\n' "$p" "$etat" "${a:-absent}" "${b:-absent}"
 done
