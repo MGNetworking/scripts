@@ -1,7 +1,7 @@
 ---
 id: TASK-042
 title: "Écrire Linux/Security/audit-ports.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian
