@@ -203,6 +203,18 @@ verifier "$([ "$directives_sans_justification" -eq 0 ] && echo 0 || echo 1)" \
     "toute directive shellcheck locale porte une justification au-dessus" \
     "$directives_sans_justification directive(s) nue(s)"
 
+# « set -Eeuo pipefail » est la première commande de chaque script de domaine
+# (A43) : seuls un shebang, des commentaires et des lignes vides le précèdent.
+# Les deux scripts Synology hérités, pas encore au standard, sont exclus.
+sans_set=""
+while IFS= read -r script; do
+    premiere="$(grep -vE '^[[:space:]]*(#|$)' "$script" | head -n 1 || true)"
+    [ "$premiere" = "set -Eeuo pipefail" ] || sans_set="$sans_set ${script#"$SCRIPTS_ROOT"/}"
+done < <(find "$SCRIPTS_ROOT/Linux" "$SCRIPTS_ROOT/Docker" "$SCRIPTS_ROOT/Kubernetes" -name '*.sh' 2>/dev/null | sort)
+verifier "$([ -z "$sans_set" ] && echo 0 || echo 1)" \
+    "set -Eeuo pipefail est la première commande de chaque script de domaine" \
+    "fautifs :$sans_set"
+
 # Un commentaire dont le premier mot est « shellcheck » est lu comme une
 # directive, et shellcheck échoue s'il n'en est pas une (A17). Seuls les mots-clés
 # connus sont permis ; le motif est assemblé pour ne pas se désigner lui-même.

@@ -44,6 +44,11 @@ awk '/ÉCHEC :/ {sub(/^\[ERROR\] /, ""); print "FAIL  " $0; d=1; next}
      d && /^        / {sub(/^ +/, ""); print "      " $0; next}
      {d=0}' <<<"$sortie"
 grep -E 'Bilan ' <<<"$sortie" | sed 's/^\[INFO\] //' || true
+# Longueur (A43) : signalée, jamais bloquante — la cible de 150 lignes souffre une raison écrite.
+for f in "${fichiers[@]}"; do
+    n="$(wc -l < "$f")"
+    [ "$n" -le 150 ] || echo "LONGUEUR  $f : $n lignes (cible 150) — raison à donner sur la ligne VERDICT"
+done
 
 # 4 : cas sautés par nature, preuve partielle mais existante.
 if [ "$sc" = 0 ] && { [ "$tc" = 0 ] || [ "$tc" = 4 ]; } && [ "${rg:-1}" != 1 ]; then

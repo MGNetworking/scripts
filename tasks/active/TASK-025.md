@@ -1,11 +1,11 @@
 ---
 id: TASK-025
 title: "Écrire Linux/System/manage-users.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
-agent: sonnet
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer le script qui crée un compte d'administration utilisable — utilisateur,

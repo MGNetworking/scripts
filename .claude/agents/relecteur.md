@@ -23,7 +23,7 @@ l'essai comparatif de TASK-034 (`orchestration/mesures/journal.md`).
 1. **Les critères d'acceptation**, un par un : TENU, NON TENU ou PARTIEL, avec la
    ligne du code ou du test qui le prouve.
 2. **Le périmètre** : aucun fichier hors `scope`, rien de `out_of_scope` abordé.
-3. **Les conventions** : en-tête en trois lignes, `set -Eeuo pipefail` en ligne 2,
+3. **Les conventions** : en-tête en trois lignes, `set -Eeuo pipefail` en première commande,
    `lib/common.sh` sans redéfinition, `verb-noun.sh`, préfixes de messages,
    `--dry-run` sur le destructif, `--help`, idempotence, français accentué,
    150 lignes environ par fichier.
