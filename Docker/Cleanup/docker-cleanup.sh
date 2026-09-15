@@ -32,6 +32,7 @@ Codes de retour : 0 nettoyage fait, simulé, ou rien à nettoyer ; 1 démon injo
 hors --dry-run ; 2 option inconnue.
 AIDE
 }
+export ASSUME_YES="false"  # destructif : seule --yes confirme, jamais un parent (décision 45)
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run)           DRY_RUN="true"; shift ;;

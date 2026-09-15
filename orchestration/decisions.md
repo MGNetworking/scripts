@@ -206,3 +206,11 @@ juge et `/tache` en tiennent lieu. Sujet à rouvrir à la fin du chantier des sc
 
 Sa lecture par sections suffit aux agents ; le scinder casserait des liens dans
 tout le dépôt pour un gain de confort. Sujet à rouvrir s'il dépasse 100 Ko.
+
+### Décision 45 — Un script destructif n'hérite pas de la confirmation (A45)
+
+`confirm` lit `ASSUME_YES`, et un script lancé par un parent qui l'exporte en
+hérite : c'est le contrat du socle, épinglé par `tests/unit/common.test.sh`, et il
+sert aux enchaînements voulus. Un script **destructif** — redémarrage, nettoyage,
+désinstallation — pose `export ASSUME_YES="false"` avant de lire ses options :
+seul son propre `--yes` le confirme.
