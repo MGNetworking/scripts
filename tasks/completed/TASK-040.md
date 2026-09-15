@@ -1,7 +1,7 @@
 ---
 id: TASK-040
 title: "Ramener manage-users.sh et son fichier de cas à la sobriété visée"
-status: ready
+status: completed
 priority: low
 depends_on:
   - TASK-025

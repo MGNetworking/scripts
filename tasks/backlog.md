@@ -50,7 +50,7 @@ de ce que cet ADR a tranché.
 | [TASK-026](completed/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
 | [TASK-039](pending/TASK-039.md) | Tenir le registre unique des anomalies et les traiter | `ready` | haute | — | conteneur `debian` | non |
-| [TASK-040](pending/TASK-040.md) | Ramener `manage-users.sh` et son fichier de cas à la sobriété visée | `ready` | basse | 025 | conteneur `debian` | non |
+| [TASK-040](completed/TASK-040.md) | Ramener `manage-users.sh` et son fichier de cas à la sobriété visée | `completed` | basse | 025 | conteneur `debian` | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -355,6 +355,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-024](completed/TASK-024.md) | Écrire `Linux/System/notify-failure.sh` | [rapport](reports/TASK-024-report.md) |
 | [TASK-025](completed/TASK-025.md) | Écrire `Linux/System/manage-users.sh` | [rapport](reports/TASK-025-report.md) |
 | [TASK-026](completed/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | [rapport](reports/TASK-026-report.md) |
+| [TASK-040](completed/TASK-040.md) | Ramener `manage-users.sh` et son fichier de cas à la sobriété visée | [rapport](reports/TASK-040-report.md) |
 | [TASK-020](completed/TASK-020.md) | Construire le profil de conteneur `systemd` et ouvrir le niveau `environment` | [rapport](reports/TASK-020-report.md) |
 | [TASK-022](completed/TASK-022.md) | Écrire `Linux/System/check-memory.sh` | [rapport](reports/TASK-022-report.md) |
 | [TASK-023](completed/TASK-023.md) | Écrire `Linux/System/check-services.sh` | [rapport](reports/TASK-023-report.md) |
