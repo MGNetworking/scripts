@@ -16,7 +16,9 @@ morts=0
 while IFS= read -r trouvaille; do
     fichier="${trouvaille%%:*}"
     cible="${trouvaille##*](}"
-    if [ ! -e "$(dirname "$fichier")/$cible" ]; then
+    # Une fiche en cours vit dans active/ : un lien vers pending/ reste juste jusqu'à la clôture.
+    en_cours="$(dirname "$fichier")/${cible/pending\//active/}"
+    if [ ! -e "$(dirname "$fichier")/$cible" ] && [ ! -e "$en_cours" ]; then
         echo "MORT  $fichier -> $cible"
         morts=$((morts + 1))
     fi
