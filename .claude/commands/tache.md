@@ -136,10 +136,13 @@ ni de `push --force`. `git status` final.
 Quelques lignes : fait, prouvé, en suspens, prochaine tâche prête. Puis lis
 `orchestration/mode.json` :
 
-- **`automatique`** : reprends à l'étape 1 sur la tâche `ready` suivante, tous
-  domaines confondus, urgentes d'abord, sans demander (décision 46). Ne vide pas le
-  contexte : il se résume de lui-même, et tout est écrit ;
-- **`manuel`** : arrête-toi, et vide le contexte (`clear_session` sur `self`).
+- **dans tous les cas, vide le contexte** après la clôture (`clear_session` sur
+  `self`) — exigence de `user` (décision 46). Annonce d'abord, en une ligne, la
+  prochaine tâche prête : le vidage arrête la session, et rien ne peut la relancer ;
+- **`automatique`** : `user` écrit « reprends », et tu repars de l'étape 1 sur la
+  tâche `ready` suivante, tous domaines confondus, urgentes d'abord, sans rien
+  demander ;
+- **`manuel`** : tu attends une consigne explicite de `user`.
 
 Quand `user` demande l'arrêt du mode automatique, écris `"mode": "manuel"` dans le
 fichier, termine la tâche en cours, puis arrête-toi.

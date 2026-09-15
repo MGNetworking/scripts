@@ -1,7 +1,7 @@
 ---
 id: TASK-045
 title: "Écrire Linux/Security/configure-firewall.sh"
-status: ready
+status: in_progress
 priority: high
 depends_on: []
 environment: container-debian

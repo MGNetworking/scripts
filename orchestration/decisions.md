@@ -218,9 +218,9 @@ seul son propre `--yes` le confirme.
 ### Décision 46 — Mode automatique, rapports lisibles, corrections en fiches (2026-09-15)
 
 Demandé par `user`. `orchestration/mode.json` porte `automatique` ou `manuel` :
-en automatique, l'orchestrateur enchaîne les tâches prêtes de tous les domaines sans
-vider le contexte ; en manuel, il s'arrête à la fin de la tâche en cours et vide le
-contexte. `user` bascule le mode en le demandant dans le terminal.
+le contexte est **vidé après chaque tâche close**, dans les deux modes ; le vidage
+arrête la session. En automatique, « reprends » suffit à lancer la tâche prête
+suivante ; en manuel, l'orchestrateur attend une consigne. `user` bascule le mode en le demandant dans le terminal.
 
 Chaque rapport de tâche commence par un compte rendu écrit comme dans la
 conversation. Une correction liée à la tâche s'y fait ; une correction liée aux
