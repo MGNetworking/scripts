@@ -10,6 +10,10 @@ while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "
 source "$_dir/lib/common.sh"
 
 SI_NECESSAIRE="false"; DRY_RUN="false"
+# ASSUME_YES est ÉCRITE ici, jamais lue : un environnement qui la porte déjà —
+# script parent, ligne de cron — ne doit pas faire redémarrer sans confirmation.
+# Seul --yes, plus bas, la relève.
+export ASSUME_YES="false"
 # La commande de redémarrage, écrite une seule fois : c'est celle que --dry-run
 # affiche, et celle qu'un faux systemctl peut enregistrer à la place d'agir.
 COMMANDE=(systemctl reboot)
@@ -30,6 +34,8 @@ redémarrage. La confirmation vient en dernier.
 
 Options :
   -y, --yes            Ne rien demander : tâche planifiée, sans terminal.
+                       Seule option qui vaut confirmation ; ASSUME_YES déjà
+                       présente dans l'environnement est ignorée.
       --si-necessaire  Ne redémarrer que si /run/reboot-required est présent ;
                        sinon ne rien faire, et rendre 0.
       --dry-run        Parcourir tous les contrôles, afficher la commande exacte
@@ -54,17 +60,20 @@ done
 
 require_root
 require_os debian ubuntu
-require_cmd systemctl pgrep
+require_cmd systemctl
 
 # Redémarrer pendant un dpkg laisse un système à moitié configuré, parfois non
 # amorçable : c'est le contrôle qui justifie ce script, et il précède toute
-# lecture d'état. Le nom du processus suffit à le reconnaître.
-for processus in dpkg apt apt-get aptitude; do
-    pids=""
-    if ! pids="$(pgrep -x "$processus")"; then pids=""; fi
-    if [ -n "$pids" ]; then
-        die "Opération de gestion de paquets en cours : « $processus » (PID ${pids//$'\n'/, }) — redémarrer maintenant laisserait un système à moitié configuré. Rien n'a été fait." 1
-    fi
+# lecture d'état. Le nom du processus suffit, et /proc le donne sans pgrep —
+# absent des images minimales. Les noms de plus de 15 caractères y sont tronqués.
+for fiche in /proc/[0-9]*/comm; do
+    nom=""
+    if ! nom="$(cat "$fiche" 2>/dev/null)"; then continue; fi
+    case "$nom" in
+        dpkg|apt|apt-get|aptitude|unattended-upgr)
+            pid="${fiche#/proc/}"; pid="${pid%/comm}"
+            die "Opération de gestion de paquets en cours : « $nom » (PID $pid) — redémarrer maintenant laisserait un système à moitié configuré. Rien n'a été fait." 1 ;;
+    esac
 done
 
 # --- Résumé, avant le geste irréversible -----------------------------------
@@ -107,11 +116,14 @@ if [ "$NB_SESSIONS" -eq 0 ]; then
     info "Sessions ouvertes : aucune."
 else
     warn "Sessions ouvertes : $NB_SESSIONS — elles seront coupées par le redémarrage."
-    printf '%s\n' "$SESSIONS" | sed 's/^/    /' >&2
+    printf '%s\n' "$SESSIONS" | sed 's/^/[WARN]     /' >&2
 fi
 info "Action     : redémarrage immédiat — ${COMMANDE[*]}"
 
 if [ "$SI_NECESSAIRE" = "true" ] && [ "$NECESSAIRE" = "non" ]; then
+    # La commande est montrée avant de conclure : --si-necessaire --dry-run reste
+    # une répétition, et l'opérateur doit y lire ce qui aurait été lancé.
+    if [ "$DRY_RUN" = "true" ]; then info "[dry-run] Commande qui serait lancée : ${COMMANDE[*]}"; fi
     success "Aucun redémarrage n'est nécessaire : rien n'a été fait."
     exit 0
 fi
