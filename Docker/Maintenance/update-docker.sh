@@ -60,16 +60,15 @@ version_paquet() {
     case "$ligne" in *"ok installed "*) printf '%s' "${ligne##* }" ;; esac
 }
 
-# « inconnu » hors d'un init systemd : systemctl ne répond pas, et ce n'est pas
-# un échec du script. Un décompte de conteneurs vide, lui, ne vaut jamais zéro.
-etat_service() { local e; e="$(systemctl is-active docker 2>/dev/null)" || e="inconnu"; printf '%s' "$e"; }
+# systemctl is-active écrit son état ET rend un code non nul quand le service ne
+# l'est pas : la sortie prime sur le code. Vide — hors d'un init systemd, ou
+# systemctl absent — elle vaut « inconnu », et ce n'est pas un échec du script.
+etat_service() { local e; e="$(systemctl is-active docker 2>/dev/null)" || e="${e:-inconnu}"; printf '%s' "$e"; }
 conteneurs_en_cours() { local n; n="$(docker ps -q 2>/dev/null | wc -l | tr -d ' ')" || n=""; printf '%s' "$n"; }
-# live-restore est LU dans « docker info », jamais écrit : /etc/docker/daemon.json
-# appartient à Docker/Configuration/configure-docker.sh.
+# live-restore est LU dans « docker info », jamais écrit : daemon.json appartient à configure-docker.sh.
 live_restore_actif() { local v; v="$(docker info --format '{{.LiveRestoreEnabled}}' 2>/dev/null)" || v=""; [ "$v" = "true" ]; }
 
-# Relevé, en une passe : il remplit INSTALLES et la table AVANT, écrite
-# « paquet=version » — une version Debian ne porte pas d'espace.
+# Relevé, en une passe : il remplit INSTALLES et la table AVANT « paquet=version ».
 relever() {
     local p v
     INSTALLES=(); AVANT=""
@@ -89,7 +88,7 @@ version_avant() { local l; for l in $AVANT; do case "$l" in "$1="*) printf '%s' 
 
 relever
 if [ "${#INSTALLES[@]}" -eq 0 ]; then
-    warn "Aucun composant Docker n'est installé : rien à mettre à jour. Docker/Installation/install-docker.sh les installe."
+    warn "Il n'y a rien à mettre à jour : aucun composant Docker n'est installé. Docker/Installation/install-docker.sh les installe."
     [ "$DRY_RUN" = "true" ] && { info "[dry-run] Aucun index de paquets rafraîchi, aucun paquet installé."; exit 0; }
     die "Rien à mettre à jour : aucun composant Docker n'est installé." 1
 fi
