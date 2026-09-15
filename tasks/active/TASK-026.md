@@ -1,11 +1,11 @@
 ---
 id: TASK-026
 title: "Écrire Linux/System/reboot-system.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
-agent: sonnet
+agent: deepseek
 human_approval_required: true
 objective: |
   Livrer le redémarrage explicite et confirmé du serveur — le script le plus
