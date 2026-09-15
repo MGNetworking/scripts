@@ -25,7 +25,9 @@ source "$SCRIPTS_ROOT/tests/lib/assert.sh"
 CIBLE="$SCRIPTS_ROOT/Linux/System/manage-users.sh"
 COMPTE="mgnetessai"
 COMPTE_DRY="mgnetessaidry"
-GROUPE="mgnetessai"
+# Groupe distinct du compte : useradd pose lui-même un groupe privé du nom du
+# compte (USERGROUPS_ENAB), et un groupe homonyme déjà présent le fait échouer.
+GROUPE="mgnetgrp"
 SUDOERS="/etc/sudoers.d/mgnetworking-$COMPTE"
 SUDOERS_DRY="/etc/sudoers.d/mgnetworking-$COMPTE_DRY"
 CLE=""
@@ -34,12 +36,31 @@ F_OUT="$REP_TMP/stdout"
 F_ERR="$REP_TMP/stderr"
 CODE=0
 
+# Le groupe « sudo » existe dans cette image (base-passwd le pose), contrairement
+# à ce que supposait la fiche : le cas de refus n'est atteignable qu'en le
+# retirant. Son GID est relevé pour le rendre intact — un groupe système retiré
+# sans son numéro laisserait des fichiers orphelins.
+SUDO_GID=""
+SUDO_PREEXISTAIT="false"
+if getent group sudo >/dev/null 2>&1; then
+    SUDO_PREEXISTAIT="true"
+    SUDO_GID="$(getent group sudo | cut -d: -f3)"
+fi
+
+retablir_groupe_sudo() {
+    if [ "$SUDO_PREEXISTAIT" = "true" ] && ! getent group sudo >/dev/null 2>&1; then
+        groupadd -g "$SUDO_GID" sudo
+    fi
+}
+
 filet_de_securite() {
     userdel -r "$COMPTE" >/dev/null 2>&1 || true
     userdel -r "$COMPTE_DRY" >/dev/null 2>&1 || true
     groupdel "$GROUPE" >/dev/null 2>&1 || true
-    groupdel sudo >/dev/null 2>&1 || true
+    if [ "$SUDO_PREEXISTAIT" = "false" ]; then groupdel sudo >/dev/null 2>&1 || true; fi
+    retablir_groupe_sudo >/dev/null 2>&1 || true
     rm -f "$SUDOERS" "$SUDOERS_DRY" /etc/sudoers.d/.mgnetworking-* >/dev/null 2>&1 || true
+    rmdir /etc/sudoers.d >/dev/null 2>&1 || true
     rm -rf "$REP_TMP" /tmp/mgnet-test-users-nobody
 }
 trap filet_de_securite EXIT
@@ -59,8 +80,12 @@ etat() {
         for f in /etc/passwd /etc/group /etc/shadow /etc/gshadow; do
             if [ -f "$f" ]; then cksum < "$f"; fi
         done
-        if [ -d /etc/sudoers.d ]; then ls -1 /etc/sudoers.d | sort; else printf 'sudoers.d absent\n'; fi
-        ls -1d /home/* 2>/dev/null | sort
+        if [ -d /etc/sudoers.d ]; then
+            find /etc/sudoers.d -mindepth 1 -maxdepth 1 -printf '%f\n' 2>/dev/null | sort
+        else
+            printf 'sudoers.d absent\n'
+        fi
+        find /home -mindepth 1 -maxdepth 1 -printf '%f\n' 2>/dev/null | sort
     } > "$destination"
 }
 
@@ -220,14 +245,12 @@ else
 fi
 
 titre "4. Groupe sudo absent — refus en 1, sans rien créer"
-# L'image de test n'embarque pas le paquet sudo : c'est le cas nominal du refus,
-# et il ne s'éprouve qu'ICI, avant que la fixture ne crée le groupe.
+# Le paquet sudo n'est pas installé : c'est le cas nominal du refus, et il ne
+# s'éprouve qu'ICI, avant que la suite ne pose le groupe.
 if [ "$MODIFIANT" != "oui" ]; then
     saute "le refus quand le groupe sudo n'existe pas" "$MODIFIANT"
-elif getent group sudo >/dev/null 2>&1; then
-    saute "le refus quand le groupe sudo n'existe pas" \
-        "un groupe sudo existe déjà sur cet hôte — la branche n'est pas atteignable"
 else
+    groupdel sudo >/dev/null 2>&1 || true
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --sudo
     assert_code 1 "$CODE" "le groupe sudo absent fait sortir en 1"
     assert_contient "$(erreur)" "groupe « sudo » n'existe pas" "le script nomme ce qui manque"
@@ -246,7 +269,7 @@ if [ "$MODIFIANT" != "oui" ]; then
     saute "la création du compte et le dépôt de la clé" "$MODIFIANT"
 else
     groupadd "$GROUPE"
-    groupadd sudo
+    if [ -n "$SUDO_GID" ]; then groupadd -g "$SUDO_GID" sudo; else groupadd sudo; fi
     etat "$REP_TMP/p0"
 
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --cle-fichier "$CLE" --groupe "$GROUPE"
@@ -418,7 +441,14 @@ if [ "$MODIFIANT" = "oui" ]; then
     else
         ok "le groupe de fixture est retiré"
     fi
-    if getent group sudo >/dev/null 2>&1; then
+    # Le groupe sudo est rendu à son état d'origine : retiré s'il n'existait pas,
+    # rétabli avec son GID s'il préexistait.
+    if [ "$SUDO_PREEXISTAIT" = "true" ]; then
+        retablir_groupe_sudo
+        gid_final="absent"
+        if ! gid_final="$(getent group sudo | cut -d: -f3)"; then gid_final="absent"; fi
+        assert_egal "$SUDO_GID" "$gid_final" "le groupe sudo préexistant est rendu intact, GID compris"
+    elif getent group sudo >/dev/null 2>&1; then
         ko "le groupe sudo de fixture est retiré" "sudo subsiste"
     else
         ok "le groupe sudo de fixture est retiré"

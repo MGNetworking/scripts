@@ -172,13 +172,23 @@ deposer_cle() {
 poser_regle_sudo() {
     # Nom sans point et sans tilde final : sudo ignore ces fichiers sans rien dire,
     # exactement comme cron dans /etc/cron.d.
-    local fichier="/etc/sudoers.d/mgnetworking-$UTILISATEUR"
-    local tmp="/etc/sudoers.d/.mgnetworking-$UTILISATEUR.$$"
+    local repertoire="/etc/sudoers.d"
+    local fichier="$repertoire/mgnetworking-$UTILISATEUR"
+    local tmp="$repertoire/.mgnetworking-$UTILISATEUR.$$"
     local attendu=""
     attendu="$(printf '# Déposé par Linux/System/manage-users.sh.\n%s ALL=(ALL) NOPASSWD:ALL\n' "$UTILISATEUR")"
     if [ -f "$fichier" ] && [ "$(cat "$fichier")" = "$attendu" ]; then
         info "$fichier est déjà conforme : rien à déposer."
         return 0
+    fi
+    # Le paquet sudo pose ce répertoire ; sans lui, une règle n'aurait nulle part où
+    # vivre. Le créer n'installe rien.
+    if [ ! -d "$repertoire" ]; then
+        if [ "$DRY_RUN" = "true" ]; then
+            info "[dry-run] Créerait $repertoire en 0755, root:root."
+        else
+            install -d -m 0755 -o root -g root "$repertoire"
+        fi
     fi
     if [ "$DRY_RUN" = "true" ]; then
         info "[dry-run] Déposerait $fichier en 0440, root:root :"
