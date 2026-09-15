@@ -7,28 +7,33 @@ _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
 
-# Borne de chaque commande interrogée. Surchargeable pour être éprouvée.
+# Borne de chaque commande interrogée, surchargeable ; un entier strictement positif.
 BORNE="${BORNE:-10}"
+case "$BORNE" in
+    ''|*[!0-9]*) die "BORNE doit être un entier positif : « $BORNE »" 2 ;;
+    0)           die "BORNE doit être supérieur à 0 : « $BORNE »" 2 ;;
+esac
 
 usage() {
     cat <<'AIDE'
 Usage : security-check.sh [-h|--help]
 
-Bilan de sécurité en lecture seule. Une ligne par contrôle, de la forme
-« STATUT  contrôle — détail », STATUT valant PASS, WARNING, FAIL ou INFO :
+Bilan de sécurité en lecture seule, une ligne par contrôle :
+« STATUT  contrôle — détail », STATUT valant PASS, WARNING, FAIL ou INFO.
 
-  SSH              sshd -T : PasswordAuthentication no et PermitRootLogin no ;
-  pare-feu         ufw actif, « deny » en entrée ;
+  SSH              sshd -T : PasswordAuthentication no, PermitRootLogin no ;
+  pare-feu         ufw actif, « deny » ou « reject » en entrée ;
   fail2ban         service actif, prison sshd présente ;
   comptes à UID 0  aucun compte à UID 0 autre que root ;
   mises à jour     paquets en attente, d'après « apt-get -s upgrade ».
 
-Un ufw ou un fail2ban absent vaut WARNING ; un outil qu'on ne peut interroger
-— sshd, getent, apt-get — vaut INFO « non vérifiable », jamais PASS. Chaque
-commande est bornée (BORNE, 10 s) et apt-get n'est appelé qu'en simulation,
-jamais suivi d'un « update ». Le bilan final compte les quatre statuts.
-
-Codes de retour :  0 aucun FAIL ;  1 au moins un FAIL ;  2 option inconnue.
+« sshd -T », « ufw status » et « fail2ban-client status » demandent root : sans
+root, ces trois contrôles sortent en INFO « non vérifiable ». Un contrôle qu'on
+ne peut pas rendre — outil absent, commande injoignable ou muette — n'est jamais
+PASS ni FAIL : ufw et fail2ban valent alors WARNING, les autres INFO. Chaque
+commande est bornée (BORNE, 10 s), et apt-get n'est appelé qu'en simulation.
+Codes de retour : 0 aucun FAIL ; 1 au moins un FAIL ; 2 option inconnue ou
+BORNE invalide.
 AIDE
 }
 
@@ -39,7 +44,8 @@ while [ "${1:-}" != "" ]; do
     esac
 done
 
-NB_PASS=0; NB_WARNING=0; NB_FAIL=0; NB_INFO=0
+NB_PASS=0; NB_WARNING=0; NB_FAIL=0; NB_INFO=0; SORTIE=""
+RACINE="non"; if [ "$(id -u)" -eq 0 ]; then RACINE="oui"; fi
 
 # ligne <statut> <contrôle> <détail> — un verdict, et son décompte.
 ligne() {
@@ -54,28 +60,36 @@ ligne() {
 
 present() { command -v "$1" >/dev/null 2>&1; }
 
-# interroger <commande...> — la commande, bornée. Sans l'outil timeout, elle est
-# lancée telle quelle : mieux vaut un contrôle non borné que pas de contrôle.
+# interroger <commande...> — la commande, bornée et en locale C : « ufw status »
+# traduit ses messages, que ce script lit en anglais.
 interroger() {
-    if present timeout; then timeout "$BORNE" "$@"; else "$@"; fi
+    if present timeout; then LC_ALL=C timeout "$BORNE" "$@"; else LC_ALL=C "$@"; fi
 }
 
-# outil <binaire> <contrôle> <statut si absent> — vrai si le binaire répond.
-# Sinon rend la ligne du contrôle et rend faux : un outil absent n'est jamais un
-# PASS ni un FAIL — le contrôle était possible, il a manqué son objet.
-outil() {
-    if present "$1"; then return 0; fi
-    ligne "$3" "$2" "$1 absent — non vérifiable"
-    return 1
+# relever <contrôle> <statut si indisponible> <root|-> <commande...> — interroge
+# la commande et met sa réponse dans SORTIE. Un binaire absent, une commande qui
+# demande root quand on ne l'est pas, un échec ou une réponse vide rendent le
+# contrôle « non vérifiable » et la fonction faux : rien de tout cela n'est un
+# verdict.
+relever() {
+    local controle="$1" statut="$2" root="$3"; shift 3
+    local binaire="$1" code=0
+    if ! present "$binaire"; then ligne "$statut" "$controle" "$binaire absent — non vérifiable"; return 1; fi
+    if [ "$root" = "root" ] && [ "$RACINE" != "oui" ]; then ligne INFO "$controle" "« $* » demande root — non vérifiable"; return 1; fi
+    SORTIE="$(interroger "$@" 2>/dev/null)" || code=$?
+    if [ "$code" -ne 0 ]; then
+        ligne "$statut" "$controle" "« $* » injoignable (code $code) — non vérifiable"; return 1
+    elif [ -z "$SORTIE" ]; then
+        ligne INFO "$controle" "« $* » n'a rien répondu — non vérifiable"; return 1
+    fi
+    return 0
 }
 
 controle_ssh() {
-    outil sshd SSH INFO || return 0
-    local config="" code=0 mdp racine
-    config="$(interroger sshd -T 2>/dev/null)" || code=$?
-    if [ "$code" -ne 0 ]; then ligne INFO SSH "« sshd -T » a échoué (code $code) — non vérifiable"; return 0; fi
-    mdp="$(awk 'tolower($1) == "passwordauthentication" {print tolower($2)}' <<< "$config" | tail -n 1)"
-    racine="$(awk 'tolower($1) == "permitrootlogin" {print tolower($2)}' <<< "$config" | tail -n 1)"
+    relever SSH INFO - sshd -T || return 0
+    local mdp racine
+    mdp="$(awk 'tolower($1) == "passwordauthentication" {print tolower($2)}' <<< "$SORTIE" | tail -n 1)"
+    racine="$(awk 'tolower($1) == "permitrootlogin" {print tolower($2)}' <<< "$SORTIE" | tail -n 1)"
     if [ "$mdp" = "no" ] && [ "$racine" = "no" ]; then
         ligne PASS SSH "PasswordAuthentication no, PermitRootLogin no"
     else
@@ -84,28 +98,22 @@ controle_ssh() {
 }
 
 controle_parefeu() {
-    outil ufw pare-feu WARNING || return 0
-    local etat="" code=0
-    etat="$(interroger ufw status verbose 2>/dev/null)" || code=$?
-    if [ "$code" -ne 0 ]; then ligne INFO pare-feu "« ufw status verbose » a échoué (code $code) — non vérifiable"; return 0; fi
-    case "$etat" in
-        *"Status: active"*) ;;
-        *) ligne FAIL pare-feu "ufw inactif"; return 0 ;;
-    esac
-    case "$etat" in
-        *"deny (incoming)"*) ligne PASS pare-feu "ufw actif, deny en entrée" ;;
-        *) ligne FAIL pare-feu "ufw actif, mais l'entrée n'est pas en deny" ;;
+    relever pare-feu WARNING root ufw status verbose || return 0
+    grep -q "Status: active" <<< "$SORTIE" || { ligne FAIL pare-feu "ufw inactif"; return 0; }
+    local politique
+    politique="$(sed -n 's/^Default: \([^ ]*\) (incoming).*/\1/p' <<< "$SORTIE" | tail -n 1)"
+    case "$politique" in
+        deny|reject) ligne PASS pare-feu "ufw actif, entrée en $politique" ;;
+        *) ligne FAIL pare-feu "ufw actif, mais l'entrée n'est ni deny ni reject (${politique:-illisible})" ;;
     esac
 }
 
 controle_fail2ban() {
-    outil fail2ban-client fail2ban WARNING || return 0
-    local etat="" code=0 liste=""
-    etat="$(interroger fail2ban-client status 2>/dev/null)" || code=$?
-    if [ "$code" -ne 0 ]; then ligne WARNING fail2ban "service injoignable (code $code) — fail2ban est-il démarré ?"; return 0; fi
+    relever fail2ban WARNING root fail2ban-client status || return 0
     # « Jail list :  sshd, nginx » -> « sshd,nginx » : sshd est cherché comme
     # jeton entier, sans quoi « sshd-ddos » passerait pour la prison sshd.
-    liste="${etat#*Jail list:}"; liste="${liste%%$'\n'*}"
+    local liste="${SORTIE#*Jail list:}"
+    liste="${liste%%$'\n'*}"
     case ",${liste//[[:space:]]/}," in
         *",sshd,"*) ligne PASS fail2ban "service actif, prison sshd présente" ;;
         *) ligne WARNING fail2ban "service actif, prison sshd absente" ;;
@@ -113,26 +121,18 @@ controle_fail2ban() {
 }
 
 controle_comptes() {
-    outil getent "comptes à UID 0" INFO || return 0
-    local comptes="" code=0 intrus=()
-    comptes="$(interroger getent passwd 2>/dev/null)" || code=$?
-    if [ "$code" -ne 0 ]; then ligne INFO "comptes à UID 0" "« getent passwd » a échoué (code $code) — non vérifiable"; return 0; fi
-    while IFS=: read -r nom _ uid _; do
-        if [ -n "$nom" ] && [ "$uid" = "0" ] && [ "$nom" != "root" ]; then intrus+=("$nom"); fi
-    done <<< "$comptes"
-    if [ "${#intrus[@]}" -eq 0 ]; then ligne PASS "comptes à UID 0" "seul root a l'UID 0"
-    else ligne FAIL "comptes à UID 0" "compte(s) à UID 0 autre(s) que root : ${intrus[*]}"; fi
+    relever "comptes à UID 0" INFO - getent passwd || return 0
+    local intrus
+    intrus="$(awk -F: '$1 != "root" && $3 == 0 {print $1}' <<< "$SORTIE" | tr '\n' ' ')"
+    if [ -z "$intrus" ]; then ligne PASS "comptes à UID 0" "seul root a l'UID 0"
+    else ligne FAIL "comptes à UID 0" "compte(s) à UID 0 autre(s) que root : ${intrus% }"; fi
 }
 
 controle_maj() {
-    outil apt-get "mises à jour" INFO || return 0
-    # « -s » simule : rien n'est installé, rien n'est écrit. « apt-get update »
-    # n'est jamais lancé — il écrirait dans /var/lib/apt, et ce script ne
-    # modifie rien.
-    local simulation="" code=0 nombre=""
-    simulation="$(interroger apt-get -s upgrade 2>/dev/null)" || code=$?
-    if [ "$code" -ne 0 ]; then ligne INFO "mises à jour" "« apt-get -s upgrade » a échoué (code $code) — non vérifiable"; return 0; fi
-    nombre="$(awk '/^Inst / {n++} END {print n + 0}' <<< "$simulation")"
+    # « -s » simule : rien n'est installé ; « apt-get update » n'est jamais lancé.
+    relever "mises à jour" INFO - apt-get -s upgrade || return 0
+    local nombre
+    nombre="$(awk '/^Inst / {n++} END {print n + 0}' <<< "$SORTIE")"
     if [ "$nombre" -eq 0 ]; then ligne PASS "mises à jour" "aucune mise à jour en attente"
     else ligne WARNING "mises à jour" "$nombre mise(s) à jour en attente"; fi
 }
