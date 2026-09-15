@@ -36,6 +36,7 @@ s'exécutent sans privilège ; ceux qui modifient le système demandent root.
 | [`Configuration/configure-docker.sh`](Configuration/configure-docker.sh) | écrit `/etc/docker/daemon.json` : rotation des journaux de conteneurs, clés existantes conservées | root | **oui** |
 | [`Configuration/create-network.sh`](Configuration/create-network.sh) | crée un réseau Docker nommé, partageable par plusieurs projets Compose ; ne supprime jamais | root | **oui** |
 | [`Maintenance/update-images.sh`](Maintenance/update-images.sh) | récupère les images d’un projet Compose désigné par `--project` ; ne redéploie rien, affiche avant/après et la commande de redéploiement | groupe docker | **oui** |
+| [`Maintenance/update-docker.sh`](Maintenance/update-docker.sh) | met à jour les composants Docker installés, et eux seuls ; relevé avant/après, annonce de la coupure des conteneurs | root | **oui**, redémarre le démon |
 | [`Diagnostics/check-docker.sh`](Diagnostics/check-docker.sh) | diagnostique une machine qu'on découvre : client, socket, service, démon, versions, stockage | aucun | non |
 | [`Diagnostics/list-containers.sh`](Diagnostics/list-containers.sh) | inventaire des conteneurs : nom, image, état, identifiant, ports, réseaux — actifs par défaut, tous avec `--all` | aucun | non |
 | [`Diagnostics/docker-disk-usage.sh`](Diagnostics/docker-disk-usage.sh) | stockage consommé par Docker : images, conteneurs, volumes, cache de build, espace récupérable ; `--detail` pour le détail | aucun | non |

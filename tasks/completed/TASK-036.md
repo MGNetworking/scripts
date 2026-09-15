@@ -1,7 +1,7 @@
 ---
 id: TASK-036
 title: "Écrire Docker/Maintenance/update-docker.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-029
