@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# manage-users.sh — compte d'administration : compte, home, shell, groupes, sudo
-# et clé SSH publique, sans aucun mot de passe. Invocation nominale :
-#   sudo Linux/System/manage-users.sh --utilisateur max --sudo --cle-fichier /root/max.pub
+# manage-users.sh — compte d'administration : compte, home, shell, groupes, sudo et clé SSH
+# publique, sans mot de passe. Invocation : --utilisateur max --sudo --cle-fichier max.pub
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
@@ -46,9 +45,7 @@ while [ "${1:-}" != "" ]; do
     esac
 done
 
-UTILISATEUR="${UTILISATEUR:-${SRV_ADMIN_UTILISATEUR:-}}"
-CLE_FICHIER="${CLE_FICHIER:-${SRV_ADMIN_CLE_PUBLIQUE:-}}"
-
+UTILISATEUR="${UTILISATEUR:-${SRV_ADMIN_UTILISATEUR:-}}"; CLE_FICHIER="${CLE_FICHIER:-${SRV_ADMIN_CLE_PUBLIQUE:-}}"
 case "$UTILISATEUR" in
     "")     die "Aucun compte demandé : --utilisateur, ou SRV_ADMIN_UTILISATEUR dans config/server.env." 2 ;;
     root)   die "« root » est refusé : ce script crée un compte non privilégié." 2 ;;
@@ -73,7 +70,6 @@ fi
 require_root
 require_os debian ubuntu
 require_cmd useradd usermod getent id stat cut mktemp
-
 if [ "$SUDO" = "true" ]; then
     GROUPES+=(sudo)
     # Ni le groupe ni le paquet ne sont créés ici : le refus dit lequel manque.
@@ -88,31 +84,22 @@ for groupe in "${GROUPES[@]}"; do
 done
 
 HOME_UTILISATEUR="/home/$UTILISATEUR"
-if id -u "$UTILISATEUR" >/dev/null 2>&1; then
-    if ! HOME_UTILISATEUR="$(getent passwd "$UTILISATEUR" | cut -d: -f6)"; then die "Répertoire personnel de $UTILISATEUR illisible."; fi
+if id -u "$UTILISATEUR" >/dev/null 2>&1 && ! HOME_UTILISATEUR="$(getent passwd "$UTILISATEUR" | cut -d: -f6)"; then
+    die "Répertoire personnel de $UTILISATEUR illisible."
 fi
 AUTORISE="$HOME_UTILISATEUR/.ssh/authorized_keys"
-
-executer() {
-    if [ "$DRY_RUN" = "true" ]; then info "[dry-run] $*"; return 0; fi
-    "$@"
-}
-
+executer() { if [ "$DRY_RUN" = "true" ]; then info "[dry-run] $*"; return 0; fi; "$@"; }
 poser_regle_sudo() {
     local fichier="/etc/sudoers.d/mgnetworking-$UTILISATEUR" tmp=""
     local attendu="# Déposé par Linux/System/manage-users.sh.
 $UTILISATEUR ALL=(ALL) NOPASSWD:ALL"
     if [ -f "$fichier" ] && [ "$(cat "$fichier")" = "$attendu" ]; then info "$fichier est déjà conforme : rien à déposer."; return 0; fi
-    # Nom sans point ni tilde final — sudo ignore ces fichiers sans rien dire,
-    # comme cron dans /etc/cron.d — et /etc/sudoers.d vient du paquet sudo.
+    # Nom sans point ni tilde final : sudo ignorerait ce fichier sans rien dire, comme cron.
     [ -d /etc/sudoers.d ] || die "« /etc/sudoers.d » est absent : installez le paquet sudo — rien n'a été modifié." 1
-    if [ "$DRY_RUN" = "true" ]; then
-        info "[dry-run] Déposerait $fichier en 0440, root:root :"; printf '%s\n' "$attendu" | sed 's/^/    /' >&2; return 0
-    fi
+    if [ "$DRY_RUN" = "true" ]; then info "[dry-run] Déposerait $fichier en 0440, root:root :"; printf '%s\n' "$attendu" | sed 's/^/    /' >&2; return 0; fi
     tmp="$(mktemp /etc/sudoers.d/.mgnetworking-XXXXXX)"
     printf '%s\n' "$attendu" > "$tmp"; chmod 0440 "$tmp"; chown root:root "$tmp"
-    # Une syntaxe fautive peut rendre sudo inutilisable pour tout le monde :
-    # la règle est validée AVANT d'être mise en place.
+    # Une syntaxe fautive peut rendre sudo inutilisable pour tout le monde : visudo tranche avant.
     if command -v visudo >/dev/null 2>&1 && ! visudo -c -f "$tmp" >/dev/null 2>&1; then
         rm -f "$tmp"; die "Règle sudoers refusée par visudo — $fichier n'a pas été déposé."
     fi
@@ -120,53 +107,37 @@ $UTILISATEUR ALL=(ALL) NOPASSWD:ALL"
     mv -f "$tmp" "$fichier"; success "Règle sudo sans mot de passe déposée : $fichier"
 }
 
-# root écrit dans le home d'un utilisateur : un lien symbolique y détournerait
-# l'écriture vers un fichier qu'il choisit. sshd, lui, refuse sans rien dire une
-# clé mal protégée — les droits sont donc corrigés, pas seulement signalés.
+# root écrit dans le home : un lien symbolique y détournerait l'écriture. sshd, lui, refuse sans
+# rien dire une clé mal protégée : les droits sont corrigés, pas seulement signalés.
 deposer_cle() {
     local rep="$HOME_UTILISATEUR/.ssh" tmp=""
     [ ! -L "$rep" ] || die "« $rep » est un lien symbolique : refus d'écrire à travers. Rien n'a été modifié." 1
     [ ! -L "$AUTORISE" ] || die "« $AUTORISE » est un lien symbolique : refus d'écrire à travers. Rien n'a été modifié." 1
-    if grep -qxF "$CLE_LIGNE" "$AUTORISE" 2>/dev/null; then
-        info "La clé publique est déjà dans $AUTORISE : rien à déposer."
+    if grep -qxF "$CLE_LIGNE" "$AUTORISE" 2>/dev/null; then info "La clé publique est déjà dans $AUTORISE : rien à déposer."
     else
-        mkdir -p "$rep"
-        tmp="$(mktemp "$rep/.authorized_keys.XXXXXX")"
+        mkdir -p "$rep"; tmp="$(mktemp "$rep/.authorized_keys.XXXXXX")"
         [ ! -f "$AUTORISE" ] || cat "$AUTORISE" > "$tmp"
         # Sans saut de ligne final, la clé se collerait à la dernière ligne.
         if [ -s "$tmp" ] && [ -n "$(tail -c 1 "$tmp")" ]; then printf '\n' >> "$tmp"; fi
-        printf '%s\n' "$CLE_LIGNE" >> "$tmp"; mv -f "$tmp" "$AUTORISE"
-        success "Clé publique déposée : $AUTORISE"
+        printf '%s\n' "$CLE_LIGNE" >> "$tmp"; mv -f "$tmp" "$AUTORISE"; success "Clé publique déposée : $AUTORISE"
     fi
     chmod 0700 "$rep"; chown "$UTILISATEUR" "$rep"; chmod 0600 "$AUTORISE"; chown "$UTILISATEUR" "$AUTORISE"
 }
 
 info "Aucun mot de passe n'est défini, lu, généré ni demandé par ce script."
-
-if id -u "$UTILISATEUR" >/dev/null 2>&1; then
-    info "Le compte « $UTILISATEUR » existe déjà (UID $(id -u "$UTILISATEUR")) : rien à créer."
-else
-    executer useradd --create-home --shell "$SHELL_UTILISATEUR" "$UTILISATEUR"
-fi
-
+if id -u "$UTILISATEUR" >/dev/null 2>&1; then info "Le compte « $UTILISATEUR » existe déjà (UID $(id -u "$UTILISATEUR")) : rien à créer."
+else executer useradd --create-home --shell "$SHELL_UTILISATEUR" "$UTILISATEUR"; fi
 # usermod --append n'ajoute jamais qu'un groupe : aucune appartenance n'est retirée.
 for groupe in "${GROUPES[@]}"; do
-    if id -nG "$UTILISATEUR" | grep -qw -- "$groupe"; then
-        info "$UTILISATEUR est déjà membre de « $groupe » : rien à ajouter."
-    else
-        executer usermod --append --groups "$groupe" "$UTILISATEUR"
-    fi
+    if id -nG "$UTILISATEUR" | grep -qw -- "$groupe"; then info "$UTILISATEUR est déjà membre de « $groupe » : rien à ajouter."
+    else executer usermod --append --groups "$groupe" "$UTILISATEUR"; fi
 done
-
 if [ "$SUDO_NOPASSWD" = "true" ]; then poser_regle_sudo; fi
 
 if [ -n "$CLE_FICHIER" ] && [ "$DRY_RUN" = "true" ]; then
     info "[dry-run] Créerait $HOME_UTILISATEUR/.ssh en 0700, propriétaire $UTILISATEUR."
     info "[dry-run] Ajouterait la clé $CLE_TYPE à $AUTORISE, sauf si déjà présente."
-elif [ -n "$CLE_FICHIER" ]; then
-    deposer_cle
-fi
-
+elif [ -n "$CLE_FICHIER" ]; then deposer_cle; fi
 if [ "$DRY_RUN" = "true" ]; then info "Mode --dry-run : aucune modification effectuée."; exit 0; fi
 
 success "Compte prêt : $UTILISATEUR — shell $(getent passwd "$UTILISATEUR" | cut -d: -f7), home $HOME_UTILISATEUR."
