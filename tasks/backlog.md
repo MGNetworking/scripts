@@ -221,7 +221,7 @@ côté ; elles restent non sélectionnables.
 | `check-memory.sh` | atomisée : [TASK-022](completed/TASK-022.md) |
 | `check-services.sh` | atomisée : [TASK-023](completed/TASK-023.md) |
 | `reboot-system.sh` | atomisée : [TASK-026](pending/TASK-026.md) |
-| brancher la notification sur la ligne de cron | laissé de côté par [TASK-024](pending/TASK-024.md) : changer la ligne déposée impose de reprendre `configure-cron.sh`, son fichier de cas et son README |
+| brancher la notification sur la ligne de cron | laissé de côté par [TASK-024](completed/TASK-024.md) : changer la ligne déposée impose de reprendre `configure-cron.sh`, son fichier de cas et son README |
 | `df` sur un montage réseau injoignable | laissé de côté par [TASK-021](completed/TASK-021.md) : un `df` peut y suspendre l'exécution indéfiniment |
 
 ### Linux / Security — plan §2
