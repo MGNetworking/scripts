@@ -1,3 +1,10 @@
+| `security-check.sh` | atomisée : [TASK-043](pending/TASK-043.md) |
+| `audit-ports.sh` | atomisée : [TASK-042](pending/TASK-042.md) |
+| `audit-users.sh` | atomisée : [TASK-041](pending/TASK-041.md) |
+| `configure-fail2ban.sh` | atomisée : [TASK-044](pending/TASK-044.md) |
+| `configure-firewall.sh` | atomisée : [TASK-045](pending/TASK-045.md) |
+| `disable-root-login.sh` | atomisée : [TASK-047](pending/TASK-047.md) |
+| `configure-ssh.sh` | atomisée : [TASK-046](pending/TASK-046.md) |
 # Backlog
 
 Index de tout le travail connu. Deux natures d'entrées y coexistent.
@@ -10,7 +17,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-041**.
+Prochain identifiant libre : **TASK-048**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -51,6 +58,13 @@ de ce que cet ADR a tranché.
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
 | [TASK-039](pending/TASK-039.md) | Tenir le registre unique des anomalies et les traiter | `ready` | haute | — | conteneur `debian` | non |
 | [TASK-040](completed/TASK-040.md) | Ramener `manage-users.sh` et son fichier de cas à la sobriété visée | `completed` | basse | 025 | conteneur `debian` | non |
+| [TASK-041](pending/TASK-041.md) | Écrire `Linux/Security/audit-users.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-042](pending/TASK-042.md) | Écrire `Linux/Security/audit-ports.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-043](pending/TASK-043.md) | Écrire `Linux/Security/security-check.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-044](pending/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-045](pending/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | `ready` | haute | — | conteneur `debian` | **oui** |
+| [TASK-046](pending/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | `ready` | haute | 025 | conteneur `debian` | **oui** |
+| [TASK-047](pending/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `pending` | haute | 046 | conteneur `debian` | **oui** |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -132,7 +146,7 @@ Opus, écrit seul les README et ce backlog, et fusionne. Coûts et défauts au
 | Tâche | Agent |
 |---|---|
 | TASK-024, TASK-033, TASK-034, TASK-035 | `deepseek` |
-| TASK-025, TASK-026 | `sonnet` (TASK-036 et TASK-037 passées à `deepseek`, A41) |
+| TASK-041 à TASK-047 | `deepseek` (agents `sonnet` indisponibles, A41) |
 | TASK-039 | `orchestrateur` |
 
 **Le domaine ne connaît aucune application.** Ni son nom, ni son fichier Compose,
@@ -223,7 +237,7 @@ côté ; elles restent non sélectionnables.
 | `check-services.sh` | atomisée : [TASK-023](completed/TASK-023.md) |
 | `reboot-system.sh` | atomisée : [TASK-026](completed/TASK-026.md) |
 | brancher la notification sur la ligne de cron | laissé de côté par [TASK-024](completed/TASK-024.md) : changer la ligne déposée impose de reprendre `configure-cron.sh`, son fichier de cas et son README |
-| `df` sur un montage réseau injoignable | laissé de côté par [TASK-021](completed/TASK-021.md) : un `df` peut y suspendre l'exécution indéfiniment |
+| `df` sur un montage réseau injoignable | traité : `check-disk.sh` borne `df` (registre TASK-039, A25) |
 
 ### Linux / Security — plan §2
 
