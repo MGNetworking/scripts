@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-040**.
+Prochain identifiant libre : **TASK-041**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -50,6 +50,7 @@ de ce que cet ADR a tranché.
 | [TASK-026](completed/TASK-026.md) | Écrire `Linux/System/reboot-system.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-028](completed/TASK-028.md) | Justifier la directive shellcheck nue de `linux-system.test.sh` | `completed` | haute | — | conteneur `debian` | non |
 | [TASK-039](pending/TASK-039.md) | Tenir le registre unique des anomalies et les traiter | `ready` | haute | — | conteneur `debian` | non |
+| [TASK-040](pending/TASK-040.md) | Ramener `manage-users.sh` et son fichier de cas à la sobriété visée | `ready` | basse | 025 | conteneur `debian` | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
