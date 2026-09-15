@@ -111,17 +111,25 @@ refus "une option inconnue est refusée" "" "Option inconnue" --option-qui-n-exi
 refus "un appel sans argument est refusé" "" "Aucun compte demandé"
 refus "--utilisateur sans valeur est refusé" "" "attend un nom de compte" --utilisateur
 refus "--cle-fichier sans valeur est refusé" "" "attend un chemin de clé" --cle-fichier
-refus "« root » est refusé comme cible" "" "root" --utilisateur root
+refus "--groupe sans valeur est refusé" "" "attend un nom de groupe" --groupe
+refus "--shell sans valeur est refusé" "" "attend un chemin de shell" --shell
+refus "« root » est refusé comme cible" "" "« root » est refusé" --utilisateur root
 refus "un nom commençant par une majuscule est refusé" "Root" "useradd" --utilisateur Root
 refus "un nom commençant par un chiffre est refusé" "1essai" "useradd" --utilisateur 1essai
 refus "un nom contenant un point est refusé" "a.b" "useradd" --utilisateur a.b
 refus "un nom de plus de 32 caractères est refusé" "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "32" --utilisateur aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 refus "un shell sans chemin absolu est refusé" "essai" "chemin absolu" --utilisateur essai --shell bash
 refus "une clé publique introuvable est refusée" "essai" "introuvable" --utilisateur essai --cle-fichier "$REP_TMP/absente.pub"
-printf 'ssh-ed25519 %s\nssh-ed25519 %s\n' "AAAAC3NzaC1lZDI1NTE5AAAAIExempleDeClePubliqueDeTest00000000000" "AAAAC3NzaC1lZDI1NTE5AAAAIExempleDeClePubliqueDeTest00000000001" > "$REP_TMP/deux.pub"
+printf 'ssh-ed25519 %s\nssh-ed25519 %s\n' \
+    "AAAAC3NzaC1lZDI1NTE5AAAAIExempleDeClePubliqueDeTest00000000000" \
+    "AAAAC3NzaC1lZDI1NTE5AAAAIExempleDeClePubliqueDeTest00000000001" > "$REP_TMP/deux.pub"
 refus "une clé sur deux lignes est refusée" "essai" "une seule ligne" --utilisateur essai --cle-fichier "$REP_TMP/deux.pub"
-printf 'ssh-machin-chose AAAAC3NzaC1lZDI1NTE5AAAAIBla\n' > "$REP_TMP/type.pub"; refus "un type de clé inconnu est refusé" "essai" "Type de clé inconnu" --utilisateur essai --cle-fichier "$REP_TMP/type.pub"
-printf 'ssh-ed25519 pas!du!base64!!\n' > "$REP_TMP/base.pub"; refus "un second champ non base64 est refusé" "essai" "base64" --utilisateur essai --cle-fichier "$REP_TMP/base.pub"
+printf 'ssh-machin-chose AAAAC3NzaC1lZDI1NTE5AAAAIBla\n' > "$REP_TMP/type.pub"
+refus "un type de clé inconnu est refusé" "essai" "Type de clé inconnu" --utilisateur essai --cle-fichier "$REP_TMP/type.pub"
+printf 'ssh-ed25519 pas!du!base64!!\n' > "$REP_TMP/base.pub"
+refus "un second champ non base64 est refusé" "essai" "base64" --utilisateur essai --cle-fichier "$REP_TMP/base.pub"
+printf 'ssh-ed25519\n' > "$REP_TMP/vide.pub"
+refus "une clé au second champ vide est refusée" "essai" "second champ est vide" --utilisateur essai --cle-fichier "$REP_TMP/vide.pub"
 
 titre "3. Privilège insuffisant"
 if [ "${#LANCEUR_SANS_ROOT[@]}" -eq 0 ]; then
@@ -131,7 +139,9 @@ else
     sans_root bash "$CIBLE" --utilisateur essai; assert_code 1 "$CODE" "le script refuse de s'exécuter sans privilège"
     assert_contient "$(erreur)" "doit être exécuté en root" "le script dit pourquoi il refuse"
     sans_root bash "$CIBLE" --option-qui-n-existe-pas; assert_code 2 "$CODE" "l'erreur d'usage prime sur le manque de privilège"
-    sans_root bash "$CIBLE" --utilisateur essai --cle-fichier "$REP_TMP/absente.pub"; assert_code 2 "$CODE" "la clé fautive prime elle aussi sur le manque de privilège"
+    sans_root bash "$CIBLE" --utilisateur essai --cle-fichier "$REP_TMP/absente.pub"
+    assert_code 2 "$CODE" "la clé fautive prime elle aussi sur le manque de privilège"
+    assert_contient "$(erreur)" "introuvable" "la primauté vaut pour le motif de la clé, pas seulement pour le code"
 fi
 
 titre "4. Prérequis manquants — refus en 1, sans rien créer"
@@ -160,16 +170,26 @@ else
     assert_contient "$(erreur)" "Aucun mot de passe n'est défini, lu, généré ni demandé" "le script annonce qu'il ne touche à aucun mot de passe"
     assert_contient "$(erreur)" "Clé publique déposée" "le dépôt de la clé est annoncé"; assert_contient "$(erreur)" "Compte prêt" "le résumé final est affiché"
     assert_contient "$(erreur)" "Vérifier la connexion : ssh $COMPTE@" "le résumé dit comment vérifier la connexion"
-    assert_contient "$(erreur)" "configure-ssh.sh" "le résumé nomme ce qu'il reste à faire avant de durcir SSH"; assert_contient "$(erreur)" "passwd $COMPTE" "le résumé rappelle le mot de passe à définir"
+    assert_contient "$(erreur)" "configure-ssh.sh" "le résumé nomme ce qu'il reste à faire avant de durcir SSH"
+    assert_contient "$(erreur)" "passwd $COMPTE" "le résumé rappelle le mot de passe à définir"
     if id -u "$COMPTE" >/dev/null 2>&1; then ok "le compte existe"; else ko "le compte existe" "id -u a échoué"; fi
     assert_egal "$COMPTE_HOME:/bin/bash" "$(getent passwd "$COMPTE" | cut -d: -f6,7)" "le home et le shell de connexion sont ceux demandés"
     if [ -d "$COMPTE_HOME" ]; then ok "le répertoire personnel est créé"; else ko "le répertoire personnel est créé" "absent"; fi
     membre "$COMPTE" "$GROUPE" oui "le compte appartient au groupe demandé"; membre "$COMPTE" sudo non "sans --sudo, le compte n'entre PAS dans le groupe sudo"
-    assert_egal "700 $COMPTE" "$(stat -c '%a %U' "$COMPTE_HOME/.ssh")" ".ssh est en 0700 et appartient au compte"; assert_egal "600 $COMPTE" "$(stat -c '%a %U' "$AUTORISE")" "authorized_keys est en 0600 et appartient au compte"
-    assert_contient "$(cat "$AUTORISE")" "AAAAC3NzaC1lZDI1NTE5AAAAIExempleDeClePubliqueDeTest00000000000" "la clé fournie est bien celle déposée"; assert_egal "1" "$(grep -c 'ssh-ed25519' "$AUTORISE")" "la clé n'est présente qu'une fois"
+    assert_egal "700 $COMPTE" "$(stat -c '%a %U' "$COMPTE_HOME/.ssh")" ".ssh est en 0700 et appartient au compte"
+    assert_egal "600 $COMPTE" "$(stat -c '%a %U' "$AUTORISE")" "authorized_keys est en 0600 et appartient au compte"
+    assert_contient "$(cat "$AUTORISE")" "AAAAC3NzaC1lZDI1NTE5AAAAIExempleDeClePubliqueDeTest00000000000" "la clé fournie est bien celle déposée"
+    assert_egal "1" "$(grep -c 'ssh-ed25519' "$AUTORISE")" "la clé n'est présente qu'une fois"
+    # Le dépôt passe par un fichier temporaire : aucun résidu ne doit rester dans .ssh.
+    residus_ssh=""
+    if ! residus_ssh="$(find "$COMPTE_HOME/.ssh" -mindepth 1 -maxdepth 1 -name '.authorized_keys.*' -printf '%f\n')"; then residus_ssh=""; fi
+    assert_egal "" "$residus_ssh" "aucun fichier temporaire .authorized_keys.* ne subsiste dans .ssh"
     # « ! » (compte verrouillé) pour useradd sans -p : un champ commençant par « $ » serait un condensé réellement posé.
     champ_shadow=""; if ! champ_shadow="$(getent shadow "$COMPTE" | cut -d: -f2)"; then champ_shadow=""; fi
-    case "$champ_shadow" in '$'*) ko "aucun mot de passe n'est posé dans /etc/shadow" "condensé trouvé : $champ_shadow" ;; *) ok "aucun mot de passe n'est posé dans /etc/shadow — champ « $champ_shadow »" ;; esac
+    case "$champ_shadow" in
+        '$'*) ko "aucun mot de passe n'est posé dans /etc/shadow" "condensé trouvé : $champ_shadow" ;;
+        *) ok "aucun mot de passe n'est posé dans /etc/shadow — champ « $champ_shadow »" ;;
+    esac
     noter apres; assert_empreinte "$avant" "$apres" different "la première exécution modifie réellement le système"
 fi
 
@@ -179,26 +199,36 @@ else
     empreinte_cle=""; if ! empreinte_cle="$(cksum < "$AUTORISE")"; then empreinte_cle=""; fi
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --cle-fichier "$CLE" --groupe "$GROUPE"; assert_code 0 "$CODE" "la seconde exécution sort en 0"
     assert_contient "$(erreur)" "existe déjà" "le script reconnaît le compte existant"
-    assert_contient "$(erreur)" "déjà membre" "le script reconnaît l'appartenance déjà posée"; assert_contient "$(erreur)" "déjà dans" "le script reconnaît la clé déjà déposée"
+    assert_contient "$(erreur)" "déjà membre" "le script reconnaît l'appartenance déjà posée"
+    assert_contient "$(erreur)" "déjà dans" "le script reconnaît la clé déjà déposée"
     noter apres2; assert_empreinte "$apres" "$apres2" egal "la seconde exécution laisse les fichiers de comptes identiques"
     assert_egal "$empreinte_cle" "$(cksum < "$AUTORISE")" "authorized_keys est inchangé — empreinte identique"
     assert_egal "1" "$(grep -c 'ssh-ed25519' "$AUTORISE")" "la clé n'est pas dupliquée par la seconde exécution"
 fi
 
 titre "7. --sudo, la règle NOPASSWD, et l'appel complet rejoué"
-if [ "$MODIFIANT" != "oui" ] || ! getent group sudo >/dev/null 2>&1; then saute "l'appartenance au groupe sudo et la règle sudoers" "$MODIFIANT sans groupe sudo"
+if [ "$MODIFIANT" != "oui" ] || ! getent group sudo >/dev/null 2>&1; then
+    saute "l'appartenance au groupe sudo et la règle sudoers" "$MODIFIANT sans groupe sudo"
 else
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --sudo; assert_code 0 "$CODE" "--sudo sort en 0 quand le groupe existe"
     membre "$COMPTE" sudo oui "--sudo ajoute le compte au groupe sudo"; membre "$COMPTE" "$GROUPE" oui "l'appartenance antérieure survit à l'ajout de sudo"
     assert_contient "$(erreur)" "Aucune clé publique fournie" "sans --cle-fichier, le résumé le dit"
     if command -v sudo >/dev/null 2>&1; then saute "l'avertissement sur la commande sudo absente" "sudo est installé sur cet hôte"
-    else assert_contient "$(erreur)" "la commande sudo est absente" "groupe sudo présent mais commande absente : le script avertit"; assert_contient "$(erreur)" "l'élévation restera impossible" "l'avertissement dit ce qui reste impossible"; fi
+    else
+        assert_contient "$(erreur)" "la commande sudo est absente" "groupe sudo présent mais commande absente : le script avertit"
+        assert_contient "$(erreur)" "l'élévation restera impossible" "l'avertissement dit ce qui reste impossible"
+    fi
     absent "$SUDOERS" "aucune règle sudoers n'est déposée sans l'option"
     # /etc/sudoers.d vient du paquet sudo : absent de l'image, la fixture le pose — le script, lui, ne le crée pas.
     install -d -m 0755 -o root -g root /etc/sudoers.d
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --sudo-sans-mot-de-passe; assert_code 0 "$CODE" "--sudo-sans-mot-de-passe sort en 0"
-    present "$SUDOERS" "la règle sudoers est déposée"; assert_egal "440 root:root" "$(stat -c '%a %U:%G' "$SUDOERS" 2>/dev/null)" "la règle est en 0440 et appartient à root:root"
-    nom_regle="$(basename "$SUDOERS")"; case "$nom_regle" in *.*|*~) ko "le nom de la règle ne porte ni point ni tilde final" "$nom_regle" ;; *) ok "le nom de la règle ne porte ni point ni tilde final" ;; esac
+    present "$SUDOERS" "la règle sudoers est déposée"
+    assert_egal "440 root:root" "$(stat -c '%a %U:%G' "$SUDOERS" 2>/dev/null)" "la règle est en 0440 et appartient à root:root"
+    nom_regle="$(basename "$SUDOERS")"
+    case "$nom_regle" in
+        *.*|*~) ko "le nom de la règle ne porte ni point ni tilde final" "$nom_regle" ;;
+        *) ok "le nom de la règle ne porte ni point ni tilde final" ;;
+    esac
     assert_contient "$(cat "$SUDOERS")" "$COMPTE ALL=(ALL) NOPASSWD:ALL" "la règle accorde NOPASSWD au compte"
     residus=""; if ! residus="$(find /etc/sudoers.d -mindepth 1 -maxdepth 1 -name '.mgnetworking-*' -printf '%f\n')"; then residus=""; fi
     assert_egal "" "$residus" "aucun fichier temporaire ne subsiste dans /etc/sudoers.d"
@@ -206,7 +236,8 @@ else
     assert_egal "mgnetworking-$COMPTE" "$listing" "/etc/sudoers.d ne contient que la règle déposée"
     # L'appel de la garde de configure-ssh.sh, rejoué tel quel : il ne doit rien changer.
     noter complet_avant; lancer bash "$CIBLE" --utilisateur "$COMPTE" --sudo --sudo-sans-mot-de-passe --cle-fichier "$CLE"
-    assert_code 0 "$CODE" "l'appel complet (--sudo --sudo-sans-mot-de-passe --cle-fichier) sort en 0"; assert_contient "$(erreur)" "déjà conforme" "le script reconnaît la règle sudo déjà conforme"
+    assert_code 0 "$CODE" "l'appel complet (--sudo --sudo-sans-mot-de-passe --cle-fichier) sort en 0"
+    assert_contient "$(erreur)" "déjà conforme" "le script reconnaît la règle sudo déjà conforme"
     noter complet_apres; assert_empreinte "$complet_avant" "$complet_apres" egal "l'appel complet rejoué ne modifie rien — /etc/sudoers.d compris"
 fi
 
@@ -216,11 +247,15 @@ else
     noter dry_avant; lancer bash "$CIBLE" --utilisateur "$COMPTE_DRY" --cle-fichier "$CLE" --groupe "$GROUPE" --sudo-sans-mot-de-passe --dry-run
     assert_code 0 "$CODE" "--dry-run sort en 0"
     apercu=""; if ! apercu="$(erreur)"; then apercu=""; fi
-    assert_contient "$apercu" "[dry-run] useradd --create-home --shell /bin/bash $COMPTE_DRY" "--dry-run annonce la création du compte"; assert_contient "$apercu" "[dry-run] usermod --append --groups $GROUPE $COMPTE_DRY" "--dry-run annonce l'ajout au groupe"
-    assert_contient "$apercu" "[dry-run] usermod --append --groups sudo $COMPTE_DRY" "--dry-run annonce l'ajout au groupe sudo"; assert_contient "$apercu" "[dry-run] Déposerait $SUDOERS_DRY" "--dry-run annonce la règle sudoers"
-    assert_contient "$apercu" "[dry-run] Ajouterait la clé ssh-ed25519" "--dry-run annonce le dépôt de la clé"; assert_contient "$apercu" "aucune modification effectuée" "--dry-run annonce n'avoir rien modifié"
+    assert_contient "$apercu" "[dry-run] useradd --create-home --shell /bin/bash $COMPTE_DRY" "--dry-run annonce la création du compte"
+    assert_contient "$apercu" "[dry-run] usermod --append --groups $GROUPE $COMPTE_DRY" "--dry-run annonce l'ajout au groupe"
+    assert_contient "$apercu" "[dry-run] usermod --append --groups sudo $COMPTE_DRY" "--dry-run annonce l'ajout au groupe sudo"
+    assert_contient "$apercu" "[dry-run] Déposerait $SUDOERS_DRY" "--dry-run annonce la règle sudoers"
+    assert_contient "$apercu" "[dry-run] Ajouterait la clé ssh-ed25519" "--dry-run annonce le dépôt de la clé"
+    assert_contient "$apercu" "aucune modification effectuée" "--dry-run annonce n'avoir rien modifié"
     ordre "useradd --create-home" "usermod --append --groups $GROUPE" "--dry-run annonce la création du compte avant l'ajout aux groupes"
-    ordre "usermod --append --groups sudo" "Déposerait $SUDOERS_DRY" "--dry-run annonce l'appartenance sudo avant la règle NOPASSWD"; ordre "Déposerait $SUDOERS_DRY" "Ajouterait la clé" "--dry-run annonce la règle sudoers avant le dépôt de la clé"
+    ordre "usermod --append --groups sudo" "Déposerait $SUDOERS_DRY" "--dry-run annonce l'appartenance sudo avant la règle NOPASSWD"
+    ordre "Déposerait $SUDOERS_DRY" "Ajouterait la clé" "--dry-run annonce la règle sudoers avant le dépôt de la clé"
     assert_compte_absent "$COMPTE_DRY" "--dry-run ne crée aucun compte"
     absent "/home/$COMPTE_DRY" "--dry-run ne crée aucun répertoire personnel"
     absent "$SUDOERS_DRY" "--dry-run ne dépose aucune règle sudoers"
@@ -228,21 +263,34 @@ else
 fi
 
 titre "9. Dépôt de clé — saut de ligne final, liens symboliques, modes"
-if [ "$MODIFIANT" != "oui" ] || [ ! -f "$AUTORISE" ]; then saute "le saut de ligne final, les liens symboliques et les modes" "$MODIFIANT sans création préalable"
+if [ "$MODIFIANT" != "oui" ] || [ ! -f "$AUTORISE" ]; then
+    saute "le saut de ligne final, les liens symboliques et les modes" "$MODIFIANT sans création préalable"
 else
     # authorized_keys sans saut de ligne final : la clé suivante ne doit pas se coller à la dernière ligne.
     printf '%s' "$(head -n 1 "$AUTORISE")" > "$AUTORISE"
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --cle-fichier "$SECONDE"; assert_code 0 "$CODE" "le dépôt sur un fichier sans saut de ligne final sort en 0"
-    assert_egal "2" "$(grep -c '^ssh-ed25519' "$AUTORISE")" "les deux clés occupent chacune leur ligne"; assert_contient "$(cat "$AUTORISE")" "seconde@mgnet" "la seconde clé est bien déposée"
-    # ~/.ssh ou authorized_keys en lien symbolique : root écrirait à travers, vers un fichier choisi par l'utilisateur.
+    assert_egal "2" "$(grep -c '^ssh-ed25519' "$AUTORISE")" "les deux clés occupent chacune leur ligne"
+    assert_contient "$(cat "$AUTORISE")" "seconde@mgnet" "la seconde clé est bien déposée"
+    # authorized_keys en lien symbolique : root écrirait à travers, vers un fichier choisi par l'utilisateur.
     mv "$AUTORISE" "$REP_TMP/vrai_autorise"; ln -s "$REP_TMP/vrai_autorise" "$AUTORISE"
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --cle-fichier "$SECONDE"; assert_code 1 "$CODE" "un authorized_keys en lien symbolique est refusé en 1"
     assert_contient "$(erreur)" "lien symbolique" "le refus nomme le lien symbolique"
     rm -f "$AUTORISE"; mv "$REP_TMP/vrai_autorise" "$AUTORISE"
+    # ~/.ssh lui-même en lien symbolique : même refus, et la cible du lien reste intacte.
+    cible_ssh="$REP_TMP/vrai_ssh"; mv "$COMPTE_HOME/.ssh" "$cible_ssh"
+    ln -s "$cible_ssh" "$COMPTE_HOME/.ssh"
+    empreinte_cible=""; if ! empreinte_cible="$(cksum < "$cible_ssh/authorized_keys")"; then empreinte_cible=""; fi
+    lancer bash "$CIBLE" --utilisateur "$COMPTE" --cle-fichier "$SECONDE"
+    assert_code 1 "$CODE" "un ~/.ssh en lien symbolique est refusé en 1"
+    assert_contient "$(erreur)" "lien symbolique" "le refus de ~/.ssh nomme le lien symbolique"
+    assert_egal "$empreinte_cible" "$(cksum < "$cible_ssh/authorized_keys")" "la cible du lien ~/.ssh reste intacte"
+    assert_egal "2" "$(grep -c '^ssh-ed25519' "$cible_ssh/authorized_keys")" "la cible garde ses deux clés"
+    rm -f "$COMPTE_HOME/.ssh"; mv "$cible_ssh" "$COMPTE_HOME/.ssh"
     # sshd refuse silencieusement une clé mal protégée : le mode est corrigé.
     chmod 0755 "$COMPTE_HOME/.ssh"; chmod 0644 "$AUTORISE"
     lancer bash "$CIBLE" --utilisateur "$COMPTE" --cle-fichier "$SECONDE"; assert_code 0 "$CODE" "un mode trop permissif ne fait pas échouer l'exécution"
-    assert_egal "700 $COMPTE" "$(stat -c '%a %U' "$COMPTE_HOME/.ssh")" "le mode de .ssh est corrigé"; assert_egal "600 $COMPTE" "$(stat -c '%a %U' "$AUTORISE")" "le mode de authorized_keys est corrigé"
+    assert_egal "700 $COMPTE" "$(stat -c '%a %U' "$COMPTE_HOME/.ssh")" "le mode de .ssh est corrigé"
+    assert_egal "600 $COMPTE" "$(stat -c '%a %U' "$AUTORISE")" "le mode de authorized_keys est corrigé"
 fi
 
 bilan "TASK-025 / manage-users.sh"

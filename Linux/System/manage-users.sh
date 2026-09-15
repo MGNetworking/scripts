@@ -23,10 +23,10 @@ Usage : manage-users.sh --utilisateur <nom> [options]
   --dry-run                  énumère les actions, sans rien modifier
   -h, --help                 cette aide
 Défauts : SRV_ADMIN_UTILISATEUR, SRV_ADMIN_CLE_PUBLIQUE (config/server.env).
-Ce que ce script ne fait pas : mot de passe (définir, lire, générer, demander), paire de
-clés, suppression ou verrouillage d'un compte, création d'un groupe, installation de sudo.
-Sans --sudo-sans-mot-de-passe, sudo réclame le mot de passe : tant que « passwd <utilisateur> »
-n'a pas été exécuté, l'élévation interactive est refusée.
+Ce que ce script ne fait pas : définir, lire, générer ou demander un mot de passe,
+fabriquer une paire de clés, supprimer ou verrouiller un compte, créer un groupe,
+installer sudo. Sans --sudo-sans-mot-de-passe, sudo réclame le mot de passe : tant
+que « passwd <utilisateur> » n'a pas été exécuté, l'élévation interactive est refusée.
 Codes : 0 conforme ; 1 prérequis manquant, rien modifié ; 2 usage refusé.
 AIDE
 }
@@ -144,7 +144,7 @@ success "Compte prêt : $UTILISATEUR — shell $(getent passwd "$UTILISATEUR" | 
 info "Vérifier la connexion : ssh $UTILISATEUR@$(uname -n)"
 if [ -z "$CLE_FICHIER" ]; then warn "Aucune clé publique fournie : --cle-fichier reste à faire avant de durcir SSH."; fi
 if [ "$SUDO_NOPASSWD" != "true" ]; then
-    info "Avant de durcir SSH : « passwd $UTILISATEUR » — sans mot de passe, sudo refuse l'élévation"
-    info "interactive. Sinon, relancer avec --sudo-sans-mot-de-passe."
+    info "Avant de durcir SSH : « passwd $UTILISATEUR » — sans mot de passe, sudo refuse"
+    info "l'élévation interactive. Sinon, relancer avec --sudo-sans-mot-de-passe."
 fi
 info "Étape suivante : Linux/Security/configure-ssh.sh, puis disable-root-login.sh."
