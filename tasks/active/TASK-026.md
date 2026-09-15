@@ -43,7 +43,7 @@ validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
   - "tests/env/run-in-container.sh -- tests/run.sh integration"
   - "tests/env/run-in-container.sh -- bash Linux/System/reboot-system.sh --help"
-  - "tests/env/run-in-container.sh -- bash Linux/System/reboot-system.sh --dry-run --yes"
+  - "tests/env/run-in-container.sh --profil systemd -- bash Linux/System/reboot-system.sh --dry-run --yes"
 implementation_notes:
   - decisions.md décision 2 — un script destructif s'écrit et s'exécute quand même, parce qu'il ne s'exécute que dans un conteneur jetable ; orchestration/regles.md §7 ne change pas
   - le profil debian n'a pas systemctl — le chemin nominal y est inatteignable par accident, et c'est une propriété à conserver
