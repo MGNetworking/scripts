@@ -20,7 +20,8 @@ out_of_scope:
   - toute ouverture non demandée par SRV_FIREWALL_PORTS ou --port
 acceptance_criteria:
   - root requis (1) ; cibles de la décision 14 ; ufw installé par apt-get s'il manque
-  - la règle du port SSH (SRV_SSH_PORT, défaut 22) est posée et vérifiée dans « ufw status » avant « ufw enable » ; absente, refus en 1 sans activer
+  - la règle du port SSH (SRV_SSH_PORT, défaut 22) est posée EN PREMIER, avant toute commande « default », puis vérifiée dans « ufw show added » (lisible même ufw inactif) avant « ufw enable » ; absente, refus en 1 sans activer
+  - le port d’écoute réel de sshd (« sshd -T » ou « ss -tlnp ») est comparé à SRV_SSH_PORT ; s’ils diffèrent, refus en 1 sans rien modifier
   - politiques deny incoming et allow outgoing ; chaque port de SRV_FIREWALL_PORTS ou de --port (forme 443/tcp) est autorisé ; une valeur mal formée rend 2
   - une règle déjà présente n'est pas reposée ; une seconde exécution ne change rien et le dit
   - le résumé est confirmé ; --yes seul le confirme (ASSUME_YES remise à false avant les options, décision 45) ; sans terminal ni --yes, refus en 1
