@@ -173,7 +173,8 @@ vise les agents ou l'architecture devient en plus une fiche TASK ; urgente, elle
 en tête (`priority: high`).
 
 **Mode d'enchaînement** : `orchestration/mode.json` — `automatique` ou `manuel`
-(décision 46).
+(décision 46, amendée le 2026-09-16) : en automatique, la session enchaîne les tâches
+sans vidage, un sous-agent `conducteur-tache` par tâche.
 
 ## 18. Cycle de vie
 

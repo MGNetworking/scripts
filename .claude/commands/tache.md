@@ -7,6 +7,27 @@ Tu es l'**orchestrateur** de la tâche **$1**. Tu n'écris pas le script : un
 agent le fait (orchestration/README.md). Toi, tu prépares, tu lances, tu vérifies, tu relis et
 tu fusionnes. Suis les étapes dans l'ordre.
 
+## 0. Répartition — une session qui dure, un conducteur par tâche
+
+Décision 46 amendée : la session ne se vide plus. Le contexte lourd d'une tâche
+(fiche, règles, diffs, sorties de tests) vit dans un sous-agent **`conducteur-tache`**
+neuf, qui disparaît à la clôture ; la session ne garde que ses résumés. Un
+sous-agent ne peut ni lancer un autre sous-agent, ni attendre un processus d'une
+heure : ces deux gestes restent à la session.
+
+| Étape | Qui | Comment |
+|---|---|---|
+| 1-3, et 4 si `agent: orchestrateur` | conducteur | Agent `conducteur-tache` : « préparer $1 » (ou « préparer la suivante ») |
+| 4, lancement d'un agent | session | `lancer-agent.sh` en arrière-plan |
+| 5 | conducteur | SendMessage au **même** conducteur : « vérifier » |
+| 6, relecture et ligne `relecteur` | session | sous-agent `relecteur` ; ses défauts transmis au conducteur (« retours »), qui écrit le fichier de retours ; relance par la session, puis « vérifier » |
+| 7-8 | conducteur | SendMessage : « clore » |
+| 9 | session | enchaîner |
+
+Chaque retour de conducteur ajoute une ligne `conducteur` à `agents.tsv`, même
+format que la ligne `relecteur` de l'étape 6. Un conducteur qui rend `BESOIN_USER`
+arrête la boucle : la session pose sa question à `user`, telle quelle.
+
 ## 1. Charger le contexte
 
 - lis `orchestration/regles.md` et la fiche `$1` dans `tasks/pending/` ou `tasks/blocked/` ;
@@ -142,16 +163,17 @@ ni de `push --force`. `git status` final.
 
 ## 9. Résumer et enchaîner
 
-Quelques lignes : fait, prouvé, en suspens, prochaine tâche prête. Puis lis
-`orchestration/mode.json` :
+Quelques lignes, reprises du résumé du conducteur : fait, prouvé, en suspens,
+prochaine tâche prête. Aucun vidage (décision 46 amendée) : ne garde de la tâche
+que ce résumé, jamais les diffs ni les sorties. Puis lis `orchestration/mode.json` :
 
-- **dans tous les cas, vide le contexte** après la clôture (`clear_session` sur
-  `self`) — exigence de `user` (décision 46). Annonce d'abord, en une ligne, la
-  prochaine tâche prête : le vidage arrête la session, et rien ne peut la relancer ;
-- **`automatique`** : `user` écrit « reprends », et tu repars de l'étape 1 sur la
+- **`automatique`** : relance aussitôt l'étape 1 avec un conducteur **neuf** sur la
   tâche `ready` suivante, tous domaines confondus, urgentes d'abord, sans rien
-  demander ;
+  demander et sans attendre de message de `user` ;
 - **`manuel`** : tu attends une consigne explicite de `user`.
+
+La boucle s'arrête d'elle-même sur : aucune tâche `ready`, tâche `blocked`,
+plafond atteint, `BESOIN_USER`, ou `mode` passé à `manuel`.
 
 Quand `user` demande l'arrêt du mode automatique, écris `"mode": "manuel"` dans le
 fichier, termine la tâche en cours, puis arrête-toi.

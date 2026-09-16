@@ -225,3 +225,12 @@ suivante ; en manuel, l'orchestrateur attend une consigne. `user` bascule le mod
 Chaque rapport de tâche commence par un compte rendu écrit comme dans la
 conversation. Une correction liée à la tâche s'y fait ; une correction liée aux
 agents ou à l'architecture devient une fiche TASK, en tête si elle est urgente.
+
+**Avenant du 2026-09-16 (TASK-049), validé par `user`** : le vidage est supprimé.
+Il arrêtait la session et imposait un « reprends » par tâche. La session
+orchestratrice dure ; chaque tâche est conduite par un sous-agent
+`conducteur-tache` neuf, qui porte le contexte lourd et ne rend que des résumés
+de 30 lignes au plus. La session garde le lancement des agents et la relecture,
+qu'un sous-agent ne peut pas faire. En automatique, elle enchaîne la tâche prête
+suivante sans message de `user` ; blocage, plafond, question ouverte ou passage en
+manuel l'arrêtent. La compaction automatique de Claude Code borne ce qui reste.
