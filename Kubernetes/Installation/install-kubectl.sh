@@ -40,8 +40,7 @@ while [ "${1:-}" != "" ]; do
     esac
 done
 
-# require_cmd n'est pas employé pour kubectl : son message ne dit pas où K3s le
-# pose, et c'est justement ce qu'un kubectl absent doit apprendre.
+# require_cmd ne dit pas où K3s pose kubectl : c'est ce qu'un kubectl absent doit apprendre.
 if ! command -v kubectl >/dev/null 2>&1; then
     error "kubectl est introuvable dans le PATH."
     error "K3s le pose lui-même : voir Linux/K3s/install-k3s.sh."
@@ -52,9 +51,7 @@ require_cmd timeout
 TEMPORAIRE="$(mktemp -d)" || die "Répertoire temporaire indisponible."
 trap 'rm -rf "$TEMPORAIRE"' EXIT
 
-# Renseigne REP, ERREUR et CODE, et ne rend jamais de code non nul : un échec de
-# kubectl est une donnée, que l'appelant nomme. Un retour non nul tuerait le
-# script sur set -e avant qu'il ait pu dire la cause.
+# Renseigne REP, ERREUR et CODE sans rendre non nul : un échec de kubectl est une donnée.
 REP=""; ERREUR=""; CODE=0
 lire() {
     CODE=0
@@ -62,15 +59,15 @@ lire() {
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
 }
 
-# Traduit l'échec d'un appel, la sortie d'erreur de kubectl comprise — montrée
-# seulement là. Le 124 vient de « timeout », pas de kubectl : le dire
-# « injoignable » accuserait le cluster à tort.
+# Traduit l'échec d'un appel ; le 124 vient de « timeout », pas de kubectl : le dire « injoignable » accuserait le cluster.
 echec() {
     local appel="$1"
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
     case "$CODE:$ERREUR" in
         124:*)       die "L'appel $appel a été interrompu : délai dépassé (${DELAI} s)." ;;
         *Forbidden*) die "Droits insuffisants : $appel a été refusé par le cluster." ;;
+        *Unauthorized*|*x509*|*"error loading config file"*)   # passe avant « Unable to connect »
+                     die "Kubeconfig invalide ou périmé : $appel a été refusé." ;;
         *"was refused"*|*"Unable to connect"*|*"no route to host"*)
                      die "L'apiserver est injoignable : $appel a échoué." ;;
     esac
@@ -94,26 +91,28 @@ lire version --client -o json
 V_CLIENT="$(version_de clientVersion "$REP")"
 [ -n "$V_CLIENT" ] || die "La version du client est absente de la sortie de kubectl."
 printf '  %s\n' "$V_CLIENT"
-# KUBECONFIG peut porter plusieurs chemins séparés par « : » : le premier lisible suffit.
-DERNIER=""
+# KUBECONFIG : plusieurs chemins séparés par « : », entrées vides comprises ; la valeur entière est citée à l'échec.
+KC_TROUVE=""; KC_CAUSE="absent"
 kubeconfig_lisible() {
     local chemin; local -a chemins; IFS=':' read -r -a chemins <<<"$1"
-    for chemin in "${chemins[@]}"; do DERNIER="$chemin"; [ -f "$chemin" ] && [ -r "$chemin" ] && return 0; done
+    for chemin in "${chemins[@]}"; do
+        if [ -f "$chemin" ] && [ -r "$chemin" ]; then KC_TROUVE="$chemin"; KC_CAUSE=""; return 0; fi
+        [ -e "$chemin" ] && KC_CAUSE="illisible"   # un dossier, ou un fichier en 0000
+    done
     return 1
 }
 printf '\nKubeconfig\n'
 if [ -n "${KUBECONFIG:-}" ]; then
-    kubeconfig_lisible "$KUBECONFIG" || {
-        # Un chemin illisible et un chemin absent n'ont pas la même cause.
-        [ -e "$DERNIER" ] && die "KUBECONFIG désigne un chemin illisible : $DERNIER"
-        die "KUBECONFIG désigne un chemin absent : $DERNIER"
-    }
-    printf '  %s (KUBECONFIG)\n' "$DERNIER"
+    kubeconfig_lisible "$KUBECONFIG" || die "KUBECONFIG désigne un chemin $KC_CAUSE : $KUBECONFIG"
+    printf '  %s (KUBECONFIG)\n' "$KC_TROUVE"
 else
     KC="${HOME:-}/.kube/config"
     if [ ! -f "$KC" ] || [ ! -r "$KC" ]; then
         info "Aucun kubeconfig : ni KUBECONFIG défini, ni $KC. Copiez celui de K3s :"
-        info "  install -d -m 0700 ~/.kube && sudo install -m 0600 /etc/rancher/k3s/k3s.yaml ~/.kube/config"
+        # Le $(id -u) est à recopier tel quel : c'est le compte qui l'exécutera qui l'évalue.
+        # shellcheck disable=SC2016
+        info '  install -d -m 0700 ~/.kube && sudo install -o "$(id -u)" -g "$(id -g)" -m 0600 /etc/rancher/k3s/k3s.yaml ~/.kube/config'
+        info "127.0.0.1 dans k3s.yaml ne vaut que sur le nœud : depuis un poste distant, y mettre l'adresse du serveur."
         die "Sans kubeconfig, kubectl ne peut pas joindre le cluster."
     fi
     printf '  %s\n' "$KC"
@@ -133,9 +132,10 @@ V_SERVEUR="$(version_de serverVersion "$REP")"
 [ -n "$V_SERVEUR" ] || die "La version du serveur est absente de la sortie de kubectl."
 printf '  client %s, serveur %s\n' "$V_CLIENT" "$V_SERVEUR"
 
-mineure() {   # v1.31.4+k3s1 -> 1.31 ; échoue si la forme n'est pas reconnue
-    local v="${1#v}"; v="${v%%+*}"
-    case "$v" in [0-9]*.[0-9]*) printf '%s' "${v%.*}" ;; *) return 1 ;; esac
+mineure() {   # v1.31.4+k3s1 et v1.31.0-rc.1 -> 1.31 ; toute autre forme échoue
+    local v="${1%%+*}"; v="${v%%-*}"
+    [[ "$v" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+$ ]] || return 1
+    printf '%s.%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
 }
 # Écart admis entre client et serveur : une version mineure (décision 48). Le majeur
 # entre dans le calcul ; l'écart n'est qu'un avertissement, jamais un échec.
@@ -144,7 +144,7 @@ if MC="$(mineure "$V_CLIENT")" && MS="$(mineure "$V_SERVEUR")"; then
     [ "$ECART" -ge 0 ] || ECART=$(( -ECART ))
     [ "$ECART" -le 1 ] || warn "Écart de versions : client $V_CLIENT, serveur $V_SERVEUR — plus d'une version mineure."
 else
-    warn "Écart de versions non vérifié : « $V_CLIENT » ou « $V_SERVEUR » n'a pas la forme v<majeur>.<mineure>."
+    warn "Écart de versions non vérifié : « $V_CLIENT » ou « $V_SERVEUR » n'a pas la forme v<majeur>.<mineure>.<correctif>."
 fi
 
 success "kubectl $V_CLIENT est présent et le cluster répond — serveur $V_SERVEUR."
