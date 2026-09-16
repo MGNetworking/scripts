@@ -51,7 +51,7 @@ CHEMIN="$BAC:$PATH"
 mkdir -p "$BAC/home/.kube"
 printf '%s\n' "JETON-A-NE-PAS-AFFICHER" > "$KUBECONF"
 CODE=0; codes=""; sortie=""
-lancer() { sortie="$(HOME="$FOYER" KUBECONFIG="$KC" PATH="$CHEMIN" bash "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
+lancer() { sortie="$(HOME="$FOYER" KUBECONFIG="$KC" PATH="$CHEMIN" bash "$CIBLE" 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
 
 titre "Codes d'usage"
 sortie="$(bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
@@ -126,9 +126,14 @@ assert_absent  "$sortie" "[SUCCESS]" "sans [SUCCESS]"
 
 titre "Délai dépassé — « timeout » enveloppe l'appel"
 cluster_sain
-# Un faux « timeout » qui n'intercepte que « get nodes » et rend 124 comme le vrai :
-# l'attente réelle serait de sept secondes.
-printf '#!/bin/sh\ncase "$*" in *" get nodes "*) printf "%%s\\n" "$*" >> "$BAC/timeout-appels"; exit 124 ;; *) exec %s "$@" ;; esac\n' "$REEL_TIMEOUT" > "$BAC/timeout"
+# Un faux « timeout » : « get nodes » rend 124 comme le vrai, sans les 7 s d'attente.
+cat > "$BAC/timeout" <<EOF
+#!/bin/sh
+case "\$*" in
+    *" get nodes "*) printf '%s\n' "\$*" >> "$BAC/timeout-appels"; exit 124 ;;
+    *) exec $REEL_TIMEOUT "\$@" ;;
+esac
+EOF
 chmod +x "$BAC/timeout"; : > "$BAC/timeout-appels"
 lancer
 rm -f "$BAC/timeout"

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Vérifie kubectl, en lecture seule : rien n'est installé, rien n'est écrit hors
-# journal, aucun kubeconfig ouvert ni affiché. K3s pose kubectl et son k3s.yaml
-# en 0600 ; ce script constate, et explique la copie à faire si elle manque.
+# Vérifie kubectl en lecture seule : rien n'est installé ni écrit hors journal,
+# aucun kubeconfig ouvert. K3s pose kubectl et son k3s.yaml en 0600.
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
@@ -53,12 +52,14 @@ require_cmd timeout
 TEMPORAIRE="$(mktemp -d)" || die "Répertoire temporaire indisponible."
 trap 'rm -rf "$TEMPORAIRE"' EXIT
 
+# Renseigne REP, ERREUR et CODE, et ne rend jamais de code non nul : un échec de
+# kubectl est une donnée, que l'appelant nomme. Un retour non nul tuerait le
+# script sur set -e avant qu'il ait pu dire la cause.
 REP=""; ERREUR=""; CODE=0
 lire() {
     CODE=0
     REP="$(timeout "$((DELAI + MARGE))" kubectl "$@" --request-timeout="${DELAI}s" 2>"$TEMPORAIRE/erreur")" || CODE=$?
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
-    return "$CODE"
 }
 
 # Traduit l'échec d'un appel, la sortie d'erreur de kubectl comprise — montrée
@@ -73,8 +74,7 @@ echec() {
         *"was refused"*|*"Unable to connect"*|*"no route to host"*)
                      die "L'apiserver est injoignable : $appel a échoué." ;;
     esac
-    # Posé hors de l'expansion : une apostrophe dans ${2:-…} vaut SC1011.
-    die "${2:-L'apiserver n'a pas répondu : $appel a échoué.}"
+    die "L'apiserver n'a pas répondu : $appel a échoué."
 }
 
 # Rend le gitVersion du bloc demandé — clientVersion ou serverVersion —, vide s'il est absent.
