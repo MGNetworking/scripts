@@ -1,7 +1,7 @@
 ---
 id: TASK-056
 title: "Écrire Kubernetes/Maintenance/pods-status.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
