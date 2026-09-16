@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A51**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A56**.
 
 ## Registre
 
@@ -100,6 +100,11 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A48 | P2 | `configure-ssh.sh` n'est prouvé qu'avec de faux `sshd` et `systemctl` : jamais exécuté sur une machine réelle ; l'effet réel n'est pas relu par `sshd -T` — un `PasswordAuthentication yes` placé dans `sshd_config` avant la ligne `Include`, ou un fichier `sshd_config.d/0x-*.conf` lu avant `10-mgnetworking.conf`, l'emporterait sans signal ; la version corrigée n'a pas été relue par Opus | TASK-046 | à éprouver sur une VM jetable, session SSH ouverte ; envisager le contrôle `sshd -T` que TASK-047 prévoit pour `permitrootlogin` |
 | [ ] | A49 | P3 | `configure-ssh.sh --dry-run` lancé sans root ne peut pas lire `~compte/.ssh/authorized_keys` et répond « Aucune clé publique », ce qui est faux | relecture TASK-046 | distinguer « illisible » d'« absent » en dry-run |
 | [ ] | A50 | P3 | `configure-ssh.test.sh` : 274 lignes (cible 150) ; deux cas redondants — `ASSUME_YES` hérité sans terminal (bloqué par `[ -t 0 ]` quoi qu'il arrive) et « Port absent » (couvert par l'égalité exacte du dépôt) — et rien ne vérifie que `sshd_config` reste intact | relecture TASK-046 | resserrer lors d'une passe de sobriété |
+| [ ] | A51 | P2 | `disable-root-login.sh` juge la conformité au seul contenu de `05-mgnetworking-root.conf` (l. 100, 113) : si un `PermitRootLogin yes` est ajouté plus tard dans `sshd_config` avant la ligne `Include`, la relance rend 0 « déjà conforme » sans repasser par `sshd -T`, alors que root peut se connecter | relecture TASK-047 | contrôler `sshd -T` aussi quand le fichier est déjà conforme |
+| [ ] | A52 | P3 | `disable-root-login.sh` appelle `sshd -T` sans `-C` (l. 138) : un bloc `Match` qui rétablit `PermitRootLogin yes` pour une adresse ou un utilisateur passe inaperçu | relecture TASK-047 | vérifier aussi les blocs `Match` présents, ou le signaler |
+| [ ] | A53 | P4 | `disable-root-login.test.sh` (l. 125-128) : le cas `ASSUME_YES` hérité avec terminal ne vérifie pas qu'aucun fichier n'est déposé après la réponse « n » | relecture TASK-047 | ajouter l'assertion d'absence du dépôt |
+| [ ] | A54 | P4 | `disable-root-login.sh` : messages trop longs aux l. 72 et 141 | relecture TASK-047 | raccourcir lors d'une passe de sobriété |
+| [ ] | A55 | P2 | `disable-root-login.test.sh` : le faux `sshd -T` rend une valeur imposée sans lire le fichier déposé, donc l'ordre de priorité (préfixe 05, directive placée avant l'`Include`) n'est jamais éprouvé — rejoint A48 ; le cas sans terminal (l. 123) ne prouve pas la décision 45, seul le cas « script » la prouve | relecture TASK-047 | éprouver sur une VM jetable avec le vrai sshd, session SSH ouverte (comme A48) |
 
 ## Suivi, pas des défauts
 

@@ -29,6 +29,7 @@ dans la conversation : TASK-045 l'a perdu.
 | TASK-045 `configure-firewall.sh` | peut couper SSH | agent `deepseek` + orchestrateur | 3/3 | 84 | 183 + 220 → 168 + 285 | 0,255 $, 2 lancements | Opus, non relevé | 1 bloquant (ufw inactif muet sur ses règles), 3 majeurs, 2 mineurs corrigés ; exigence IPv6 erronée retirée après mesure sur le vrai ufw |
 | TASK-043 `security-check.sh` | lecture seule, cron | agent `deepseek` | 3/3 | 86 | 150 + 150 → 150 + 168 | 0,323 $, 2 lancements | Opus 24 942 | 1 majeur (sortie ufw traduite) et 5 mineurs corrigés |
 | TASK-040 sobriété `manage-users` | refonte sans changement | agent `deepseek` | 3/3 | 138 | 179 + 419 → 150 + 296 | 0,276 $, 2 lancements | Opus 35 683 | 2 messages rétablis, 5 trous de test comblés |
+| TASK-047 `disable-root-login.sh` | peut couper SSH | agent `deepseek` | 3/3 | 92 | 150 + 140 | 0,116 $, 1 lancement | Opus 29 930 | fusionnable au premier jet, aucun défaut corrigé ; 5 mineurs laissés : réserves A51-A55 ; premier conducteur-tache (TASK-049) |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.
