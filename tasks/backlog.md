@@ -80,7 +80,7 @@ de ce que cet ADR a tranché.
 | [TASK-058](completed/TASK-058.md) | Écrire `Kubernetes/Maintenance/diagnostics.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-059](completed/TASK-059.md) | Écrire `Kubernetes/Maintenance/resource-usage.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-060](completed/TASK-060.md) | Écrire `Kubernetes/Maintenance/backup-resources.sh` | `completed` | moyenne | — | conteneur `debian` | non |
-| [TASK-061](pending/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-061](active/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | `in_progress` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-062](pending/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-063](pending/TASK-063.md) | Écrire `Kubernetes/Installation/install-helm.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-064](pending/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | `pending` | moyenne | 062 | conteneur `debian` | non |
@@ -292,7 +292,7 @@ Découpé en trois lots (plus de sept scripts), tous atomisés le 2026-09-16.
 
 | Lot | Fiches | Note |
 |---|---|---|
-| Maintenance — plan §7 | [TASK-055](completed/TASK-055.md) à [TASK-061](pending/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; décision 48 |
+| Maintenance — plan §7 | [TASK-055](completed/TASK-055.md) à [TASK-061](active/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; décision 48 |
 | Installation — plan §5 | [TASK-062](pending/TASK-062.md) à [TASK-066](pending/TASK-066.md) | vérification seule de kubectl, Traefik et metrics-server ; décision 48 |
 | Configuration — plan §6 | [TASK-067](pending/TASK-067.md) à [TASK-071](pending/TASK-071.md) | secrets du registry hors dépôt ; décision 48 |
 
