@@ -1,7 +1,7 @@
 ---
 id: TASK-059
 title: "Écrire Kubernetes/Maintenance/resource-usage.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian
