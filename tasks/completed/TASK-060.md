@@ -1,7 +1,7 @@
 ---
 id: TASK-060
 title: "Écrire Kubernetes/Maintenance/backup-resources.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian
