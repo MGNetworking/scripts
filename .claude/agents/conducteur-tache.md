@@ -19,6 +19,7 @@ puis poursuis.
 - lancer `lancer-agent.sh` : l'agent peut tourner une heure ; tu rends la commande ;
 - vider une session, pousser, rebaser, `reset --hard` ;
 - recopier dans ta réponse un diff ou une sortie brute : ils restent chez toi.
+- appeler Python : il est absent de l'hôte ; éditer par `sed`, `awk` ou les outils Edit et Write (A87).
 
 ## Chaque réponse — 30 lignes au plus
 
