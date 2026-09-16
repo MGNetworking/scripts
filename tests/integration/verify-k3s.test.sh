@@ -127,7 +127,7 @@ cluster_sain
 rm -f "$BAC/nodes" "$BAC/pods" "$BAC/namespaces" "$BAC/events"
 lancer
 assert_code 1 "$CODE" "un k3s qui ne rend rien rend 1"
-assert_contient "$sortie" "l'API du cluster ne répond pas" "le verdict nomme l'API, pas le shell"
+assert_contient "$sortie" "API du cluster ne répond pas" "le verdict nomme l'API, pas le shell"
 
 titre "Root requis"
 cluster_sain
@@ -141,7 +141,7 @@ titre "Codes d'usage"
 bash "$CIBLE" --help > "$BAC/help" 2>&1 && code=0 || code=$?
 assert_code 0 "$code" "--help rend 0"
 assert_contient "$(cat "$BAC/help")" "Codes de retour"    "--help documente les codes de retour"
-assert_contient "$(cat "$BAC/help")" "Événements Warning" "--help nomme les rubriques"
+assert_contient "$(cat "$BAC/help")" "événements Warning" "--help nomme les rubriques"
 assert_contient "$(cat "$BAC/help")" "k3s kubectl"        "--help dit par où passent les commandes"
 bash "$CIBLE" --option-qui-nexiste-pas >/dev/null 2>&1 && code=0 || code=$?
 assert_code 2 "$code" "une option inconnue rend 2"

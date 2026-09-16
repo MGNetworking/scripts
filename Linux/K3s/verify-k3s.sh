@@ -101,9 +101,12 @@ fi
 
 rubrique "Pods (tous les namespaces)" kubectl_lire get pods -A --no-headers
 if [ -n "$REP" ]; then
-    while read -r espace nom pret etat reste; do
+    # Un pod de Job achevé porte la phase Succeeded, que kubectl affiche
+    # « Completed » : le compter comme anormal ferait échouer tout cluster
+    # qui exécute des tâches planifiées.
+    while read -r espace nom _ etat _; do
         [ -n "$nom" ] || continue
-        case "$etat" in Running|Succeeded) ;; *) ANOMALIES="$ANOMALIES pod $espace/$nom ($etat);" ;; esac
+        case "$etat" in Running|Succeeded|Completed) ;; *) ANOMALIES="$ANOMALIES pod $espace/$nom ($etat);" ;; esac
     done <<<"$REP"
 fi
 
