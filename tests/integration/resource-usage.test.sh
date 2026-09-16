@@ -24,7 +24,7 @@ printf '%s\n' "$*" | tee -a "$BAC/appels" >> "$BAC/tous"
 [ "$1" = top ] && [ "${KUBECTL_METRIQUES:-1}" != 1 ] && { echo "error: Metrics API not available" >&2; exit 1; }
 [ "$1" = top ] && [ "$2" = pods ] && [ "${KUBECTL_PODS_KO:-0}" = 1 ] && { echo "error: unable to retrieve metrics for pods" >&2; exit 1; }
 fic="$BAC/$1-$2"
-[ -e "$fic" ] || { echo "error: the server doesn't have a resource type \"$2\"" >&2; exit 1; }
+[ -e "$fic" ] || { echo "Error from server (NotFound): the server could not find the requested resource" >&2; exit 1; }
 [ -s "$fic" ] || { echo "No resources found" >&2; exit 0; }
 cat "$fic"
 EOF
@@ -34,7 +34,7 @@ for outil in k3s systemctl; do printf '#!/bin/sh\ntouch "%s/%s-appele"\n' "$BAC"
 CODE=0; sortie=""
 # Chaque lancer repart d'un journal vierge : « appels » ne porte que sur le cas.
 lancer() { : > "$BAC/appels"; sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?; }
-avec() { local v="$1"; shift; export "$v"; lancer "$@"; unset "${v%%=*}"; }
+avec() { local v="$1"; shift; export "${v?}"; lancer "$@"; unset "${v%%=*}"; }
 
 # Formes réelles : « kubectl top » rend un tableau à en-tête, « describe nodes »
 # les blocs Capacity: et Allocatable:, indentés de deux espaces.
@@ -79,7 +79,7 @@ appels="$(cat "$BAC/appels")"
 assert_code 0 "$CODE" "avec métriques, le relevé rend 0"
 assert_contient "$sortie" "[SUCCESS]" "et il le dit en [SUCCESS]"
 assert_contient "$sortie" "node-1   120m" "le CPU et la mémoire du nœud sont affichés tels quels"
-assert_contient "$sortie" "web-1   12m" "ceux des pods aussi"
+assert_contient "$sortie" "web-1         12m" "ceux des pods aussi"
 assert_contient "$appels" "top nodes --no-headers" "« kubectl top nodes » est demandé"
 assert_contient "$appels" "top pods -A --no-headers" "puis « kubectl top pods » sur tous les namespaces"
 assert_contient "$(head -1 "$BAC/appels")" "get nodes" "la sonde de l'apiserver ouvre le relevé, avant « top »"
