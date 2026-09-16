@@ -100,17 +100,17 @@ etat_neuf; printf 'toor:x:0:0::/root:/bin/bash\n' > "$PASSWD_FACTICE"
 lancer bash "$CIBLE" -y --utilisateur toor
 assert_code 1 "$CODE" "un compte d'UID 0 : rend 1"
 etat_neuf; printf 'sudo:x:27:\n' > "$GROUP_FACTICE"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "hors du groupe sudo : rend 1"
 assert_contient "$SORTIE" "sudo" "le refus nomme le groupe manquant"
 etat_neuf; : > "$HOME_ADMIN/.ssh/authorized_keys"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "authorized_keys vide : rend 1"
 etat_neuf; printf '# aucune clé ici\n\n' > "$HOME_ADMIN/.ssh/authorized_keys"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "authorized_keys sans clé : rend 1"
 etat_neuf; rm -f "$HOME_ADMIN/.ssh/authorized_keys"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "authorized_keys absent : rend 1"
 assert_contient "$SORTIE" "authorized_keys" "le refus nomme le fichier attendu"
 assert_egal "absent" "$(present)"            "aucun refus n'a déposé de fichier"
@@ -118,14 +118,14 @@ assert_egal "0" "$(modifications)"           "aucun refus n'a appelé sshd ni sy
 
 titre "Inclusion de sshd_config.d — refus en 1"
 etat_neuf; printf 'Port 22\n' > "$SSHD_CONFIG"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "sshd_config sans Include : rend 1"
 assert_contient "$SORTIE" "sshd_config.d/*.conf" "le refus nomme l'inclusion attendue"
 assert_egal "0" "$(modifications)" "rien n'est validé ni rechargé"
 
 titre "--dry-run — l'état et les actions prévues, sans rien modifier"
 etat_neuf
-lancer bash "$CIBLE" --dry-run
+lancer bash "$CIBLE" --dry-run --utilisateur admin
 assert_code 0 "$CODE" "--dry-run rend 0"
 assert_contient "$SORTIE" "absent, à déposer"           "--dry-run montre l'état du fichier"
 assert_contient "$SORTIE" "PasswordAuthentication no"   "--dry-run montre le contenu prévu"
@@ -142,7 +142,7 @@ assert_egal "$(printf '# Déposé par Linux/Security/configure-ssh.sh.\nPassword
     "$(depot)" "le fichier déposé porte exactement les trois directives"
 assert_absent "$(depot)" "Port" "le port n'est pas touché"
 assert_egal "644" "$(stat -c '%a' "$DEPOT")" "le dépôt est en 0644"
-assert_egal "1" "$(ls -A "$SSHD_CONFIG_D" | wc -l)" "aucun fichier temporaire ne subsiste"
+assert_egal "1" "$(find "$SSHD_CONFIG_D" -mindepth 1 | wc -l)" "aucun fichier temporaire ne subsiste"
 assert_avant "sshd -t" "systemctl reload ssh" "« sshd -t » précède le rechargement"
 assert_contient "$(cat "$JOURNAL")" "reload ssh" "le rechargement passe par reload ssh"
 assert_absent "$(cat "$JOURNAL")" "restart"      "aucun « restart » n'est employé"
@@ -161,14 +161,14 @@ titre "« sshd -t » refuse — l'état antérieur est restauré, rien n'est rec
 etat_neuf
 printf '# ancien fichier\nPasswordAuthentication yes\n' > "$DEPOT"
 : > "$SSHD_REFUS"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "« sshd -t » en échec : rend 1"
 assert_contient "$SORTIE" "restauré" "le message dit l'état antérieur restauré"
 assert_egal "$(printf '# ancien fichier\nPasswordAuthentication yes')" "$(depot)" "le contenu antérieur est en place"
 assert_egal "0" "$(grep -c systemctl "$JOURNAL" || true)" "aucun rechargement n'a suivi"
-assert_egal "1" "$(ls -A "$SSHD_CONFIG_D" | wc -l)" "aucun fichier temporaire ne subsiste"
+assert_egal "1" "$(find "$SSHD_CONFIG_D" -mindepth 1 | wc -l)" "aucun fichier temporaire ne subsiste"
 etat_neuf; : > "$SSHD_REFUS"
-lancer bash "$CIBLE" -y
+lancer bash "$CIBLE" -y --utilisateur admin
 assert_code 1 "$CODE" "« sshd -t » en échec, sans état antérieur : rend 1"
 assert_egal "absent" "$(present)" "le fichier déposé est retiré"
 
