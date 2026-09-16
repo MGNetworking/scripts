@@ -1,7 +1,7 @@
 ---
 id: TASK-051
 title: "Écrire Linux/K3s/install-k3s.sh"
-status: ready
+status: in_progress
 priority: high
 depends_on:
   - TASK-050
@@ -27,6 +27,7 @@ acceptance_criteria:
   - K3s déjà installé — version affichée, rend 0 sans rien réinstaller
   - résumé confirmé ; --yes seul le confirme (ASSUME_YES remise à false, décision 45) ; sans terminal ni --yes, 1
   - --dry-run affiche le préflight et la commande prévue, sans téléchargement, rend 0
+  - version : canal stable si SRV_K3S_VERSION est absente, sinon la version épinglée, affichée dans le résumé ; installateur en HTTPS seul, sans empreinte épinglée (décision 47)
   - l'installateur est téléchargé dans un temporaire puis exécuté, jamais « curl | sh » ; échec → 1
   - le jeton /var/lib/rancher/k3s/server/node-token n'apparaît ni dans la sortie ni dans le journal
   - après installation, k3s est activé et verify-k3s.sh rend 0, sinon 1

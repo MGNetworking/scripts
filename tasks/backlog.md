@@ -71,7 +71,7 @@ de ce que cet ADR a tranché.
 | [TASK-036](completed/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `completed` | haute | 034 | conteneur `debian` | **oui** |
 | [TASK-050](completed/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | `completed` | moyenne | — | conteneur `debian` | non |
-| [TASK-051](pending/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `ready` | haute | 050 | conteneur `debian` | **oui** |
+| [TASK-051](active/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `in_progress` | haute | 050 | conteneur `debian` | **oui** |
 | [TASK-052](pending/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | `pending` | moyenne | 051 | conteneur `debian` | **oui** |
 | [TASK-053](pending/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `pending` | moyenne | 050, 051 | conteneur `debian` | **oui** |
 | [TASK-054](pending/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | `pending` | moyenne | 051 | conteneur `debian` | **oui** |
@@ -265,7 +265,7 @@ besoin, et l'ordre d'installation de `CLAUDE.md` le lui impose déjà. Deux scri
 | Entrée | Note |
 |---|---|
 | `verify-k3s.sh` | atomisée : [TASK-050](completed/TASK-050.md) |
-| `install-k3s.sh` | atomisée : [TASK-051](pending/TASK-051.md) — décisions prises (décision 47) |
+| `install-k3s.sh` | atomisée : [TASK-051](active/TASK-051.md) — décisions prises (décision 47) |
 | `configure-k3s.sh` | atomisée : [TASK-052](pending/TASK-052.md) — deux décisions attendues de user (contenu, fichier cible) |
 | `upgrade-k3s.sh` | atomisée : [TASK-053](pending/TASK-053.md) — décision attendue de user (version cible) |
 | `uninstall-k3s.sh` | atomisée : [TASK-054](pending/TASK-054.md) — **destructif** ; décision attendue de user (données) |
