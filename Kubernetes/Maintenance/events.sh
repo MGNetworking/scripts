@@ -10,7 +10,9 @@ _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
 
-DELAI=5
+DELAI=5                 # --request-timeout demandé à kubectl, en secondes
+REVEIL=$((DELAI + 2))   # timeout qui l'entoure : le laisser dépasser le premier
+                        # donne à kubectl le temps d'écrire son propre message
 
 usage() {
     cat <<'EOF'
@@ -23,8 +25,11 @@ Usage : events.sh [--namespace <ns>] [--warnings]
   --help             afficher cette aide
 
 Sans option, les événements de TOUS les namespaces sont listés, par
-« kubectl get events -A ». L'ordre croissant est demandé à kubectl par
---sort-by=.lastTimestamp : le plus ancien en tête, le plus récent en bas.
+« kubectl get events -A ». L'ordre est demandé à kubectl par
+--sort-by=.metadata.creationTimestamp : le plus ancien en tête, par date de
+création de l'événement ; un événement répété garde sa date de création.
+lastTimestamp ne convenait pas — l'API events.k8s.io n'en pose pas, et ses
+événements sortaient donc en tête du tri.
 
 --warnings ajoute --field-selector type=Warning, appliqué par l'apiserver :
 les événements Normal ne quittent pas le serveur. Les deux options se
@@ -36,13 +41,13 @@ alors 0 avec « No resources found » — une faute de frappe passerait pour un
 namespace vide.
 
 Le kubeconfig est celui que kubectl résout lui-même ; ce script ne le
-remplace pas et ne l'affiche pas. Root n'est pas requis, et chaque appel est
-borné par --request-timeout. Une liste vide n'est pas une panne : les
-événements expirent — une heure par défaut côté apiserver.
+remplace pas et ne l'affiche pas. Root n'est pas requis. Une liste vide n'est
+pas une panne : les événements expirent — une heure par défaut côté apiserver.
 
 Codes de retour :
   0  liste affichée — vide comprise, et quel que soit le type des événements
-  1  kubectl introuvable, apiserver injoignable, ou namespace inconnu
+  1  kubectl introuvable, apiserver injoignable, droits insuffisants,
+     ou namespace inconnu
   2  option inconnue, ou --namespace sans valeur ou sans nom valable
 EOF
 }
@@ -78,7 +83,7 @@ trap 'rm -rf "$TEMPORAIRE"' EXIT
 REP=""; ERREUR=""
 lire() {
     local code=0
-    REP="$(timeout "$DELAI" kubectl "$@" --request-timeout="${DELAI}s" 2>"$TEMPORAIRE/erreur")" || code=$?
+    REP="$(timeout "$REVEIL" kubectl "$@" --request-timeout="${DELAI}s" 2>"$TEMPORAIRE/erreur")" || code=$?
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
     return "$code"
 }
@@ -91,22 +96,24 @@ montrer_erreur() {
 
 # L'existence du namespace se vérifie à part : « kubectl get events -n inconnu »
 # rend 0 avec « No resources found », sans distinguer la faute de frappe du
-# namespace réellement vide. L'échec de cette vérification a deux causes, que
-# seul le message de kubectl sépare : namespace absent, ou apiserver muet.
+# namespace réellement vide. Deux causes d'échec ont leur verdict propre — un
+# refus de droits n'est pas un apiserver muet ; les autres lui sont imputées.
 if [ -n "$NS" ] && ! lire get namespace "$NS" --no-headers; then
     montrer_erreur
     case "$ERREUR" in
         *NotFound*) die "Namespace inconnu : $NS" ;;
+        *Forbidden*) die "Droits insuffisants pour vérifier le namespace $NS." ;;
         *) die "L'apiserver n'a pas répondu : le namespace $NS n'a pas pu être vérifié." ;;
     esac
 fi
 
 portee="tous les namespaces"
-appel=(get events -A --sort-by=.lastTimestamp)
+appel=(get events -A)
 if [ -n "$NS" ]; then
     portee="namespace $NS"
-    appel=(get events -n "$NS" --sort-by=.lastTimestamp)
+    appel=(get events -n "$NS")
 fi
+appel+=(--sort-by=.metadata.creationTimestamp)
 if [ "$WARNINGS" = "oui" ]; then
     appel+=(--field-selector type=Warning)
 fi
