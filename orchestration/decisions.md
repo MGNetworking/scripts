@@ -234,3 +234,18 @@ de 30 lignes au plus, relecture comprise. La session ne garde que le lancement
 des agents, qui peut durer une heure. En automatique, elle enchaîne la tâche
 prête suivante sans message de `user` ; blocage, plafond de la décision 40,
 question ouverte ou passage en manuel l'arrêtent.
+
+### Décision 47 — K3s : version, installateur, configuration, désinstallation (2026-09-16)
+
+Tranché par `user` sur les options recommandées à l'atomisation de `Linux/K3s`.
+
+- **Version installée** (TASK-051) : canal `stable` si `SRV_K3S_VERSION` est absente,
+  sinon la version épinglée ; la version retenue est affichée.
+- **Installateur** : HTTPS seul, aucune empreinte épinglée de `get.k3s.io` —
+  l'installateur officiel vérifie lui-même la somme sha256 du binaire.
+- **`config.yaml`** (TASK-052) : `write-kubeconfig-mode: "0600"` et `tls-san` tiré de
+  `SRV_K3S_TLS_SAN`, rien d'autre ; le script possède `config.yaml` entier.
+- **Mise à niveau** (TASK-053) : version cible explicite et obligatoire
+  (`--version` ou `SRV_K3S_VERSION`), jamais « dernière stable » par défaut.
+- **Désinstallation** (TASK-054) : désinstallateur officiel seul, après affichage de
+  ce qui sera détruit ; la sauvegarde relève d'un script distinct.

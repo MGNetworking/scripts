@@ -47,9 +47,5 @@ Traefik de K3s voudra 80/443, d'où le contrôle de conflit. ufw en `deny`
 à documenter, pas à régler ici. Seuils de ressources à reprendre de la
 documentation K3s (non vérifiés dans le dépôt).
 
-Décision attendue de user : version installée — (a) SRV_K3S_VERSION obligatoire,
-épinglée, ou (b) canal « stable » si absente ? Recommandé : (b), version affichée.
 
-Décision attendue de user : vérification de l'installateur — (a) aucune au-delà de
-HTTPS, l'installateur vérifiant lui-même la somme sha256 du binaire, ou (b) empreinte
-de get.k3s.io épinglée dans config/ ? Recommandé : (a), (b) casse à chaque publication.
+**Décidé par `user` le 2026-09-16** : voir `orchestration/decisions.md`, décision 47.

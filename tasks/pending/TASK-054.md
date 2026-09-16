@@ -40,6 +40,5 @@ La liste des chemins supprimés par k3s-uninstall.sh (/etc/rancher/k3s,
 /var/lib/rancher/k3s, /var/lib/kubelet…) est à relever dans le désinstallateur
 réel, pas supposée.
 
-Décision attendue de user : données — (a) désinstallateur officiel seul, tout est
-détruit, liste affichée, ou (b) archive préalable de /var/lib/rancher/k3s/storage et
-config.yaml ? Recommandé : (a) ; la sauvegarde relève d'un script distinct.
+
+**Décidé par `user` le 2026-09-16** : voir `orchestration/decisions.md`, décision 47.

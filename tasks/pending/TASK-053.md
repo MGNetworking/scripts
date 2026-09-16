@@ -42,7 +42,5 @@ implementation_notes:
 Kubernetes ne supporte qu'une version mineure à la fois (politique d'écart de
 versions) ; K3s s'y conforme. Le jeton de nœud ne s'affiche jamais.
 
-Décision attendue de user : cible — (a) --version ou SRV_K3S_VERSION explicite,
-obligatoire, ou (b) dernière du canal « stable » par défaut ? Recommandé : (a) — une
-mise à niveau silencieuse de version mineure est un risque sur un serveur unique.
-Suit la décision de version de TASK-051.
+
+**Décidé par `user` le 2026-09-16** : voir `orchestration/decisions.md`, décision 47.

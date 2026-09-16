@@ -41,10 +41,5 @@ implementation_notes:
 K3s ne lit config.yaml qu'au démarrage, d'où le redémarrage. Redémarrer k3s
 n'arrête pas les conteneurs des pods (à confirmer dans la documentation K3s).
 
-Décision attendue de user : contenu géré — (a) `write-kubeconfig-mode: "0600"` et
-`tls-san` depuis SRV_K3S_TLS_SAN, rien d'autre, ou (b) liste plus large ?
-Recommandé : (a).
 
-Décision attendue de user : cible — (a) config.yaml entier, possédé par le script,
-ou (b) dépôt dans config.yaml.d/50-mgnetworking.yaml ? Recommandé : (a), nommé par
-le plan ; (b) suppose le support config.yaml.d, à vérifier sur la version retenue.
+**Décidé par `user` le 2026-09-16** : voir `orchestration/decisions.md`, décision 47.
