@@ -27,13 +27,13 @@ Usage : backup-resources.sh [--output <dossier>] [--dry-run] [--help]
 
 Types exportés, et eux seuls : namespaces, deployments, statefulsets, daemonsets,
 cronjobs, services, ingresses, configmaps, persistentvolumeclaims, storageclasses.
-Les Secrets ne le sont jamais. Destination refusée si elle est dans le dépôt, chemin
-résolu. Appels bornés par --request-timeout ; rien n'est écrit sur le cluster.
+Les Secrets ne le sont jamais. Destination refusée si elle est dans le dépôt,
+chemin résolu. Appels bornés par --request-timeout ; rien n'est écrit sur le cluster.
 
 Codes de retour :
   0  export terminé, chemin affiché
-  1  destination refusée, kubectl ou timeout introuvable, apiserver injoignable,
-     droits insuffisants, délai dépassé, ou export incomplet
+  1  destination refusée, kubectl, timeout ou realpath introuvable, apiserver
+     injoignable, droits insuffisants, délai dépassé, ou export incomplet
   2  option inconnue, ou --output sans valeur
 EOF
 }
@@ -55,24 +55,17 @@ while [ "${1:-}" != "" ]; do
 done
 [ -n "$DESTINATION" ] || DESTINATION="${SRV_K8S_BACKUP_DIR:-$DEST_DEFAUT}"
 
-# Chemin résolu sans rien créer : on remonte au premier parent existant, dont
-# « pwd -P » suit les liens, puis on recolle la partie absente — un lien
-# symbolique vers le dépôt mène donc au même refus qu'un chemin relatif.
-resoudre() {
-    local chemin="$1" reste=""
-    while [ -n "$chemin" ] && [ ! -d "$chemin" ]; do
-        reste="/$(basename "$chemin")$reste"; chemin="$(dirname "$chemin")"
-    done
-    printf '%s%s\n' "$(cd "$chemin" && pwd -P)" "$reste"
-}
+require_cmd kubectl timeout realpath
 
+# Le refus porte sur le chemin RÉSOLU, et c'est lui qui est créé ensuite.
+# « realpath -m » traite les « .. » même derrière un composant absent et suit les
+# liens existants : aucun détour ne mène dans le dépôt, qui est public.
 RACINE="$(cd "$SCRIPTS_ROOT" && pwd -P)"
-DEST_RESOLU="$(resoudre "$DESTINATION")"
+DEST_RESOLU="$(realpath -m -- "$DESTINATION")"
 case "$DEST_RESOLU" in
     "$RACINE"|"$RACINE"/*) die "Destination refusée : $DEST_RESOLU est dans le dépôt ($RACINE), qui est public. Utiliser --output ou SRV_K8S_BACKUP_DIR hors du dépôt." ;;
 esac
 
-require_cmd kubectl timeout
 TEMPORAIRE="$(mktemp -d)" || die "Répertoire temporaire indisponible."
 trap 'rm -rf "$TEMPORAIRE"' EXIT
 
@@ -83,28 +76,35 @@ echec() {
     local appel="$1" fin="${2:-}"
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
     case "$CODE:$ERREUR" in
-        124:*)       die "L'appel a été interrompu : délai dépassé (${DELAI} s) — $appel.$fin" ;;
+        124:*) die "L'appel a été interrompu : délai dépassé (${DELAI} s) — $appel.$fin" ;;
         *Forbidden*) die "Droits insuffisants : $appel a été refusé.$fin" ;;
-        *NotFound*)  die "L'apiserver ne connaît pas la ressource demandée par $appel.$fin" ;;
+        *"doesn't have a resource type"*) die "Type de ressource inconnu de l'apiserver : $appel.$fin" ;;
     esac
     die "L'apiserver n'a pas répondu : $appel a échoué.$fin"
 }
 
-# Retire resourceVersion, uid, managedFields et status : propres à l'instant du
-# relevé. Un bloc se reconnaît à son indentation, où « - clé: » vaut deux
-# colonnes de plus que le tiret.
+# Le format de « kubectl get <type> -o yaml » est fixe : une List dont chaque item
+# commence par « - » en colonne 0, ses clés indentées de 2 et celles de son metadata
+# de 4. Le retrait est donc STRUCTUREL et non textuel — un « status: » de ConfigMap
+# est conservé, celui d'un item est retiré. kubectl ≥ 1.21 omet déjà managedFields.
 filtre() {
     awk '
-        /^[[:space:]]*[^[:space:]]/ {
-            indent = match($0, /[^ ]/) - 1
-            if ($0 ~ /^[ ]*- /) indent += 2
-            if (bloc != "" && indent > bloc_indent) next
+        function ind(l) { return match(l, /[^ ]/) - 1 }
+        function cle(l) { c = l; sub(/^ */, "", c); sub(/^- /, "", c); sub(/:.*/, "", c); return c }
+        /^[[:space:]]*$/ { print; next }
+        {
+            i = ind($0)
+            if (bloc != "" && (i > bloc_i || (i == bloc_i && $0 ~ /^ *- /))) next
             bloc = ""
-            cle = $0; sub(/^[ ]*/, "", cle); sub(/:.*/, "", cle)
-            if (cle == "status" || cle == "managedFields") { bloc = cle; bloc_indent = indent; next }
-            if (cle == "resourceVersion" || cle == "uid") next
+            n = cle($0)
+            if ($0 ~ /^- /)          { item = 1; meta = (n == "metadata") }
+            else if (i == 0)         { item = 0; meta = 0 }
+            else if (item && i == 2) { meta = (n == "metadata") }
+            if (item && i == 2 && n == "status") { bloc = n; bloc_i = 2; next }
+            if (meta && i == 4 && (n == "uid" || n == "resourceVersion" || n == "managedFields")) { bloc = n; bloc_i = 4; next }
+            if (!item && i == 2 && n == "resourceVersion") next
+            print
         }
-        { print }
     '
 }
 
@@ -136,10 +136,10 @@ if [ "$DRY_RUN" = "oui" ]; then
 fi
 
 umask 077
-mkdir -p "$DESTINATION" || die "Création impossible : $DESTINATION — sans root, /var/backups n'est pas inscriptible ; --output ou SRV_K8S_BACKUP_DIR désignent un autre dossier."
+mkdir -p "$DEST_RESOLU" || die "Création impossible : $DEST_RESOLU — sans root, /var/backups n'est pas inscriptible ; --output ou SRV_K8S_BACKUP_DIR désignent un autre dossier."
 # mktemp -d : le sous-dossier porte l'horodatage et ne peut pas écraser une
 # sauvegarde précédente, même pour deux exécutions de la même seconde.
-CIBLE="$(mktemp -d "$DESTINATION/$(date +%Y%m%d-%H%M%S)-XXXXXX")" || die "Création impossible dans $DESTINATION."
+CIBLE="$(mktemp -d "$DEST_RESOLU/$(date +%Y%m%d-%H%M%S)-XXXXXX")" || die "Création impossible dans $DEST_RESOLU."
 chmod 700 "$CIBLE"
 
 for type in $TYPES_CLUSTER; do exporter "$CIBLE/${type}.yaml" get "$type" -o yaml; done

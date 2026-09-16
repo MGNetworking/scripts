@@ -23,6 +23,9 @@ cat > "$BAC/kubectl" <<'EOF'
 printf '%s\n' "$*" >> "$BAC/appels"
 [ "${KUBECTL_INJOIGNABLE:-0}" = 1 ] && { echo "The connection to the server 127.0.0.1:6443 was refused" >&2; exit 1; }
 case " ${KUBECTL_REFUS:-} " in *" $1 $2 "*) echo "Error from server (Forbidden): $2 is forbidden" >&2; exit 1 ;; esac
+if [ -n "${KUBECTL_INCONNU:-}" ] && [ "$KUBECTL_INCONNU" = "$2" ]; then
+    echo "error: the server doesn't have a resource type \"$2\"" >&2; exit 1
+fi
 ns=""
 [ "${3:-}" = -n ] && ns="-$4"
 if [ "$1" = get ] && [ "$2" = namespaces ] && [ "${3:-}" = -o ] && [ "${4:-}" = name ]; then
@@ -37,8 +40,9 @@ EOF
 chmod +x "$BAC/kubectl"
 printf '%s\n' "namespace/default" "namespace/kube-system" > "$BAC/namespaces"
 # Un manifeste aux formes réelles : metadata complet — uid, resourceVersion,
-# managedFields, labels — plus spec et status peuplés. Le filtre doit en retirer
-# tout ce qui est propre à l'instant du relevé, et rien d'autre.
+# managedFields, labels, ownerReferences — plus spec et status peuplés. Le filtre
+# doit retirer ce qui est propre à l'instant du relevé, et RIEN d'autre : le
+# « status: » d'un label et l'« uid: » d'un ownerReference sont des données.
 manifeste() {   # <fichier> <kind> <nom> <namespace>
     cat > "$BAC/$1" <<EOF
 apiVersion: apps/v1
@@ -49,12 +53,18 @@ items:
     creationTimestamp: "2026-09-16T10:00:00Z"
     labels:
       app: $3
+      status: actif
     managedFields:
     - apiVersion: apps/v1
       fieldsType: FieldsV1
       manager: kubectl-create
     name: $3
     namespace: $4
+    ownerReferences:
+    - apiVersion: apps/v1
+      kind: ReplicaSet
+      name: $3-rs
+      uid: 11111111-2222-3333-4444-555555555555
     resourceVersion: "84213"
     uid: 6f1a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8
   spec:
@@ -73,12 +83,40 @@ metadata:
   resourceVersion: ""
 EOF
 }
+# La ConfigMap pousse le filtre dans ses retranchements : « status: » et « uid: »
+# y sont des DONNÉES, à l'indentation 4 comme les clés du metadata d'un item, et
+# le bloc littéral mêle les deux formes — « uid: 1000 » et « - uid: 1000 ».
+manifeste_configmap() {   # <fichier> <namespace>
+    cat > "$BAC/$1" <<EOF
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    script.sh: |
+      #!/bin/sh
+      uid: 1000
+      - uid: 1000
+      status: garde
+    status: configuration
+    uid: "1000"
+  kind: ConfigMap
+  metadata:
+    name: configmaps-1
+    namespace: $2
+    resourceVersion: "84213"
+    uid: 6f1a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8
+kind: List
+metadata:
+  resourceVersion: ""
+EOF
+}
 for paire in deployments=Deployment statefulsets=StatefulSet daemonsets=DaemonSet cronjobs=CronJob \
-             services=Service ingresses=Ingress configmaps=ConfigMap persistentvolumeclaims=PersistentVolumeClaim; do
+             services=Service ingresses=Ingress persistentvolumeclaims=PersistentVolumeClaim; do
     for ns in default kube-system; do
         manifeste "yaml-${paire%%=*}-$ns" "${paire#*=}" "${paire%%=*}-1" "$ns"
     done
 done
+for ns in default kube-system; do manifeste_configmap "yaml-configmaps-$ns" "$ns"; done
 manifeste yaml-namespaces Namespace kube-system ""
 manifeste yaml-storageclasses StorageClass standard ""
 # Le cluster simulé compte un Secret : si le script le demandait, il l'obtiendrait.
@@ -126,6 +164,21 @@ ln -s "$SCRIPTS_ROOT" "$BAC/lien-vers-depot"
 lancer --output "$BAC/lien-vers-depot/sauvegardes"
 assert_code 1 "$CODE" "un lien symbolique vers le dépôt est refusé"
 assert_contient "$sortie" "Destination refusée" "le refus est nommé là aussi, chemin résolu"
+# Un « .. » derrière un composant ABSENT : le chemin doit être résolu avant d'être
+# jugé, et rien de ce qu'il traverse ne doit être créé au passage.
+ABSENT="/nexiste-t060-$$"
+lancer --output "$ABSENT/../$SCRIPTS_ROOT/fuite"
+assert_code 1 "$CODE" "un « .. » derrière un composant absent ne contourne pas le refus"
+assert_contient "$sortie" "Destination refusée" "le refus est nommé là encore"
+assert_contient "$sortie" "$SCRIPTS_ROOT/fuite" "et le chemin résolu est nommé"
+assert_egal "absente" "$(present "$ABSENT")" "le composant absent n'est pas créé au passage"
+assert_egal "absente" "$(present "$SCRIPTS_ROOT/fuite")" "rien n'est écrit dans le dépôt"
+rm -rf "$SCRIPTS_ROOT/fuite" "$ABSENT" 2>/dev/null || true
+# Même chose en relatif et depuis un sous-dossier du dépôt : la cible est le dépôt.
+( cd "$SCRIPTS_ROOT/tests" && PATH="$BAC:$PATH" bash "$CIBLE" --output absent-t060/.. ) >/dev/null 2>&1 && code=0 || code=$?
+assert_code 1 "$code" "un chemin relatif avec « .. » vers le dépôt est refusé"
+assert_egal "absente" "$(present "$SCRIPTS_ROOT/tests/absent-t060")" "et le composant absent n'est pas créé"
+rm -rf "$SCRIPTS_ROOT/tests/absent-t060" 2>/dev/null || true
 
 titre "kubectl introuvable, puis timeout introuvable"
 sortie="$(PATH="/usr/bin:/bin" bash "$CIBLE" --output "$BAC/sans-kubectl" 2>&1)" && code=0 || code=$?
@@ -195,13 +248,21 @@ assert_contient "$CONTENU" "app: deployments-1" "avec ses labels"
 assert_contient "$CONTENU" "replicas: 2" "et son spec"
 assert_contient "$CONTENU" "namespace: kube-system" "chaque namespace a bien son propre contenu"
 assert_absent "$CONTENU" "resourceVersion" "resourceVersion est retiré"
-assert_absent "$CONTENU" "uid:" "uid est retiré"
+assert_absent "$CONTENU" "uid: 6f1a2b3c-4d5e" "l'uid du metadata d'un item est retiré"
 assert_absent "$CONTENU" "managedFields" "managedFields est retiré"
 assert_absent "$CONTENU" "manager: kubectl-create" "et son contenu avec lui"
-assert_absent "$CONTENU" "status:" "le bloc status est retiré"
+assert_absent "$CONTENU" 'status: "True"' "le bloc status de l'item est retiré"
 assert_absent "$CONTENU" "availableReplicas" "et son contenu avec lui"
 assert_absent "$CONTENU" "lastTransitionTime" "y compris dans les listes imbriquées"
-assert_absent "$CONTENU" "kind: Secret" "aucun objet Secret dans les fichiers produits"
+# Les mêmes mots-clés, mais dans les DONNÉES : là, le filtre ne doit rien toucher.
+assert_contient "$CONTENU" "status: actif" "un label « status: » est conservé"
+assert_contient "$CONTENU" "status: configuration" "une clé « status: » de ConfigMap aussi"
+assert_contient "$CONTENU" "status: garde" "un « status: » dans un bloc littéral aussi"
+assert_contient "$CONTENU" 'uid: "1000"' "une clé « uid: » de ConfigMap aussi"
+assert_contient "$CONTENU" "- uid: 1000" "et un « - uid: » en tête d'élément de liste"
+assert_contient "$CONTENU" "uid: 11111111-2222-3333-4444-555555555555" "l'uid d'un ownerReference est conservé"
+# Recherche récursive : c'est le dossier entier qui ne doit porter aucun Secret.
+assert_egal "0" "$(grep -rl "kind: Secret" "$BAC/sortie" 2>/dev/null | wc -l)" "aucun fichier produit ne porte un Secret"
 assert_absent "$CONTENU" "No resources found" "le message de kubectl n'entre pas dans le YAML"
 APPELS="$(cat "$BAC/appels")"
 assert_contient "$APPELS" "get deployments -n default -o yaml --request-timeout=30s" "chaque type est demandé pour chaque namespace"
@@ -222,10 +283,45 @@ assert_egal "1" "$(find "$BAC/partiel" -mindepth 1 -maxdepth 1 -type d | wc -l)"
 assert_absent "$sortie" "[SUCCESS]" "jamais [SUCCESS] : rien n'est déclaré terminé"
 
 titre "Deux exécutions de la même seconde — aucun écrasement"
+# L'empreinte porte sur la sauvegarde NOMMÉE par le premier export — DOSSIER —, et
+# se compare à elle-même : la seconde exécution ne peut pas la modifier en silence.
+EMPREINTE="$(find "$DOSSIER" -type f -exec sha256sum {} + | sort | sha256sum)"
 lancer --output "$BAC/sortie"
 assert_code 0 "$CODE" "une seconde exécution rend 0"
 assert_egal "2" "$(find "$BAC/sortie" -mindepth 1 -maxdepth 1 -type d | wc -l)" "elle crée son propre dossier horodaté"
-assert_egal "18" "$(find "$BAC/sortie" -mindepth 1 -maxdepth 1 -type d | sort | head -1 | xargs -I{} find {} -type f | wc -l)" "sans tronquer la précédente"
+assert_egal "18" "$(find "$DOSSIER" -type f | wc -l)" "la sauvegarde précédente garde ses 18 fichiers"
+assert_egal "$EMPREINTE" "$(find "$DOSSIER" -type f -exec sha256sum {} + | sort | sha256sum)" "et son contenu est intact, fichier par fichier"
+
+titre "Types de ressource — un type inconnu de l'apiserver arrête tout (A78)"
+export KUBECTL_INCONNU="ingresses"
+lancer --output "$BAC/type-inconnu"
+unset KUBECTL_INCONNU
+assert_code 1 "$CODE" "un type inconnu rend 1"
+assert_contient "$sortie" "Type de ressource inconnu" "le cas est nommé pour ce qu'il est"
+assert_contient "$sortie" "doesn't have a resource type" "et le message de kubectl est montré"
+assert_absent "$sortie" "[SUCCESS]" "jamais [SUCCESS] : l'export est amputé"
+
+titre "Dossiers intermédiaires créés par « mkdir -p » — en 0700 eux aussi"
+lancer --output "$BAC/arbre/sous"
+assert_code 0 "$CODE" "une destination à deux niveaux absents est créée"
+assert_egal "700" "$(stat -c %a "$BAC/arbre")" "le dossier intermédiaire est en 0700"
+assert_egal "700" "$(stat -c %a "$BAC/arbre/sous")" "le dernier aussi"
+assert_egal "700" "$(stat -c %a "$(find "$BAC/arbre/sous" -mindepth 1 -maxdepth 1 -type d)")" "et le sous-dossier horodaté également"
+
+titre "Dossier non inscriptible — le remède est nommé, rien n'est créé"
+mkdir -p "$BAC/ferme"; chmod 500 "$BAC/ferme"
+chmod 755 "$BAC"; chmod 644 "$BAC/namespaces"; touch "$BAC/appels"; chmod 666 "$BAC/appels"
+# root ignore les bits de permission : l'appel est confié à « nobody », qui les subit.
+SP="$(command -v setpriv)"
+if [ "$(id -u)" -eq 0 ] && [ -n "$SP" ]; then
+    sortie="$("$SP" --reuid=65534 --regid=65534 --clear-groups env PATH="$BAC:/usr/bin:/bin" bash "$CIBLE" --output "$BAC/ferme/sous" 2>&1)" && CODE=0 || CODE=$?
+else
+    sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" --output "$BAC/ferme/sous" 2>&1)" && CODE=0 || CODE=$?
+fi
+assert_code 1 "$CODE" "un dossier parent en 0500 rend 1"
+assert_contient "$sortie" "SRV_K8S_BACKUP_DIR" "le remède nomme la variable de configuration"
+assert_contient "$sortie" "--output" "et l'option de ligne de commande"
+assert_egal "absente" "$(present "$BAC/ferme/sous")" "rien n'est créé sous ce dossier"
 
 titre "Délai dépassé — « timeout » enveloppe l'appel et le dit"
 REEL_TIMEOUT="$(command -v timeout)"
@@ -242,7 +338,7 @@ chmod +x "$BAC/timeout"
 lancer --output "$BAC/lent"
 assert_code 1 "$CODE" "un appel qui expire rend 1"
 assert_contient "$sortie" "délai dépassé" "le délai est nommé pour ce qu'il est"
-assert_absent "$sortie" "injoignable" "et non pris pour un apiserver injoignable"
+assert_absent "$sortie" "n'a pas répondu" "et non pris pour un apiserver qui n'a pas répondu"
 assert_contient "$(cat "$BAC/timeout-appels")" "32 kubectl get services -n default -o yaml --request-timeout=30s" "« timeout » reçoit le délai de l'appel majoré de 2 s"
 assert_absent "$sortie" "[SUCCESS]" "jamais [SUCCESS] : l'export est amputé (A78)"
 rm -f "$BAC/timeout"
