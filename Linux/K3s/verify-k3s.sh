@@ -58,7 +58,11 @@ SYSTEMD="oui"; SERVICE="inactive"; UNITES=""
 if ! command -v systemctl >/dev/null 2>&1; then
     SYSTEMD="non"
 else
-    SERVICE="$(timeout "$DELAI" systemctl is-active k3s 2>/dev/null || echo inactive)"
+    # is-active rend 3 dès que le service n'est pas « active » : garder sa seule
+    # sortie, et ne la remplacer que si elle est vide — sinon « inactive »
+    # s'ajouterait à « failed » sur une seconde ligne.
+    SERVICE="$(timeout "$DELAI" systemctl is-active k3s 2>/dev/null)" || true
+    [ -n "$SERVICE" ] || SERVICE="inactive"
     UNITES="$(timeout "$DELAI" systemctl list-unit-files k3s.service 2>/dev/null || true)"
 fi
 UNITE="non"
@@ -111,7 +115,16 @@ if [ -n "$REP" ]; then
 fi
 
 rubrique "Namespaces" kubectl_lire get namespaces --no-headers
-rubrique "Événements Warning" kubectl_lire get events -A --field-selector type=Warning
+# L'API qui répond sans rendre d'événement Warning n'est pas une API muette :
+# les deux cas se distinguent par l'état relevé sur les nœuds.
+printf '\nÉvénements Warning\n'
+if kubectl_lire get events -A --field-selector type=Warning; then
+    printf '%s\n' "$REP" | sed 's/^/  /'
+elif [ "$API" = "oui" ]; then
+    printf '  aucun événement Warning\n'
+else
+    printf '  non disponible\n'
+fi
 
 printf '\nVerdict\n'
 if [ -z "$K3S_BIN" ] && [ "$UNITE" = "non" ]; then

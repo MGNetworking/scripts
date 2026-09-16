@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 # tests/integration/verify-k3s.test.sh — Linux/K3s/verify-k3s.sh.
-#
-# TASK-050. Le conteneur n'a ni K3s ni systemd et n'en aura pas : les issues du
-# script sont éprouvées par de faux « k3s » et « systemctl » en tête de PATH.
-#
-# Chaque cas d'échec porte sa GARDE DE CONTRASTE : « k3s » est absent par défaut
-# ici, donc « K3s absent » serait vert sans rien prouver. C'est le cas « cluster
-# sain », mêmes faux, qui rend 0.
+# Le conteneur n'a ni K3s ni systemd : les issues du script sont éprouvées par de
+# faux « k3s » et « systemctl ». Chaque cas d'échec a sa garde de contraste.
 
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
@@ -14,11 +9,9 @@ source "$_dir/lib/common.sh"
 source "$SCRIPTS_ROOT/tests/lib/assert.sh"
 
 CIBLE="$SCRIPTS_ROOT/Linux/K3s/verify-k3s.sh"
-BAC="$(mktemp -d)"
-trap 'rm -rf "$BAC"' EXIT
+BAC="$(mktemp -d)"; trap 'rm -rf "$BAC"' EXIT
 
-# Faux « k3s » : note chaque appel dans appels, puis rend le contenu préparé dans
-# $BAC. Un contenu absent fait échouer l'appel, comme une API muette.
+# Faux « k3s » : note chaque appel dans appels, puis rend $BAC — absent, il échoue.
 faux_k3s() {
     cat > "$BAC/k3s" <<EOF
 #!/bin/sh
@@ -31,13 +24,12 @@ EOF
     chmod +x "$BAC/k3s"
 }
 
-# Faux « systemctl » : $1 est l'état rendu par is-active, $2 vaut « non » pour ne
-# pas lister l'unité.
+# Faux « systemctl » : $1 = état rendu par is-active (3 hors de « active »), $2 = « non » pour ne pas lister l'unité.
 faux_systemctl() {
     cat > "$BAC/systemctl" <<EOF
 #!/bin/sh
 case "\$*" in
-  "is-active k3s") echo "$1" ;;
+  "is-active k3s") echo "$1"; [ "$1" = "active" ] || exit 3 ;;
   "list-unit-files k3s.service") [ "$2" = "non" ] || echo "k3s.service enabled" ;;
 esac
 EOF
@@ -45,11 +37,9 @@ EOF
 }
 
 # Faux « kubectl » qui laisse une trace s'il est appelé : aucun n'est installé ici.
-printf '#!/bin/sh\ntouch "%s"\n' "$BAC/kubectl-appele" > "$BAC/kubectl"
-chmod +x "$BAC/kubectl"
+printf '#!/bin/sh\ntouch "%s"\n' "$BAC/kubectl-appele" > "$BAC/kubectl"; chmod +x "$BAC/kubectl"
 
-# Cluster sain : un nœud Ready, deux pods Running, un pod achevé — phase
-# Succeeded, que kubectl affiche « Completed » —, et un Warning ancien.
+# Cluster sain : un nœud Ready, deux pods Running, un pod achevé, un Warning ancien.
 cluster_sain() {
     printf '%s\n' "nœud-1   Ready   control-plane,master   5d   v1.30.5+k3s1" > "$BAC/nodes"
     printf '%s\n' "kube-system   coredns-aaa   1/1   Running     0   5d" \
@@ -62,9 +52,9 @@ cluster_sain() {
     : > "$BAC/appels"
 }
 
-CODE=0
-sortie=""
-lancer() { sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" 2>&1)" && CODE=0 || CODE=$?; }
+CODE=0; codes=""; sortie=""
+# codes garde chaque code rendu : à la fin, le 2 ne doit venir que de l'usage.
+lancer() { sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
 
 titre "K3s absent — le cas d'usage principal"
 faux_systemctl active non
@@ -74,6 +64,7 @@ assert_contient "$sortie" "Service k3s"        "la rubrique service est affiché
 assert_contient "$sortie" "Événements Warning" "la rubrique des événements est affichée malgré tout"
 assert_contient "$sortie" "non disponible"     "les informations manquantes sont nommées, pas tues"
 assert_absent   "$sortie" "command not found"  "aucun message brut du shell ne filtre"
+assert_contient "$sortie" "n'est pas installé" "et l'absence de K3s est nommée comme telle"
 
 titre "Cluster sain — la garde de contraste de tous les cas suivants"
 cluster_sain
@@ -89,14 +80,19 @@ ordonnancees="$(printf '%s\n' "$sortie" | grep -oE '^(Service k3s|Version|Nœuds
 assert_egal "Service k3s|Version|Nœuds|Pods (tous les namespaces)|Namespaces|Événements Warning|" \
     "$ordonnancees" "les six rubriques s'affichent, dans l'ordre du plan"
 
+# Même cluster, sans le moindre événement : l'API répond, donc « aucun » — et non
+# « non disponible », qui veut dire API muette.
+rm -f "$BAC/events"
+lancer
+assert_code 0 "$CODE" "l'absence d'événement Warning ne rend pas le cluster malsain"
+assert_contient "$sortie" "aucun événement Warning" "la rubrique distingue « aucun » de « non disponible »"
 titre "Les appels passent par « k3s kubectl », et sont bornés"
 assert_contient "$(cat "$BAC/appels")" "kubectl get nodes" "les nœuds sont demandés à « k3s kubectl »"
-assert_egal "0" "$(grep -vcE '^(--version|kubectl )' "$BAC/appels" || true)" \
-    "aucun appel à k3s ne sort de ces deux formes"
-assert_egal "0" "$(grep -v -- '--request-timeout=5s' "$BAC/appels" | grep -vc '^--version' || true)" \
-    "chaque appel kubectl porte --request-timeout"
-trace="absente"
-if [ -e "$BAC/kubectl-appele" ]; then trace="présente"; fi
+appels_hors_forme="$(grep -vcE '^(--version|kubectl )' "$BAC/appels" || true)"
+assert_egal "0" "$appels_hors_forme" "aucun appel à k3s ne sort de ces deux formes"
+sans_delai="$(grep -v -- '--request-timeout=5s' "$BAC/appels" | grep -vc '^--version' || true)"
+assert_egal "0" "$sans_delai" "chaque appel kubectl porte --request-timeout"
+trace="absente"; [ -e "$BAC/kubectl-appele" ] && trace="présente"
 assert_egal "absente" "$trace" "aucun kubectl supposé installé n'a été appelé"
 
 titre "Service k3s inactif"
@@ -105,6 +101,9 @@ faux_systemctl inactive
 lancer
 assert_code 1 "$CODE" "un service inactif rend le cluster non sain"
 assert_contient "$sortie" "service k3s inactive" "un [WARN] nomme le service et son état"
+# Le vrai is-active rend 3 hors de « active » : y ajouter une ligne doublerait l'état.
+bloc="$(printf '%s\n' "$sortie" | sed -n '/^Service k3s$/,/^$/p' | grep -c inactive || true)"
+assert_egal "1" "$bloc" "l'état du service tient sur une seule ligne, sans doublon"
 
 titre "Nœud non Ready"
 cluster_sain
@@ -145,6 +144,7 @@ assert_contient "$(cat "$BAC/help")" "événements Warning" "--help nomme les ru
 assert_contient "$(cat "$BAC/help")" "k3s kubectl"        "--help dit par où passent les commandes"
 bash "$CIBLE" --option-qui-nexiste-pas >/dev/null 2>&1 && code=0 || code=$?
 assert_code 2 "$code" "une option inconnue rend 2"
-ok "le 2 est réservé à l'erreur d'usage : les six chemins d'échec ci-dessus rendent tous 1"
+cas2="non"; case "$codes" in *" 2"*) cas2="oui" ;; esac
+assert_egal "non" "$cas2" "aucun chemin éprouvé ne rend 2 : le 2 reste réservé à l'erreur d'usage"
 
 bilan "TASK-050 / verify-k3s.sh"
