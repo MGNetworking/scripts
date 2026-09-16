@@ -1,7 +1,7 @@
 ---
 id: TASK-054
 title: "Écrire Linux/K3s/uninstall-k3s.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-051
