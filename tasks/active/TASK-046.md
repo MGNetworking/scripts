@@ -1,7 +1,7 @@
 ---
 id: TASK-046
 title: "Écrire Linux/Security/configure-ssh.sh"
-status: ready
+status: in_progress
 priority: high
 depends_on:
   - TASK-025
