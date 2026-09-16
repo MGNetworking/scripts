@@ -1,7 +1,7 @@
 ---
 id: TASK-062
 title: "Écrire Kubernetes/Installation/install-kubectl.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
@@ -33,6 +33,8 @@ validation:
 implementation_notes:
   - faux kubectl en tête de PATH, aux vrais codes de retour ; HOME et KUBECONFIG pointés dans un mktemp ; aucun appel réseau réel
   - le message de copie cite le chemin k3s.yaml comme texte à exécuter par l'humain ; le script ne l'ouvre jamais
+  - défauts connus du domaine (TASK-055 à 061) — faux kubectl aux vrais formats, codes et messages : `kubectl version --client -o yaml|json`, `kubectl version` serveur injoignable ; garde /.dockerenv avant tout trap ou écriture ; --request-timeout sur chaque appel au serveur, prouvé par test ; timeout externe = délai + 2, code 124 nommé ; require_cmd timeout ; stderr tenu à part de stdout
+  - distinguer Forbidden, cluster injoignable, kubeconfig absent, KUBECONFIG vers un fichier absent ou illisible ; rubrique en échec suivie d'aucun [SUCCESS] (A78) ; `kubectl config view --raw` interdit ; chaque test doit pouvoir échouer contre le script, pas seulement prouver le faux
 ---
 
 # TASK-062 — Vérifier kubectl
