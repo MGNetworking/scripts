@@ -67,6 +67,7 @@ case "$OS_ARCH" in
     aarch64) ARCH="arm64" ;;
     *) die "Architecture non supportée : $OS_ARCH (attendu : x86_64 ou aarch64)" ;;
 esac
+info "Système : $OS_ID $OS_VERSION ($ARCH), cible des binaires Helm publiés."
 require_cmd curl openssl
 
 if command -v helm >/dev/null 2>&1; then

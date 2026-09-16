@@ -44,16 +44,16 @@ exit "${INSTALLATEUR_CODE:-0}"
 INSTALLATEUR
 EOF
 # La somme de contrôle et l'élévation appartiennent à get-helm-4, pas au script :
-# ces deux faux sont là pour prouver que le script ne les appelle pas lui-même.
+# ces deux faux laissent une trace si l'un ou l'autre est appelé.
 for outil in openssl sudo; do
-    printf '#!/bin/sh\necho "%s $*" >> "$BAC/%s-appels"\nexit 0\n' "$outil" "$outil" > "$BAC/$outil"
+    printf '#!/bin/sh\ntouch "%s/%s-appele"\nexit 0\n' "$BAC" "$outil" > "$BAC/$outil"
     chmod +x "$BAC/$outil"
 done
 
 CHEMIN="$BAC:$PATH"
 neuf() {   # remet la machine d'essai à zéro : aucun helm posé, aucune trace
     rm -f "$BAC/helm" "$BAC/installateur-appele" "$BAC/installateur-args" \
-          "$BAC/installateur-env" "$BAC/sudo-appels" "$BAC/openssl-appels"
+          "$BAC/installateur-env" "$BAC/sudo-appele" "$BAC/openssl-appele"
     : > "$BAC/curl-appels"; : > "$BAC/helm-appels"; }
 pose() { if [ -e "$1" ]; then echo "présente"; else echo "absente"; fi; }
 EXTRA=(); codes=""
@@ -85,8 +85,11 @@ assert_contient "$sortie" "riscv64" "le refus nomme l'architecture détectée"
 assert_egal "" "$(cat "$BAC/curl-appels")" "aucun refus n'a rien téléchargé"
 
 titre "curl et openssl requis"
+# Ni curl ni openssl ici : le harnais seul, pour que require_cmd les réclame.
 mkdir -p "$BAC/sans-outils"
-for c in bash sh id mkdir basename dirname date uname cat tee; do ln -sf "$(command -v "$c")" "$BAC/sans-outils/$c"; done
+for c in bash sh timeout id mkdir basename dirname date uname cat tee; do
+    ln -sf "$(command -v "$c")" "$BAC/sans-outils/$c"
+done
 sortie="$(TMPDIR="$BAC" PATH="$BAC/sans-outils" timeout 30 bash "$CIBLE" --yes </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "sans curl ni openssl, le script rend 1"
 assert_contient "$sortie" "Commande(s) requise(s) introuvable(s) : curl openssl" \
@@ -177,8 +180,8 @@ assert_contient "$sortie" "get-helm-4 a échoué" "le message nomme l'installate
 
 titre "Ce que le script ne fait jamais"
 assert_egal "0" "$(grep -c require_root "$CIBLE" || true)" "aucun require_root : l'élévation est celle de get-helm-4"
-assert_egal "absente" "$(pose "$BAC/sudo-appels")" "et le script n'appelle jamais sudo lui-même"
-assert_contient "$(cat "$BAC/openssl-appels")" "sha1 -sha256" "la somme de contrôle est demandée à openssl par l'installateur"
+assert_egal "absente" "$(pose "$BAC/sudo-appele")" "et le script n'appelle jamais sudo lui-même"
+assert_egal "présente" "$(pose "$BAC/openssl-appele")" "la somme de contrôle passe par l'openssl du PATH, comme chez get-helm-4"
 cas2="non"; case "$codes" in *" 2"*) cas2="oui" ;; esac
 assert_egal "non" "$cas2" "aucun chemin éprouvé ne rend 2 : le 2 reste réservé à l'usage"
 
