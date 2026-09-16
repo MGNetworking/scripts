@@ -68,7 +68,15 @@ Périmètre débordé ou tests modifiés : travail rejeté, tâche bloquée.
 ## 6. Relire, corriger une fois
 
 Sous-agent `relecteur`, modèle `opus`, une lecture : critères de la fiche un par
-un, défauts BLOQUANT / MAJEUR / MINEUR, tests creux, verdict. Relève ses jetons.
+un, défauts BLOQUANT / MAJEUR / MINEUR, tests creux, verdict.
+
+**Dès son retour**, avant toute autre action, ajoute une ligne à
+`orchestration/mesures/agents.tsv` dans le dépôt principal — jamais dans
+`../script-agents/$1` —, onze colonnes séparées par des tabulations
+(`printf '%s\t…\n' >>`) : `date '+%F %T'`, `$1`, `relecteur`, `opus`, appels d'outils,
+`-`, `-`, jetons **totaux** du sous-agent (seul chiffre fourni : pour ce profil, la
+colonne `sortie` ne se somme pas avec les autres), durée en secondes, `0`, vide.
+Une session interrompue ne perd ainsi pas la mesure (A47).
 
 - **Fusionnable** : étape 7.
 - **Défauts** : écris-les dans un fichier du scratchpad, et relance **une fois**
@@ -120,10 +128,11 @@ porte un `Axx`, et chaque `Axx` cité existe dans le registre.
    qui ne liste que les domaines, le seul nombre de scripts ;
 4. `tasks/backlog.md` : statut, section « Terminé », tâches débloquées en `ready` ;
 5. ligne au journal `orchestration/mesures/journal.md` : agent, modèle, passages,
-   jetons (`orchestration/mesures/agents.tsv`), jetons de relecture, défauts ;
+   jetons et jetons de relecture, lus tous deux dans `orchestration/mesures/agents.tsv`
+   (lignes `relecteur`), défauts ;
 6. `bash orchestration/outils/verifier-liens.sh` : 0, sinon corrige les liens cassés
    par le déplacement de la fiche ;
-7. `git commit` avec la ligne `Tâche : $1`.
+7. `git commit`, `agents.tsv` compris, avec la ligne `Tâche : $1`.
 
 **Tâche `blocked`** : fiche vers `tasks/blocked/` avec `blocked_reason`, rapport,
 commit sur `master`. Branche et copie gardées, rien fusionné.

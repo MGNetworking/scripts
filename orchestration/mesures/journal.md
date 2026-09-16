@@ -5,6 +5,10 @@ une tâche de même nature faite par Claude. Méthode : le modèle délégué pr
 Opus relit une fois dans un sous-agent (jetons mesurés), le modèle délégué corrige
 une fois, l'arbitre termine si nécessaire.
 
+Depuis TASK-048, la colonne « Relecture Opus » se lit dans `agents.tsv`, lignes
+`relecteur`, écrites dès le retour du sous-agent. Avant, le chiffre ne vivait que
+dans la conversation : TASK-045 l'a perdu.
+
 | Tâche | Nature | Exécutant | Validations | Vérif. | Lignes script + cas | Coût délégué | Relecture Opus | Rattrapage |
 |---|---|---|---|---|---|---|---|---|
 | TASK-029 `install-docker.sh` | modifie le système | Claude seul | 5/5 | 26 → 43 | 176 + 105 → 199 + 149 | — | 33 991 jetons | 7 défauts corrigés par Claude |
