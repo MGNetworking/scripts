@@ -10,24 +10,25 @@ environment: container-debian
 agent: deepseek
 human_approval_required: true
 objective: |
-  Installer cert-manager (décision 23, plan §5) dans le namespace cert-manager, attendre
-  ses déploiements et vérifier ses CRD. Rédigé pour l'option recommandée ci-dessous.
+  Installer cert-manager (décision 23, plan §5) par le chart Helm officiel jetstack, à une
+  version obligatoire, CRD comprises, puis attendre ses déploiements et relire ses CRD.
 scope:
   - Kubernetes/Installation/install-cert-manager.sh
   - tests/integration/install-cert-manager.test.sh
   - config/server.env.example — SRV_CERT_MANAGER_VERSION
 out_of_scope:
   - ClusterIssuer, Let's Encrypt, domaine, Certificate — c'est configure-tls.sh (Kubernetes/Configuration)
-  - mettre à niveau ou désinstaller un cert-manager présent ; supprimer des CRD
-  - installer Helm ou kubectl ; installer cmctl
+  - mettre à niveau ou désinstaller un cert-manager présent ; supprimer des CRD ; CRD posées par kubectl apply
+  - installer Helm ou kubectl ; installer cmctl ; lire /etc/rancher/k3s/k3s.yaml
 acceptance_criteria:
+  - aucun require_root ; helm et kubectl trouvent seuls KUBECONFIG ou ~/.kube/config ; aucune référence à k3s.yaml
   - helm ou kubectl absent, cluster injoignable — rend 1 en le nommant, renvoi vers TASK-063 / TASK-062
-  - version cible obligatoire (--version ou SRV_CERT_MANAGER_VERSION, forme vX.Y.Z) ; absente ou invalide — 1
+  - version cible obligatoire (--version prioritaire, sinon SRV_CERT_MANAGER_VERSION, forme vX.Y.Z) ; absente ou invalide — 1
   - release cert-manager présente — version affichée, rien modifié, 0 ; CRD cert-manager.io sans release Helm — refus en 1, rien modifié
   - résumé confirmé ; --yes seul le confirme (ASSUME_YES remise à false, décision 45) ; sans terminal ni --yes, 1
   - --dry-run affiche version et commande helm prévues, sans rien installer, rend 0
-  - chart jetstack/cert-manager depuis https://charts.jetstack.io, version épinglée, CRD incluses (crds.enabled=true), namespace cert-manager créé
-  - déploiements cert-manager, cert-manager-cainjector et cert-manager-webhook attendus Available avec délai borné ; dépassement — 1 en nommant les non prêts, rien désinstallé
+  - chart jetstack/cert-manager depuis https://charts.jetstack.io, version épinglée, CRD installées par le chart, namespace cert-manager créé
+  - déploiements cert-manager, cainjector et webhook attendus Available avec délai borné ; dépassement — 1 en nommant les non prêts, rien désinstallé
   - CRD certificates, issuers et clusterissuers relues après installation ; manquante — 1 ; codes 0 / 1 / 2
 validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
@@ -35,15 +36,12 @@ validation:
   - "tests/env/run-in-container.sh -- bash Kubernetes/Installation/install-cert-manager.sh --help"
 implementation_notes:
   - faux helm et kubectl en tête de PATH, aux vrais codes ; aucun dépôt ni cluster réel
-  - Helm ignore le kubeconfig de K3s : KUBECONFIG hérité respecté, sinon /etc/rancher/k3s/k3s.yaml s'il existe (0600, root en pratique)
+  - KUBECONFIG hérité respecté tel quel, jamais fixé par le script
 ---
 
 # TASK-065 — Installer cert-manager
 
-Doutes : `crds.enabled` remplace `installCRDs` depuis cert-manager 1.15 (à vérifier) ;
-noms des trois déploiements à confirmer sur la version épinglée.
+Doutes : `crds.enabled=true` remplace `installCRDs` depuis cert-manager 1.15 (à vérifier
+sur la version épinglée) ; noms exacts des trois déploiements à confirmer.
 
-**Décision attendue de user** : quel mécanisme et quelle version ?
-1. **(recommandé)** chart Helm officiel jetstack, version épinglée obligatoire, HTTPS seul sans vérification de provenance (`--verify`) ;
-2. chart Helm, dernière version si non épinglée ;
-3. manifeste officiel `cert-manager.yaml` des releases GitHub par kubectl apply — TASK-063 ne serait plus une dépendance.
+**Décidé par `user` le 2026-09-16** : `orchestration/decisions.md`, décision 48.

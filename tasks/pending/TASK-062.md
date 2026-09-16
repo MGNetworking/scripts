@@ -1,46 +1,44 @@
 ---
 id: TASK-062
 title: "Écrire Kubernetes/Installation/install-kubectl.sh"
-status: pending
+status: ready
 priority: medium
 depends_on: []
 environment: container-debian
 agent: deepseek
 human_approval_required: false
 objective: |
-  Vérifier kubectl (plan §5) : présence, architecture, version client et serveur, accès
-  au cluster. Rédigé pour l'option recommandée ci-dessous — vérification seule.
+  Vérifier kubectl sans rien installer (plan §5) — présence, architecture, versions client
+  et serveur, kubeconfig, accès au cluster ; expliquer la copie de k3s.yaml s'il manque.
 scope:
   - Kubernetes/Installation/install-kubectl.sh
   - tests/integration/install-kubectl.test.sh
 out_of_scope:
   - télécharger ou installer kubectl, créer le lien /usr/local/bin/kubectl — K3s le pose (Linux/K3s/install-k3s.sh)
-  - écrire, copier, afficher ou exporter un kubeconfig ; fixer KUBECONFIG
+  - écrire, copier, afficher ou exporter un kubeconfig ; fixer KUBECONFIG ; lire /etc/rancher/k3s/k3s.yaml
   - diagnostic des nœuds et des pods — c'est Linux/K3s/verify-k3s.sh et Kubernetes/Maintenance/
 acceptance_criteria:
-  - lecture seule — aucun fichier écrit hors journal, aucun paquet ni binaire installé
+  - lecture seule, sans root (aucun require_root) — aucun fichier écrit hors journal, rien installé
   - kubectl absent — rend 1 en renvoyant vers Linux/K3s/install-k3s.sh
+  - KUBECONFIG vide et ~/.kube/config absent — rend 1 en affichant la copie à faire (k3s.yaml vers ~/.kube/config du compte, 0600)
   - architecture de la machine et version client affichées ; architecture hors amd64/arm64 — [WARN]
   - cluster injoignable ou kubeconfig illisible (appels bornés par --request-timeout) — rend 1 en nommant la cause
   - versions client et serveur affichées ; écart de plus d'une version mineure — [WARN] sans changer le code
   - aucun contenu de kubeconfig, jeton ou certificat dans la sortie ni le journal
-  - codes : 0 kubectl présent et cluster joignable, 1 anomalie, 2 option inconnue
+  - codes — 0 kubectl présent et cluster joignable, 1 anomalie, 2 option inconnue
 validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
   - "tests/env/run-in-container.sh -- tests/run.sh integration"
   - "tests/env/run-in-container.sh -- bash Kubernetes/Installation/install-kubectl.sh --help"
 implementation_notes:
-  - faux kubectl en tête de PATH, aux vrais codes de retour ; aucun appel réseau réel
-  - le script laisse kubectl résoudre son kubeconfig ; il ne lit pas /etc/rancher/k3s/k3s.yaml lui-même
+  - faux kubectl en tête de PATH, aux vrais codes de retour ; HOME et KUBECONFIG pointés dans un mktemp ; aucun appel réseau réel
+  - le message de copie cite le chemin k3s.yaml comme texte à exécuter par l'humain ; le script ne l'ouvre jamais
 ---
 
 # TASK-062 — Vérifier kubectl
 
-K3s pose déjà `kubectl` (lien vers `k3s`, Linux/K3s/README.md) ; sur K3s le
-kubeconfig est en 0600 (décision 47), d'où `sudo` en pratique — à documenter, pas
-à exiger. Politique d'écart kubectl : ±1 mineure.
+K3s pose déjà `kubectl` (lien vers `k3s`, Linux/K3s/README.md) et un `k3s.yaml` en
+0600 (décision 47). Le compte d'administration le copie une fois dans `~/.kube/config`
+(0600) ; les scripts de `Kubernetes/` tournent ensuite sans `sudo`. Écart kubectl : ±1 mineure.
 
-**Décision attendue de user** : quel objet pour ce script, kubectl étant fourni par K3s ?
-1. **(recommandé)** vérification seule, sans rien installer — fiche rédigée ainsi ;
-2. installer kubectl depuis dl.k8s.io, sha256 vérifiée, s'il manque (cluster managé, poste) — `human_approval_required` passe à `true` ;
-3. annuler la tâche (`verify-k3s.sh` suffit).
+**Décidé par `user` le 2026-09-16** : `orchestration/decisions.md`, décision 48.

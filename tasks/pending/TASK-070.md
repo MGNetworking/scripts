@@ -10,20 +10,22 @@ environment: container-debian
 agent: deepseek
 human_approval_required: true
 objective: |
-  Créer les ClusterIssuer Let's Encrypt de cert-manager (plan §6, décision 23) à partir
-  de l'e-mail ACME lu dans config/, par kubectl apply, sans clé privée versionnée.
+  Créer les ClusterIssuers letsencrypt-staging et letsencrypt-production (plan §6,
+  décision 23), HTTP-01, e-mail SRV_K8S_ACME_EMAIL, par kubectl apply, sans demander de certificat.
 scope:
   - Kubernetes/Configuration/configure-tls.sh
   - tests/integration/configure-tls.test.sh
-  - config/server.env.example — variables e-mail ACME et domaine retenues par la décision
+  - config/server.env.example — SRV_K8S_ACME_EMAIL
 out_of_scope:
+  - créer un Certificate, pour quelque domaine que ce soit ; variable de domaine
   - installer cert-manager (TASK-065) ; Middlewares Traefik (TASK-069)
-  - solveur DNS-01 et certificats wildcard (jeton de fournisseur DNS) ; Certificate applicatifs
-  - lire, exporter ou afficher les Secrets de clé ACME ; supprimer un issuer existant
+  - solveur DNS-01 et certificats wildcard ; lire, exporter ou afficher les Secrets de clé ACME ; supprimer un issuer
 acceptance_criteria:
+  - sans root (aucun require_root) ; aucune référence à /etc/rancher/k3s/k3s.yaml
   - kubectl absent, API injoignable, CRD ClusterIssuer absente ou webhook cert-manager non prêt → 1 en nommant la cause
-  - e-mail absent → 2 nommant la variable ; e-mail mal formé → 2 sans rien appliquer
+  - SRV_K8S_ACME_EMAIL absente → 2 la nommant ; e-mail mal formé → 2 sans rien appliquer
   - letsencrypt-staging et letsencrypt-production existent après exécution, solveur HTTP-01 classe d'ingress traefik, et atteignent Ready dans le délai borné, sinon 1
+  - aucun objet Certificate ni CertificateRequest créé par le script
   - seconde exécution → aucun changement (kubectl diff rend 0)
   - --dry-run affiche la différence et rend 0 ; sans terminal ni --yes, 1 si un changement est à faire
   - aucune clé privée ni contenu de Secret n'apparaît dans la sortie ni dans le journal
@@ -39,10 +41,7 @@ implementation_notes:
 
 # TASK-070 — Configurer TLS
 
-Décision 23 : cert-manager et Let's Encrypt, domaine dans config/. Un ClusterIssuer
-HTTP-01 n'a pas besoin du domaine ; le staging évite les limites de débit de production.
+Un ClusterIssuer HTTP-01 n'a pas besoin du domaine ; le staging évite les limites de
+débit de production. Chaque site demande son certificat dans son propre Ingress.
 
-**Décision attendue de user : périmètre des ressources créées ?**
-(a) recommandé — les deux ClusterIssuer (staging et production), HTTP-01, e-mail dans
-`SRV_K8S_ACME_EMAIL`, sans Certificate ;
-(b) idem, plus un Certificate pour le domaine de config/ (`SRV_K8S_DOMAIN`).
+**Décidé par `user` le 2026-09-16** : `orchestration/decisions.md`, décision 48.

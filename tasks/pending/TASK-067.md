@@ -9,22 +9,24 @@ environment: container-debian
 agent: deepseek
 human_approval_required: false
 objective: |
-  Créer les namespaces communs du cluster (plan §6) à partir d'une liste lue dans config/,
-  par kubectl apply, sans jamais en supprimer.
+  Créer les namespaces communs du cluster (plan §6) listés dans SRV_K8S_NAMESPACES de
+  config/server.env, par kubectl apply, sans jamais en supprimer.
 scope:
   - Kubernetes/Configuration/configure-namespaces.sh
   - tests/integration/configure-namespaces.test.sh
-  - config/server.env.example — variable de liste retenue par la décision ci-dessous
+  - config/server.env.example — SRV_K8S_NAMESPACES, noms séparés par des virgules
 out_of_scope:
   - supprimer, renommer ou relabelliser un namespace absent de la liste ou déjà présent
   - quotas, LimitRange, NetworkPolicy, RBAC, labels Pod Security Admission
-  - installer kubectl (TASK-062), passer par « k3s kubectl » (frontière plan §5)
+  - contexte dédié config/kubernetes.env ou load_config ; installer kubectl (TASK-062) ; « k3s kubectl »
 acceptance_criteria:
+  - sans root (aucun require_root) ; aucune référence à /etc/rancher/k3s/k3s.yaml
   - kubectl absent ou API injoignable → refus en 1 en nommant la cause ; chaque appel borné par --request-timeout
-  - liste absente ou vide → refus en 2 nommant la variable ; un nom non conforme RFC 1123 (minuscules, chiffres, tiret, 63 au plus) → 2 sans rien appliquer
+  - SRV_K8S_NAMESPACES absente ou vide → refus en 2 la nommant ; liste lue séparée par des virgules
+  - un nom non conforme RFC 1123 (minuscules, chiffres, tiret, 63 au plus) → 2 sans rien appliquer
+  - les namespaces système (default, kube-*) sont refusés dans la liste, en 2
   - un namespace déjà présent n'est pas modifié ; une seconde exécution n'annonce aucun changement
   - --dry-run affiche les namespaces à créer et rend 0 sans appel en écriture
-  - les namespaces système (default, kube-*) sont refusés dans la liste, en 2
 validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
   - "tests/env/run-in-container.sh -- tests/run.sh integration"
@@ -37,10 +39,7 @@ implementation_notes:
 
 # TASK-067 — Configurer les namespaces
 
-Premier script du domaine : la liste qu'il fixe sert à TASK-071 (registry).
+Premier script du domaine : `SRV_K8S_NAMESPACES` sert aussi à TASK-071 (registry).
+`config/server.env` est chargé seul par `lib/common.sh` : pas de `--config`.
 
-**Décision attendue de user : où vit la liste des namespaces ?**
-(a) recommandé — `SRV_K8S_NAMESPACES` dans `config/server.env`, noms séparés par des
-espaces, comme les `SRV_K3S_*` (décisions 17 et 47) ;
-(b) un contexte dédié `config/kubernetes.env` chargé par `load_config kubernetes`.
-Le choix vaut pour tout le domaine : à trancher avec les lots Installation et Maintenance.
+**Décidé par `user` le 2026-09-16** : `orchestration/decisions.md`, décision 48.
