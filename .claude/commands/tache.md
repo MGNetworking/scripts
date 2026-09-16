@@ -16,7 +16,7 @@ lancer l'agent, qui peut tourner une heure, en arrière-plan.
 
 | La session envoie | Le conducteur fait | Il rend |
 |---|---|---|
-| Agent `conducteur-tache` : « préparer $1 » ou « préparer la suivante » | 1-3 ; fiche `agent: orchestrateur` : 1-8 d'un trait | `PRÊTE <tâche> <commande>`, `CLOSE`, `REFUS` |
+| Agent `conducteur-tache` : « préparer $1 » ou « préparer la suivante » (jamais TASK-039, le registre) | 1-3 ; fiche `agent: orchestrateur` : 1-8 d'un trait | `PRÊTE <tâche> <commande>`, `CLOSE`, `REFUS` |
 | `lancer-agent.sh` en arrière-plan, puis SendMessage « agent terminé » + sa sortie | 5, 6 ; fusionnable : 7-8 | `RELANCER <fichier de retours>`, `CLOSE`, `BLOQUÉE` |
 | relance en arrière-plan, puis SendMessage « relance terminée » + sa sortie | 5 ; puis 7-8, ou finir lui-même, ou bloquer (étape 6) | `CLOSE`, `BLOQUÉE` |
 

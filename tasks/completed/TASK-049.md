@@ -1,7 +1,7 @@
 ---
 id: TASK-049
 title: "Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche"
-status: validating
+status: completed
 priority: high
 depends_on: []
 environment: host

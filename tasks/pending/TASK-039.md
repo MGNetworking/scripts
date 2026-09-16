@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A56**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A62**.
 
 ## Registre
 
@@ -108,6 +108,9 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A56 | P3 | `configure-fail2ban.sh` (l. 83-87) redémarre un service simplement arrêté alors que ni paquet, ni fichier, ni activation n'ont changé : défendable (la prison doit être chargée), mais écart à la lettre du critère « redémarré seulement si quelque chose a changé » de TASK-044 | relecture TASK-044 | trancher : amender le critère ou n'agir que sur changement |
 | [ ] | A57 | P2 | `configure-fail2ban.sh` : la version corrigée après relecture (attente du démon, rattrapage après `enable` raté, `require_cmd fail2ban-client`, fichier de cas passé de 146 à 219 lignes) n'a pas été relue par Opus ; prouvée seulement avec de faux `apt-get`, `systemctl` et `fail2ban-client`, jamais avec le vrai démon | TASK-044 | relire le diff 6906255..6807391 lors d'une passe de sobriété ; éprouver sur une VM jetable (profil `systemd`) |
 | [ ] | A58 | P4 | `configure-fail2ban.test.sh` : 219 lignes (cible 150), justifiées par les huit retours de relecture | TASK-044 | resserrer lors d'une passe de sobriété |
+| [ ] | A59 | P2 | Claude Code garde en cache la définition d'un sous-agent lue la première fois dans une session : la révision de `conducteur-tache.md` (relecture lancée par le conducteur, outil `Agent`) n'a pas été prise en compte pendant TASK-047 et TASK-044, où la session a lancé le relecteur | TASK-049 | à constater dans une session neuve : le conducteur doit rendre `RELANCER` ou `CLOSE` après sa propre relecture, et écrire lui-même la ligne `relecteur` |
+| [ ] | A60 | P2 | La boucle sans surveillance suppose un mode de permissions qui laisse passer `git commit`, `juger.sh` et les tests en conteneur ; `.claude/settings.json` ne les autorise pas. Dans un mode plus strict, une demande de permission du conducteur arrête la boucle sans le signaler | relecture TASK-049 | décider avec `user` : compléter la liste `allow`, ou limiter la boucle au mode automatique de Claude Code |
+| [ ] | A61 | P3 | Écarts du conducteur observés sur ses deux premières tâches : activation en deux commits (TASK-047), « prochain identifiant libre » du registre non avancé après A56-A58 (TASK-044, rattrapé à la clôture de TASK-049), TASK-047 annoncée à tort comme dernière de `Linux/Security` | TASK-049 | surveiller sur les tâches suivantes ; préciser `conducteur-tache.md` si l'écart se répète |
 
 ## Suivi, pas des défauts
 

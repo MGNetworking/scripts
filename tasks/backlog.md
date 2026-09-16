@@ -59,7 +59,7 @@ de ce que cet ADR a tranché.
 | [TASK-046](completed/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | `completed` | haute | 025 | conteneur `debian` | **oui** |
 | [TASK-047](completed/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `completed` | haute | 046 | conteneur `debian` | **oui** |
 | [TASK-048](completed/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` (A47) | `completed` | moyenne | — | hôte | non |
-| [TASK-049](active/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | `validating` | haute | — | hôte | **oui** |
+| [TASK-049](completed/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | `completed` | haute | — | hôte | **oui** |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -376,6 +376,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-046](completed/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | [rapport](reports/TASK-046-report.md) |
 | [TASK-047](completed/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | [rapport](reports/TASK-047-report.md) |
 | [TASK-044](completed/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | [rapport](reports/TASK-044-report.md) |
+| [TASK-049](completed/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | [rapport](reports/TASK-049-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
