@@ -1,7 +1,7 @@
 ---
 id: TASK-048
 title: "Consigner les jetons de relecture dès la fin de l'étape 6 de /tache"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: host
