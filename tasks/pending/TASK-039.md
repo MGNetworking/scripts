@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A84**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A88**.
 
 ## Registre
 
@@ -133,6 +133,10 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A81 | P3 | `tests/integration/pods-status.test.sh` fait 206 lignes, au-delà des ~150 : les cinq retours de relecture ont ajouté deux cas, un faux kubectl enrichi et environ 25 assertions à un fichier déjà à 150 | TASK-056 (clôture) | factoriser le faux kubectl et les séquences « tracer / lancer / assert » si le fichier doit encore grandir |
 | [ ] | A82 | P3 | `Kubernetes/Maintenance/pods-status.sh` : un utilisateur dont le RBAC se limite aux pods d'un namespace n'a pas le droit `get namespace` ; la vérification préalable échoue (Forbidden) et le script rend 1 en accusant l'apiserver, alors que la liste des pods lui serait accessible | TASK-056 (relecture) | reconnaître `Forbidden` sur `get namespace` : message dédié, ou repli sur `get pods -n` en le signalant |
 | [ ] | A83 | P3 | `Kubernetes/Maintenance/cluster-status.sh` emploie `timeout` sans `require_cmd timeout` : sur un système sans coreutils, message brut « command not found » (corrigé dans `pods-status.sh`, pas ici) | TASK-056 (relecture) | ajouter `timeout` au `require_cmd` de cluster-status.sh |
+| [ ] | A84 | P3 | `Kubernetes/Maintenance/events.sh` et son fichier de cas : la version corrigée (commit 04f85f9, retours de relecture) n'a pas été relue — la tâche n'admet qu'une relecture. Le conducteur a vérifié en lisant le code le point majeur (tri `--sort-by=.metadata.creationTimestamp` sur les appels `-A` et `-n`, `--help` conforme) et le verdict propre de `Forbidden` sur `get namespace` ; le faux kubectl fidèle sur liste filtrée vide, les tests creux remplacés et `timeout` à DELAI+2 ne sont couverts que par les tests. Le tri par date de création n'a jamais été constaté sur un vrai apiserver | TASK-057 (clôture) | relire la version fusionnée lors d'une prochaine tâche du domaine ; éprouver le tri sur un vrai cluster |
+| [ ] | A85 | P3 | `tests/integration/events.test.sh` fait 208 lignes, au-delà des ~150 : 80 vérifications d'une ligne chacune et un faux kubectl fidèle d'environ 30 lignes ; les retours de relecture ont retiré les redondances (225 → 208) sans atteindre la cible | TASK-057 (clôture) | factoriser le faux kubectl commun à `pods-status.test.sh` et `events.test.sh` (même besoin que A81) |
+| [ ] | A86 | P3 | `Kubernetes/Maintenance/events.sh` l. 76 : `require_cmd kubectl timeout` — l'absence de la commande `timeout` n'est exercée par aucun cas du fichier de cas | TASK-057 (relecture) | ajouter un cas PATH sans `timeout` → `[ERROR]` qui la nomme et code 1 |
+| [ ] | A87 | P3 | Orchestration : l'hôte Windows n'a pas Python (l'alias `python` ouvre le Microsoft Store). Deux activations en ont souffert (TASK-053, TASK-057) : l'édition de la fiche a échoué en silence au milieu d'une chaîne de commandes, et le commit d'activation est parti incomplet. Les conducteurs doivent éditer par `sed`/`awk` ou par l'outil Edit, jamais par Python | TASK-057 (clôture) | ajouter la consigne à `.claude/agents/conducteur-tache.md` (ou à `tache.md` étape 3) |
 
 ## Suivi, pas des défauts
 
