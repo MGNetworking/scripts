@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A48**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A51**.
 
 ## Registre
 
@@ -97,6 +97,9 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [x] | A45 | P1 | `ASSUME_YES` héritée de l’environnement : un script lancé par un parent qui l’exporte confirme tout seul (`confirm` de `lib/common.sh` la lit sans qu’elle ait été posée par `--yes`) — vu sur `reboot-system.sh`, probable sur tous les scripts à confirmation | relecture TASK-026 | décision 45 — le socle garde l'héritage (contrat testé) ; les scripts destructifs posent `ASSUME_YES=false` avant leurs options : fait pour `docker-cleanup.sh`, demandé à TASK-026 pour `reboot-system.sh` |
 | [ ] | A46 | P3 | `configure-firewall.sh` n'est prouvé qu'avec un faux `ufw` : jamais exécuté sur une machine réelle avec ufw actif, ni avec sshd écoutant sur plusieurs ports ; la seconde version et le correctif IPv6 de l'orchestrateur n'ont pas été relus par Opus | TASK-045 | à éprouver sur une VM jetable, session SSH ouverte, avant usage en production |
 | [x] | A47 | P2 | Jetons de relecture perdus quand la session s'interrompt entre la relecture et la clôture : `/tache` ne les consigne qu'à l'étape 8 (TASK-045 : « non relevé ») | TASK-045 | fait — [TASK-048](../completed/TASK-048.md) : l’étape 6 de `/tache` écrit une ligne `relecteur` dans `agents.tsv` dès le retour du sous-agent ; l’étape 8 la relit |
+| [ ] | A48 | P2 | `configure-ssh.sh` n'est prouvé qu'avec de faux `sshd` et `systemctl` : jamais exécuté sur une machine réelle ; l'effet réel n'est pas relu par `sshd -T` — un `PasswordAuthentication yes` placé dans `sshd_config` avant la ligne `Include`, ou un fichier `sshd_config.d/0x-*.conf` lu avant `10-mgnetworking.conf`, l'emporterait sans signal ; la version corrigée n'a pas été relue par Opus | TASK-046 | à éprouver sur une VM jetable, session SSH ouverte ; envisager le contrôle `sshd -T` que TASK-047 prévoit pour `permitrootlogin` |
+| [ ] | A49 | P3 | `configure-ssh.sh --dry-run` lancé sans root ne peut pas lire `~compte/.ssh/authorized_keys` et répond « Aucune clé publique », ce qui est faux | relecture TASK-046 | distinguer « illisible » d'« absent » en dry-run |
+| [ ] | A50 | P3 | `configure-ssh.test.sh` : 274 lignes (cible 150) ; deux cas redondants — `ASSUME_YES` hérité sans terminal (bloqué par `[ -t 0 ]` quoi qu'il arrive) et « Port absent » (couvert par l'égalité exacte du dépôt) — et rien ne vérifie que `sshd_config` reste intact | relecture TASK-046 | resserrer lors d'une passe de sobriété |
 
 ## Suivi, pas des défauts
 

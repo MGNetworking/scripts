@@ -1,7 +1,7 @@
 ---
 id: TASK-047
 title: "Écrire Linux/Security/disable-root-login.sh"
-status: pending
+status: ready
 priority: high
 depends_on:
   - TASK-046
