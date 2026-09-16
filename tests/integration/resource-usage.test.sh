@@ -179,6 +179,11 @@ assert_contient "$sortie" 'namespaces "absent" not found' "le message de l'apise
 assert_absent  "$(cat "$BAC/appels")" "top pods" "aucun relevé de pods n'est tenté"
 assert_absent  "$(cat "$BAC/appels")" "top nodes" "aucun relevé de métriques non plus : le refus précède"
 assert_absent  "$sortie" "[SUCCESS]" "et rien n'est déclaré terminé"
+# Un refus sur la vérification du namespace n'est pas un namespace inconnu.
+export KUBECTL_REFUS="get namespace"; lancer --namespace kube-system; unset KUBECTL_REFUS
+assert_code 1 "$CODE" "un « get namespace » refusé rend 1"
+assert_contient "$sortie" "Droits insuffisants" "le refus est nommé pour ce qu'il est"
+assert_absent  "$sortie" "Namespace inconnu" "et il n'est pas pris pour un namespace inconnu"
 
 titre "API metrics absente — repli sur la capacité des nœuds"
 metriques
