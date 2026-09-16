@@ -1,7 +1,7 @@
 ---
 id: TASK-061
 title: "Écrire Kubernetes/Maintenance/cleanup-resources.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

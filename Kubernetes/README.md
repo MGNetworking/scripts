@@ -8,7 +8,7 @@ cluster managé. Ce qui dépend de K3s lui-même vit dans `Linux/K3s/`.
 |---|---|---|
 | `Installation/` | outils et composants de l'écosystème (Helm, cert-manager…) | à venir |
 | `Configuration/` | namespaces, registry, ressources de configuration | à venir |
-| [Maintenance/](Maintenance/README.md) | exploitation et diagnostic du cluster | 6 scripts |
+| [Maintenance/](Maintenance/README.md) | exploitation et diagnostic du cluster | 7 scripts |
 
 Prérequis communs : `kubectl` installé et un kubeconfig que `kubectl` résout
 lui-même (`KUBECONFIG`, sinon `~/.kube/config`). Les workloads gérés par
