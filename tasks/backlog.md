@@ -60,6 +60,7 @@ de ce que cet ADR a tranché.
 | [TASK-047](completed/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `completed` | haute | 046 | conteneur `debian` | **oui** |
 | [TASK-048](completed/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` (A47) | `completed` | moyenne | — | hôte | non |
 | [TASK-049](completed/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | `completed` | haute | — | hôte | **oui** |
+| [TASK-050](completed/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | [rapport](reports/TASK-050-report.md) |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -69,8 +70,8 @@ de ce que cet ADR a tranché.
 | [TASK-035](completed/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `completed` | moyenne | 029 | conteneur `debian` | **oui** |
 | [TASK-036](completed/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `completed` | haute | 034 | conteneur `debian` | **oui** |
-| [TASK-050](active/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | `in_progress` | moyenne | — | conteneur `debian` | non |
-| [TASK-051](pending/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `pending` | haute | 050 | conteneur `debian` | **oui** |
+| [TASK-050](completed/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | `completed` | moyenne | — | conteneur `debian` | non |
+| [TASK-051](pending/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `ready` | haute | 050 | conteneur `debian` | **oui** |
 | [TASK-052](pending/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | `pending` | moyenne | 051 | conteneur `debian` | **oui** |
 | [TASK-053](pending/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `pending` | moyenne | 050, 051 | conteneur `debian` | **oui** |
 | [TASK-054](pending/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | `pending` | moyenne | 051 | conteneur `debian` | **oui** |
@@ -263,8 +264,8 @@ besoin, et l'ordre d'installation de `CLAUDE.md` le lui impose déjà. Deux scri
 
 | Entrée | Note |
 |---|---|
-| `verify-k3s.sh` | atomisée : [TASK-050](active/TASK-050.md) |
-| `install-k3s.sh` | atomisée : [TASK-051](pending/TASK-051.md) — deux décisions attendues de user (version, vérification de l'installateur) |
+| `verify-k3s.sh` | atomisée : [TASK-050](completed/TASK-050.md) |
+| `install-k3s.sh` | atomisée : [TASK-051](pending/TASK-051.md) — décisions prises (décision 47) |
 | `configure-k3s.sh` | atomisée : [TASK-052](pending/TASK-052.md) — deux décisions attendues de user (contenu, fichier cible) |
 | `upgrade-k3s.sh` | atomisée : [TASK-053](pending/TASK-053.md) — décision attendue de user (version cible) |
 | `uninstall-k3s.sh` | atomisée : [TASK-054](pending/TASK-054.md) — **destructif** ; décision attendue de user (données) |
@@ -387,6 +388,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-047](completed/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | [rapport](reports/TASK-047-report.md) |
 | [TASK-044](completed/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | [rapport](reports/TASK-044-report.md) |
 | [TASK-049](completed/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | [rapport](reports/TASK-049-report.md) |
+| [TASK-050](completed/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | [rapport](reports/TASK-050-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

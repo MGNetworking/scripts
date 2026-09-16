@@ -8,7 +8,7 @@ indépendamment de Docker et de Kubernetes. Cibles : Debian 12 et 13, Ubuntu
 |---|---|---|
 | [System/](System/README.md) | système de base : paquets, nom d'hôte, fuseau, swap, journaux, cron, diagnostics disque, mémoire et services, notification d’échec, comptes, redémarrage | 13 scripts |
 | [Security/](Security/README.md) | audits des comptes et des ports, SSH, firewall `ufw`, `fail2ban` | 7 scripts |
-| `K3s/` | installer, mettre à niveau, désinstaller K3s | à venir |
+| [K3s/](K3s/README.md) | diagnostiquer, installer, mettre à niveau, désinstaller K3s | 1 script, 4 à venir |
 
 `Linux/K3s/` porte ce qui dépend de la distribution K3s ; ce qui survivrait à un
 cluster managé va dans `Kubernetes/`.

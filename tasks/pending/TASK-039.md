@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A62**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A64**.
 
 ## Registre
 
@@ -111,6 +111,8 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A59 | P2 | Claude Code garde en cache la définition d'un sous-agent lue la première fois dans une session : la révision de `conducteur-tache.md` (relecture lancée par le conducteur, outil `Agent`) n'a pas été prise en compte pendant TASK-047 et TASK-044, où la session a lancé le relecteur | TASK-049 | à constater dans une session neuve : le conducteur doit rendre `RELANCER` ou `CLOSE` après sa propre relecture, et écrire lui-même la ligne `relecteur` |
 | [ ] | A60 | P2 | La boucle sans surveillance suppose un mode de permissions qui laisse passer `git commit`, `juger.sh` et les tests en conteneur ; `.claude/settings.json` ne les autorise pas. Dans un mode plus strict, une demande de permission du conducteur arrête la boucle sans le signaler | relecture TASK-049 | décider avec `user` : compléter la liste `allow`, ou limiter la boucle au mode automatique de Claude Code |
 | [ ] | A61 | P3 | Écarts du conducteur observés sur ses deux premières tâches : activation en deux commits (TASK-047), « prochain identifiant libre » du registre non avancé après A56-A58 (TASK-044, rattrapé à la clôture de TASK-049), TASK-047 annoncée à tort comme dernière de `Linux/Security` | TASK-049 | surveiller sur les tâches suivantes ; préciser `conducteur-tache.md` si l'écart se répète |
+| [ ] | A62 | P2 | `verify-k3s.sh` : la version corrigée après relecture (état du service sur une ligne malgré le code 3 de `systemctl is-active`, rubrique « aucun événement Warning » distincte de l'API muette, fichier de cas passé de 34 à 38 vérifications) n'a pas été relue par Opus ; prouvée seulement avec de faux `k3s` et `systemctl`, jamais contre un vrai cluster | TASK-050 | relire le diff fea10ba..c9abdc9 lors d'une passe de sobriété ; éprouver après `install-k3s.sh` (TASK-051) sur une VM jetable |
+| [ ] | A63 | P4 | `orchestration/schema/orchestration.svg` (et son PNG) ne montre pas le sous-agent `conducteur-tache` introduit par TASK-049 | session, clôture TASK-050 | mettre le schéma et son export PNG à jour |
 
 ## Suivi, pas des défauts
 
