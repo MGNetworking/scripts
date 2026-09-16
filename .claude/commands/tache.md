@@ -71,10 +71,12 @@ Sous-agent `relecteur`, modèle `opus`, une lecture : critères de la fiche un p
 un, défauts BLOQUANT / MAJEUR / MINEUR, tests creux, verdict.
 
 **Dès son retour**, avant toute autre action, ajoute une ligne à
-`orchestration/mesures/agents.tsv`, dans la copie de `master`, onze colonnes séparées
-par des tabulations (`printf '%s\t…\n' >>`) : date, `$1`, `relecteur`, `opus`,
-`-`, `-`, `-`, jetons totaux du sous-agent, durée en secondes, `0`, `-`. Une
-session interrompue ne perd ainsi pas la mesure (A47).
+`orchestration/mesures/agents.tsv` dans le dépôt principal — jamais dans
+`../script-agents/$1` —, onze colonnes séparées par des tabulations
+(`printf '%s\t…\n' >>`) : `date '+%F %T'`, `$1`, `relecteur`, `opus`, appels d'outils,
+`-`, `-`, jetons **totaux** du sous-agent (seul chiffre fourni : pour ce profil, la
+colonne `sortie` ne se somme pas avec les autres), durée en secondes, `0`, vide.
+Une session interrompue ne perd ainsi pas la mesure (A47).
 
 - **Fusionnable** : étape 7.
 - **Défauts** : écris-les dans un fichier du scratchpad, et relance **une fois**
@@ -130,7 +132,7 @@ porte un `Axx`, et chaque `Axx` cité existe dans le registre.
    (lignes `relecteur`), défauts ;
 6. `bash orchestration/outils/verifier-liens.sh` : 0, sinon corrige les liens cassés
    par le déplacement de la fiche ;
-7. `git commit` avec la ligne `Tâche : $1`.
+7. `git commit`, `agents.tsv` compris, avec la ligne `Tâche : $1`.
 
 **Tâche `blocked`** : fiche vers `tasks/blocked/` avec `blocked_reason`, rapport,
 commit sur `master`. Branche et copie gardées, rien fusionné.
