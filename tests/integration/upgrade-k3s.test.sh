@@ -20,12 +20,13 @@ trap 'rm -rf "$BAC"' EXIT
 
 faux() { cat > "$BAC/$1"; chmod +x "$BAC/$1"; }
 # Faux k3s : la version annoncée est celle du fichier version, que l'installateur
-# réécrit ; muet, il simule un cluster qui ne répond plus.
+# réécrit ; muet, il simule un cluster qui ne répond plus — son binaire, lui,
+# répond toujours : c'est l'API qui se tait, pas le binaire.
 faux k3s <<'EOF'
 #!/bin/sh
-[ ! -f "$BAC/muet" ] || exit 1
 case "$*" in
   --version) echo "k3s version $(cat "$BAC/version") (aaaaaaa)" ;;
+  *) [ ! -f "$BAC/muet" ] || exit 1 ;;
   *"kubectl get nodes"*) echo "nœud-1   Ready   control-plane,master   5d   $(cat "$BAC/version")" ;;
   *"kubectl get pods"*) echo "kube-system   coredns-aaa   1/1   Running   0   5d" ;;
   *"kubectl get namespaces"*) echo "kube-system" ;;
@@ -44,9 +45,9 @@ printf '%s\n' "$0" > "$BAC/installateur-appele"
 printf '%s\n' "${INSTALL_K3S_VERSION:-aucune}" > "$BAC/installateur-version"
 printf '%s\n' "${INSTALL_K3S_CHANNEL:-aucun}" > "$BAC/installateur-canal"
 printf '%s\n' "$(cat "$BAC/version")" > "$BAC/version-avant"
+[ "${INSTALLATEUR_CODE:-0}" = 0 ] || exit "${INSTALLATEUR_CODE}"
 [ "${INSTALLATEUR_MUET:-0}" = 0 ] || : > "$BAC/muet"
 printf '%s\n' "${K3S_VERSION_APRES:-v1.31.1+k3s1}" > "$BAC/version"
-exit "${INSTALLATEUR_CODE:-0}"
 INSTALLATEUR
 EOF
 faux systemctl <<'EOF'

@@ -41,8 +41,7 @@ L'installateur part dans un fichier temporaire, exécuté puis retiré — jamai
 Codes de retour :
   0  mise à niveau faite, déjà à jour, ou simulée
   1  cible absente ou invalide, K3s absent, cible en recul ou trop lointaine,
-     cluster malsain, privilège manquant, téléchargement, installateur ou
-     diagnostic en échec
+     cluster malsain, privilège manquant, téléchargement, installateur, diagnostic
   2  option inconnue
 EOF
 }
@@ -77,11 +76,15 @@ fi
 
 version_lue() { "$K3S_BIN" --version 2>/dev/null | awk '/^k3s version/ {print $3}' || true; }
 
-# vX.Y.Z+k3sN -> MAJEUR, MINEUR, PATCH
+# vX.Y.Z+k3sN -> MAJEUR, MINEUR, PATCH et REVISION, la révision K3s comprise :
+# v1.30.5+k3s1 est postérieure à v1.30.5+k3s0, et le recul se refuse aussi.
 decouper() {
     local v="${1#v}" reste="${1#v*.}"
     MAJEUR="${v%%.*}"; MINEUR="${reste%%.*}"; PATCH="${reste#*.}"; PATCH="${PATCH%%+*}"
+    REVISION="${1##*+k3s}"
 }
+# Rang comparable des trois nombres qui suivent la majeure, déjà réputée égale.
+rang() { printf '%s' $(( MINEUR * 10000 + PATCH * 100 + REVISION )); }
 
 ACTUELLE="$(version_lue)"
 if [[ ! "$ACTUELLE" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\+k3s[0-9]+$ ]]; then
@@ -95,12 +98,12 @@ if [ "$ACTUELLE" = "$CIBLE" ]; then
     exit 0
 fi
 
-decouper "$ACTUELLE"; A_MAJ="$MAJEUR"; A_MIN="$MINEUR"; A_PAT="$PATCH"
-decouper "$CIBLE";    C_MAJ="$MAJEUR"; C_MIN="$MINEUR"; C_PAT="$PATCH"
+decouper "$ACTUELLE"; RANG_A="$(rang)"; A_MAJ="$MAJEUR"; A_MIN="$MINEUR"
+decouper "$CIBLE";    RANG_C="$(rang)"; C_MAJ="$MAJEUR"; C_MIN="$MINEUR"
 if [ "$C_MAJ" -ne "$A_MAJ" ]; then
     die "Changement de version majeure refusé : $ACTUELLE → $CIBLE. Rien n'a été modifié." 1
 fi
-if [ "$C_MIN" -lt "$A_MIN" ] || { [ "$C_MIN" -eq "$A_MIN" ] && [ "$C_PAT" -lt "$A_PAT" ]; }; then
+if [ "$RANG_C" -lt "$RANG_A" ]; then
     die "Version cible inférieure à celle en place : $ACTUELLE → $CIBLE. Rien n'a été modifié." 1
 fi
 if [ "$C_MIN" -gt $((A_MIN + 1)) ]; then
