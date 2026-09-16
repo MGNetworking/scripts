@@ -1,7 +1,7 @@
 ---
 id: TASK-058
 title: "Écrire Kubernetes/Maintenance/diagnostics.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
