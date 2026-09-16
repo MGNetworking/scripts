@@ -1,7 +1,7 @@
 ---
 id: TASK-053
 title: "Écrire Linux/K3s/upgrade-k3s.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on:
   - TASK-050
@@ -21,13 +21,14 @@ out_of_scope:
   - toute modification de config.yaml, de Traefik ou des workloads
   - mise à niveau des paquets du système
 acceptance_criteria:
+  - version cible explicite et obligatoire : --version ou SRV_K3S_VERSION, validée strictement (forme vX.Y.Z+k3sN) ; absente ou invalide → refus en 1, jamais « dernière stable » par défaut (décision 47)
   - root requis (1) ; K3s absent → refus en 1 en renvoyant vers install-k3s.sh
   - versions actuelle et cible affichées ; identiques → rend 0 sans rien télécharger
   - cible inférieure à l'actuelle, ou sautant plus d'une version mineure, refusée en 1
   - verify-k3s.sh en échec avant la mise à niveau → refus en 1 sans rien modifier
   - résumé confirmé ; --yes seul le confirme (ASSUME_YES remise à false, décision 45) ; sans terminal ni --yes, 1
   - --dry-run affiche versions et commande prévue, sans téléchargement, rend 0
-  - installateur téléchargé comme dans install-k3s.sh ; verify-k3s.sh après ; échec → 1, en affichant la version en place
+  - installateur téléchargé en HTTPS seul (curl --proto '=https' --tlsv1.2, décision 47), comme dans install-k3s.sh ; verify-k3s.sh après ; échec → 1, en affichant la version en place
 validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
   - "tests/env/run-in-container.sh -- tests/run.sh integration"
