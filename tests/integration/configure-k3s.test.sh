@@ -54,7 +54,7 @@ tls-san:
 neuf() { rm -rf "$BAC_ETC"; : > "$JOURNAL"; }
 pose() { if [ -e "$1" ]; then echo "présente"; else echo "absente"; fi; }
 lancer() { sortie="$("${LANCER_ENV[@]}" bash "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?; }
-ancien_en_place() { mkdir -p "$BAC_ETC"; printf '%s\n' "$ANCIEN" > "$FICHIER"; : > "$JOURNAL"; }
+ancien_en_place() { mkdir -p "$BAC_ETC"; rm -f "$BAC_ETC"/*.bak; printf '%s\n' "$ANCIEN" > "$FICHIER"; : > "$JOURNAL"; }
 
 titre "Codes d'usage"
 sortie="$(bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
@@ -92,6 +92,13 @@ assert_egal "$ATTENDU" "$(cat "$FICHIER" 2>/dev/null)" "le fichier porte exactem
 assert_contient "$(cat "$JOURNAL")" "restart k3s" "K3s est redémarré"
 assert_contient "$sortie" "cluster est sain" "et le diagnostic verify-k3s.sh rend 0"
 
+titre "Fichier identique : rien n'est réécrit ni redémarré"
+: > "$JOURNAL"
+sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr,10.0.0.5" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 0 "$code" "une seconde exécution rend 0"
+assert_contient "$sortie" "déjà conforme" "le script constate au lieu de réécrire"
+assert_egal "" "$(cat "$JOURNAL")" "aucun redémarrage n'a été demandé"
+
 titre "SRV_K3S_TLS_SAN absente ou vide : la clé tls-san est omise"
 neuf
 lancer --yes
@@ -102,13 +109,6 @@ neuf
 sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
 assert_code 0 "$code" "une SRV_K3S_TLS_SAN vide n'est pas une erreur"
 assert_absent "$(cat "$FICHIER")" "tls-san" "et la clé tls-san est omise là aussi"
-
-titre "Fichier identique : rien n'est réécrit ni redémarré"
-: > "$JOURNAL"
-sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr,10.0.0.5" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
-assert_code 0 "$code" "une seconde exécution rend 0"
-assert_contient "$sortie" "déjà conforme" "le script constate au lieu de réécrire"
-assert_egal "" "$(cat "$JOURNAL")" "aucun redémarrage n'a été demandé"
 
 titre "Fichier différent : différence affichée, sauvegarde, remplacement"
 ancien_en_place
