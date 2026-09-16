@@ -77,7 +77,7 @@ de ce que cet ADR a tranché.
 | [TASK-055](completed/TASK-055.md) | Écrire `Kubernetes/Maintenance/cluster-status.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-056](completed/TASK-056.md) | Écrire `Kubernetes/Maintenance/pods-status.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-057](completed/TASK-057.md) | Écrire `Kubernetes/Maintenance/events.sh` | `completed` | moyenne | — | conteneur `debian` | non |
-| [TASK-058](active/TASK-058.md) | Écrire `Kubernetes/Maintenance/diagnostics.sh` | `in_progress` | moyenne | — | conteneur `debian` | non |
+| [TASK-058](completed/TASK-058.md) | Écrire `Kubernetes/Maintenance/diagnostics.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-059](pending/TASK-059.md) | Écrire `Kubernetes/Maintenance/resource-usage.sh` | `pending` | moyenne | — | conteneur `debian` | non |
 | [TASK-060](pending/TASK-060.md) | Écrire `Kubernetes/Maintenance/backup-resources.sh` | `pending` | moyenne | — | conteneur `debian` | non |
 | [TASK-061](pending/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | `pending` | moyenne | — | conteneur `debian` | **oui** |
@@ -410,6 +410,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-055](completed/TASK-055.md) | Écrire `Kubernetes/Maintenance/cluster-status.sh` | [rapport](reports/TASK-055-report.md) |
 | [TASK-056](completed/TASK-056.md) | Écrire `Kubernetes/Maintenance/pods-status.sh` | [rapport](reports/TASK-056-report.md) |
 | [TASK-057](completed/TASK-057.md) | Écrire `Kubernetes/Maintenance/events.sh` | [rapport](reports/TASK-057-report.md) |
+| [TASK-058](completed/TASK-058.md) | Écrire `Kubernetes/Maintenance/diagnostics.sh` | [rapport](reports/TASK-058-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

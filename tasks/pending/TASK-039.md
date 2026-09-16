@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A88**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A91**.
 
 ## Registre
 
@@ -137,6 +137,9 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A85 | P3 | `tests/integration/events.test.sh` fait 208 lignes, au-delà des ~150 : 80 vérifications d'une ligne chacune et un faux kubectl fidèle d'environ 30 lignes ; les retours de relecture ont retiré les redondances (225 → 208) sans atteindre la cible | TASK-057 (clôture) | factoriser le faux kubectl commun à `pods-status.test.sh` et `events.test.sh` (même besoin que A81) |
 | [ ] | A86 | P3 | `Kubernetes/Maintenance/events.sh` l. 76 : `require_cmd kubectl timeout` — l'absence de la commande `timeout` n'est exercée par aucun cas du fichier de cas | TASK-057 (relecture) | ajouter un cas PATH sans `timeout` → `[ERROR]` qui la nomme et code 1 |
 | [ ] | A87 | P3 | Orchestration : l'hôte Windows n'a pas Python (l'alias `python` ouvre le Microsoft Store). Deux activations en ont souffert (TASK-053, TASK-057) : l'édition de la fiche a échoué en silence au milieu d'une chaîne de commandes, et le commit d'activation est parti incomplet. Les conducteurs doivent éditer par `sed`/`awk` ou par l'outil Edit, jamais par Python | TASK-057 (clôture) | ajouter la consigne à `.claude/agents/conducteur-tache.md` (ou à `tache.md` étape 3) |
+| [ ] | A88 | P3 | `Kubernetes/Maintenance/diagnostics.sh` et son fichier de cas : la version corrigée (commit d58e388, retours de relecture) n'a pas été relue — la tâche n'admet qu'une relecture. Le conducteur a vérifié à la lecture les trois majeurs (DaemonSets lus en `-o custom-columns` `.status.desiredNumberScheduled`/`.status.numberReady`, Deployments et StatefulSets en `.spec.replicas`/`.status.readyReplicas`, `<none>` lu comme 0 ; raisons réelles de la colonne STATUS, préfixe `Init:` retiré, Completed ignoré ; `Forbidden` sur `get nodes` annoncé « droits insuffisants ») et le point 5 (relevé d'événements impossible compté comme anomalie). Aucun de ces formats n'a été constaté sur un vrai cluster | TASK-058 (clôture) | relire la version corrigée, ou la confronter à un cluster réel lors d'une tâche Kubernetes suivante |
+| [ ] | A89 | P3 | `Kubernetes/Maintenance/diagnostics.sh` fait 161 lignes et `tests/integration/diagnostics.test.sh` 203, au-delà des ~150 : les retours de relecture ont ajouté 11 lignes de script et 25 vérifications d'une ligne | TASK-058 (clôture) | factoriser le faux kubectl commun aux fichiers de cas `Kubernetes/Maintenance` (même besoin que A81, A85) |
+| [ ] | A90 | P3 | `tests/integration/diagnostics.test.sh` : tests qui ne prouvent que le faux — les fixtures de workloads suivent l'ordre de colonnes que le script demande, mais aucune assertion ne vérifie les champs `custom-columns` demandés (seulement la présence de `custom-columns=`) ; le cas « DaemonSet complet, sélecteur à « / » compris » n'a aucun sélecteur dans sa fixture, et `assert_absent nodeSelector` sur les appels est vrai par construction ; l'absence de la commande `timeout` (`require_cmd kubectl timeout`) n'est exercée par aucun cas | TASK-058 (clôture) | asserter les chemins JSON demandés par ressource ; retirer ou rendre réel le cas du sélecteur ; ajouter un cas PATH sans `timeout` (même besoin que A86) |
 
 ## Suivi, pas des défauts
 
