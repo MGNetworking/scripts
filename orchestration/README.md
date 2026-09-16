@@ -23,7 +23,8 @@ msedge --headless=new --hide-scrollbars --screenshot=orchestration/schema/orches
 
 | Rôle | Qui | Consigne |
 |---|---|---|
-| Orchestrateur | votre session Claude Code | [.claude/commands/tache.md](../.claude/commands/tache.md) |
+| Orchestrateur | votre session Claude Code, qui dure | [.claude/commands/tache.md](../.claude/commands/tache.md) |
+| Conducteur | sous-agent neuf par tâche : prépare, vérifie, fait relire, clôt ; ne rend que des résumés | [.claude/agents/conducteur-tache.md](../.claude/agents/conducteur-tache.md) |
 | Agent exécutant | Claude Code + le modèle de la fiche | [.claude/commands/executer-tache.md](../.claude/commands/executer-tache.md) |
 | Relecteur | sous-agent Opus, lecture seule | [.claude/agents/relecteur.md](../.claude/agents/relecteur.md) |
 | Atomiseur | sous-agent, découpe un domaine en fiches | [.claude/commands/atomiser.md](../.claude/commands/atomiser.md) |
@@ -50,7 +51,7 @@ tourner en parallèle, une fois trois tâches passées sans incident (décision 
 |---|---|
 | [regles.md](regles.md) | ce que orchestrateur et agents ont le droit de faire |
 | [decisions.md](decisions.md) | les décisions en vigueur, numérotées |
-| [mode.json](mode.json) | `automatique` ou `manuel` ; dans les deux cas, vidage du contexte après chaque tâche |
+| [mode.json](mode.json) | `automatique` : enchaînement sans message de `user` ; `manuel` : attente d’une consigne |
 | [limites.json](limites.json) | les droits techniques d'un agent (écriture, commandes) |
 | `modeles/` | un fichier par modèle **externe** : adresse d'API, nom, variable de clé |
 | `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons |
