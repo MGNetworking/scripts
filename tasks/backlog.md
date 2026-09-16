@@ -73,7 +73,7 @@ de ce que cet ADR a tranché.
 | [TASK-051](completed/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `completed` | haute | 050 | conteneur `debian` | **oui** |
 | [TASK-052](completed/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | `completed` | moyenne | 051 | conteneur `debian` | **oui** |
 | [TASK-053](completed/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `completed` | moyenne | 050, 051 | conteneur `debian` | **oui** |
-| [TASK-054](pending/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | `ready` | moyenne | 051 | conteneur `debian` | **oui** |
+| [TASK-054](active/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | `in_progress` | moyenne | 051 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -267,7 +267,7 @@ besoin, et l'ordre d'installation de `CLAUDE.md` le lui impose déjà. Deux scri
 | `install-k3s.sh` | atomisée : [TASK-051](completed/TASK-051.md) |
 | `configure-k3s.sh` | atomisée : [TASK-052](completed/TASK-052.md) — décisions prises (décision 47) |
 | `upgrade-k3s.sh` | atomisée : [TASK-053](completed/TASK-053.md) — décisions prises (décision 47) |
-| `uninstall-k3s.sh` | atomisée : [TASK-054](pending/TASK-054.md) — décisions prises (décision 47) |
+| `uninstall-k3s.sh` | atomisée : [TASK-054](active/TASK-054.md) — décisions prises (décision 47) |
 
 ### Kubernetes — plan §5 à §7
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-054
 title: "Écrire Linux/K3s/uninstall-k3s.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on:
   - TASK-051
@@ -18,6 +18,7 @@ out_of_scope:
   - toute suppression écrite à la main (rm -rf) en complément ou à la place du désinstallateur officiel
   - sauvegarde des ressources Kubernetes — Kubernetes/Maintenance/backup-resources.sh
   - suppression de Docker, des images Docker, des règles ufw ou de config/
+  - archive ou copie des données avant suppression (décision 47 : aucune archive)
 acceptance_criteria:
   - root requis (1) ; K3s absent (ni k3s ni k3s-uninstall.sh) → rend 0 en le disant, rien exécuté
   - binaire k3s présent sans k3s-uninstall.sh → refus en 1, rien supprimé
@@ -31,6 +32,12 @@ validation:
   - "tests/env/run-in-container.sh -- bash Linux/K3s/uninstall-k3s.sh --help"
 implementation_notes:
   - faux k3s, k3s-uninstall.sh et systemctl en tête de PATH ; chemins surchargeables par variable ; aucun rm réel hors répertoire temporaire du test
+  - décision 47 : /usr/local/bin/k3s-uninstall.sh seul, appelé après affichage du résumé de ce qui sera détruit
+  - test : garde conteneur (/.dockerenv absent → sortie) avant tout trap, écriture ou suppression ; il ne peut jamais lancer un vrai désinstallateur
+  - faux systemctl fidèle (is-active inactif → 3, is-enabled unité absente → 1) ; INSTALL_K3S_* et K3S_* héritées neutralisées (unset) dans le test
+  - ASSUME_YES=true exportée sans --yes : refus prouvé sous pseudo-terminal (script -qec), pas seulement sans terminal
+  - require_cmd sur les commandes utilisées ; aucun jeton (K3S_TOKEN, node-token) affiché ni journalisé
+  - état final relu (binaire, unité, répertoires) : un reste → 1 en le nommant ; message d'échec exact, sans consigne de retour arrière inopérante (A74)
 ---
 
 # TASK-054 — Désinstaller K3s
