@@ -1,7 +1,7 @@
 ---
 id: TASK-057
 title: "Écrire Kubernetes/Maintenance/events.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
