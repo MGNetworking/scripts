@@ -11,6 +11,8 @@ source "$_dir/lib/common.sh"
 
 # Décision 45 : un parent qui exporte ASSUME_YES ne confirme pas à ma place.
 export ASSUME_YES="false"
+# Ces variables héritées détourneraient l'installateur du K3s annoncé au résumé.
+unset INSTALL_K3S_VERSION INSTALL_K3S_CHANNEL K3S_URL K3S_TOKEN
 
 DRY_RUN="false"
 OUI="false"
@@ -28,22 +30,23 @@ install-k3s.sh — installe K3s mono-nœud depuis l'installateur officiel.
 
 Usage : install-k3s.sh [--dry-run] [-y|--yes] [--help]
 
-  --dry-run   affiche le préflight et la commande prévue, sans rien télécharger
+  --dry-run   préflight local et commande prévue, sans réseau ni écriture
   -y, --yes   ne pose aucune question (obligatoire hors terminal)
 
 Systèmes supportés : Debian 12 et 13, Ubuntu 22.04 et 24.04 LTS, sur amd64 ou
 arm64 (décision 14). Toute autre distribution ou architecture est refusée.
 
-Ce que le script modifie : K3s, par https://get.k3s.io en HTTPS seulement.
 L'installateur part dans un fichier temporaire, exécuté puis retiré — jamais
-« curl | sh ». Le service k3s est activé, puis Linux/K3s/verify-k3s.sh dit si le
-cluster répond. Version : le canal stable, ou celle qu'épingle SRV_K3S_VERSION
-dans config/server.env.
+« curl | sh » — et en HTTPS seulement. Le service k3s est activé, puis
+Linux/K3s/verify-k3s.sh dit si le cluster répond. Version : le canal stable, ou
+celle qu'épingle SRV_K3S_VERSION dans config/server.env ; un INSTALL_K3S_VERSION
+hérité de l'environnement est ignoré.
 
 Codes de retour :
   0  K3s est installé et le diagnostic passe, ou l'était déjà
-  1  système non supporté, ressources insuffisantes, get.k3s.io injoignable,
-     port requis occupé, privilège manquant, installateur ou diagnostic en échec
+  1  système non supporté, disque insuffisant, port requis occupé, get.k3s.io
+     injoignable, privilège manquant, installateur, activation ou diagnostic
+     en échec
   2  option inconnue
 EOF
 }
@@ -70,18 +73,19 @@ case "$OS_ARCH" in
     *) die "Architecture non supportée : $OS_ARCH (attendu : x86_64 ou aarch64)" ;;
 esac
 require_cmd systemctl curl
+
 if command -v k3s >/dev/null 2>&1; then
     success "K3s est déjà installé : $(k3s --version 2>/dev/null | head -n1 || echo 'version illisible')"
     info "Ce script ne réinstalle rien. Configurer relève de Linux/K3s/configure-k3s.sh."
     exit 0
 fi
+
 DISQUE_MO="$(df -Pm /var/lib 2>/dev/null | awk 'NR==2 {print $4}')"
 if [ -z "${DISQUE_MO:-}" ]; then
     warn "Espace libre sous /var/lib illisible : le contrôle du disque n'a pas été fait."
 elif [ "$DISQUE_MO" -lt "$MIN_DISQUE_MO" ]; then
     die "Espace insuffisant sous /var/lib : ${DISQUE_MO} Mo libres, ${MIN_DISQUE_MO} Mo requis. Rien n'a été installé."
 fi
-
 # Sous le minimum, K3s démarre encore : c'est un avertissement, jamais un refus.
 MEMOIRE_MO="$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || true)"
 if [ -n "${MEMOIRE_MO:-}" ] && [ "$MEMOIRE_MO" -lt "$MIN_MEMOIRE_MO" ]; then
@@ -89,15 +93,14 @@ if [ -n "${MEMOIRE_MO:-}" ] && [ "$MEMOIRE_MO" -lt "$MIN_MEMOIRE_MO" ]; then
 fi
 info "Système : $OS_ID $OS_VERSION ($ARCH), ${DISQUE_MO:-?} Mo libres sous /var/lib, ${MEMOIRE_MO:-?} Mo de mémoire."
 
-# HEAD suffit à prouver que l'hôte répond en HTTPS ; le script n'est téléchargé
-# qu'une fois, plus bas. Décision 47 : HTTPS seul, sans empreinte épinglée.
-if ! timeout 15 curl -fsS --head -o /dev/null "$URL_INSTALLATEUR"; then
-    die "$URL_INSTALLATEUR injoignable en HTTPS : rien n'a été téléchargé ni installé."
-fi
-# ss -H -ltn : une ligne par écoute, sans en-tête, 4e colonne = adresse locale.
+# Le conflit de ports se constate avant toute requête réseau : un refus local n'a
+# pas à joindre get.k3s.io. ss -H -ltn : une ligne par écoute, 4e colonne =
+# adresse locale.
 OCCUPES=""
 if command -v ss >/dev/null 2>&1; then
-    OCCUPES="$(ss -H -ltn 2>/dev/null | awk '{print $4}' | sed 's/.*://' | sort -u || true)"
+    if ! OCCUPES="$(ss -H -ltn 2>/dev/null | awk '{print $4}' | sed 's/.*://' | sort -u)"; then
+        die "ss n'a pas pu lister les ports en écoute : le conflit de ports n'a pas été vérifié. Rien n'a été installé."
+    fi
 else
     warn "ss absent : les ports $PORTS_REQUIS n'ont pas été vérifiés."
 fi
@@ -109,10 +112,10 @@ if [ -n "$CONFLITS" ]; then
     die "Port(s) déjà en écoute :${CONFLITS} — K3s a besoin de 6443, et de 80 et 443 pour Traefik. Rien n'a été installé."
 fi
 
-VERSION="stable (canal par défaut de l'installateur)"
 if [ -n "${SRV_K3S_VERSION:-}" ]; then
-    VERSION="$SRV_K3S_VERSION (épinglée)"
-    export INSTALL_K3S_VERSION="$SRV_K3S_VERSION"
+    VERSION="$SRV_K3S_VERSION (épinglée)"; export INSTALL_K3S_VERSION="$SRV_K3S_VERSION"
+else
+    VERSION="stable (canal par défaut de l'installateur)"; export INSTALL_K3S_CHANNEL="stable"
 fi
 printf '\nChangements prévus\n'
 printf '  Installateur           %s, en HTTPS\n' "$URL_INSTALLATEUR"
@@ -120,11 +123,16 @@ printf '  Version                %s\n' "$VERSION"
 printf '  Service                k3s, activé, puis diagnostic verify-k3s.sh\n\n'
 
 if [ "$DRY_RUN" = "true" ]; then
-    info "[dry-run] Commande prévue : curl -fsSL $URL_INSTALLATEUR -o <temporaire>, puis ${SRV_K3S_VERSION:+INSTALL_K3S_VERSION=$SRV_K3S_VERSION }sh <temporaire>"
-    info "[dry-run] Aucun téléchargement, aucune écriture : rien n'a été installé."
+    info "[dry-run] Commande prévue : curl -fsSL $URL_INSTALLATEUR -o <temporaire> --proto '=https' --tlsv1.2, puis ${SRV_K3S_VERSION:+INSTALL_K3S_VERSION=$SRV_K3S_VERSION }sh <temporaire>"
+    info "[dry-run] Préflight local seul : aucune requête réseau, aucune écriture. Rien n'a été installé."
     exit 0
 fi
 
+# HEAD suffit à prouver que l'hôte répond en HTTPS. Décision 47 : HTTPS seul,
+# sans empreinte épinglée.
+if ! timeout 15 curl -fsS --head -o /dev/null --proto '=https' --tlsv1.2 "$URL_INSTALLATEUR"; then
+    die "$URL_INSTALLATEUR injoignable en HTTPS : rien n'a été téléchargé ni installé."
+fi
 [ -t 0 ] || [ "$OUI" = "true" ] \
     || die "Installation à confirmer, et aucun terminal n'est disponible. Relancer avec --yes."
 confirm "Installer K3s ($VERSION) sur cette machine ?" || die "Installation abandonnée."
@@ -133,15 +141,21 @@ confirm "Installer K3s ($VERSION) sur cette machine ?" || die "Installation aban
 # exécuté ne serait ni relisible ni rejouable.
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
-if ! curl -fsSL --max-time 120 -o "$TMP" "$URL_INSTALLATEUR" || [ ! -s "$TMP" ]; then
+if ! curl -fsSL --max-time 120 --proto '=https' --tlsv1.2 -o "$TMP" "$URL_INSTALLATEUR" || [ ! -s "$TMP" ]; then
     die "Installateur irrécupérable depuis $URL_INSTALLATEUR : rien n'a été installé."
 fi
 if ! run_logged sh "$TMP"; then
     die "L'installateur K3s a échoué : l'état de la machine est incertain. Relancer ce script, qui ne réinstalle pas un K3s présent."
 fi
-run_logged systemctl enable k3s
-
-# La version et l'état du service sont ceux que verify-k3s.sh relève ensuite.
+# set -e sortirait ici sur une ligne ERR anonyme, au code non garanti : les deux
+# échecs qui suivent sont nommés, et rendent 1.
+if ! run_logged systemctl enable k3s; then
+    die "Activation du service k3s en échec : K3s est installé, mais il ne redémarrera pas au démarrage."
+fi
+ETAT="$(systemctl is-active k3s 2>/dev/null || true)"
+if [ "$ETAT" != "active" ]; then
+    die "Le service k3s n'est pas actif après l'installation (état : ${ETAT:-inconnu}) : le cluster ne répondra pas."
+fi
 printf '\nVérification : %s\n\n' "$(k3s --version 2>/dev/null | head -n1 || echo 'version non disponible')"
 if ! bash "$SCRIPTS_ROOT/Linux/K3s/verify-k3s.sh"; then
     die "K3s est installé, mais le diagnostic ci-dessus ne passe pas."
