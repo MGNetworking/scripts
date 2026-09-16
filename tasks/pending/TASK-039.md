@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A80**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A84**.
 
 ## Registre
 
@@ -129,6 +129,10 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A77 | P3 | `tests/run.sh integration` affiche `[ERROR] Échec (code 4) à la ligne 1 de assert.sh.` après le bilan de `configure-cron.test.sh` (TASK-009) : le `exit 4` de `bilan` (réussite partielle, cas non applicables) déclenche le trap ERR de `lib/common.sh` ; la suite rend 0, mais le faux `[ERROR]` brouille la lecture des sorties | TASK-054 (lecture du conducteur) | faire sortir `bilan` sans passer par le trap ERR (ou le désarmer avant `exit`), sans toucher à `lib/common.sh` si possible |
 | [ ] | A78 | P3 | `Kubernetes/Maintenance/cluster-status.sh` l. 67-68 et 90 : une rubrique qui échoue après la sonde des nœuds affiche l'erreur brute de kubectl sans `[WARN]`, puis le script conclut `[SUCCESS]` et rend 0, même si l'apiserver tombe entre deux appels ; `--help` ne le dit pas ; branche jamais exercée par le test (l. 23-24 annoncent un fichier absent qu'aucun cas ne retire) | TASK-055 (relecture) | préfixer l'échec d'une rubrique en `[WARN]`, dire dans `--help` que 0 signifie « la sonde a répondu », ajouter le cas d'une rubrique en échec |
 | [ ] | A79 | P3 | `tests/integration/cluster-status.test.sh` partiel : la branche « aucun élément » (script l. 56) n'est jamais testée, et `--help` n'est vérifié que pour une rubrique sur six, sans les codes 0, 1 et 2 (test l. 67-68) | TASK-055 (relecture) | ajouter un cas à sortie vide et les assertions de `--help` manquantes |
+| [ ] | A80 | P3 | `Kubernetes/Maintenance/pods-status.sh` et son fichier de cas : la version corrigée (commit c67e8cd, retours de relecture) n'a pas été relue — la tâche n'admet qu'une relecture. Le conducteur a vérifié en lisant le code le point majeur (sortie d'erreur de kubectl tenue à part, affichée seulement en échec, cas avertissement + code 0 en liste pleine et vide) et la preuve de `--request-timeout` sur tous les appels ; les trois mineurs (nom en « - », NotFound distingué, en-tête gardé et `require_cmd timeout`) ne sont couverts que par les tests | TASK-056 (clôture) | relire la version fusionnée lors d'une prochaine tâche du domaine |
+| [ ] | A81 | P3 | `tests/integration/pods-status.test.sh` fait 206 lignes, au-delà des ~150 : les cinq retours de relecture ont ajouté deux cas, un faux kubectl enrichi et environ 25 assertions à un fichier déjà à 150 | TASK-056 (clôture) | factoriser le faux kubectl et les séquences « tracer / lancer / assert » si le fichier doit encore grandir |
+| [ ] | A82 | P3 | `Kubernetes/Maintenance/pods-status.sh` : un utilisateur dont le RBAC se limite aux pods d'un namespace n'a pas le droit `get namespace` ; la vérification préalable échoue (Forbidden) et le script rend 1 en accusant l'apiserver, alors que la liste des pods lui serait accessible | TASK-056 (relecture) | reconnaître `Forbidden` sur `get namespace` : message dédié, ou repli sur `get pods -n` en le signalant |
+| [ ] | A83 | P3 | `Kubernetes/Maintenance/cluster-status.sh` emploie `timeout` sans `require_cmd timeout` : sur un système sans coreutils, message brut « command not found » (corrigé dans `pods-status.sh`, pas ici) | TASK-056 (relecture) | ajouter `timeout` au `require_cmd` de cluster-status.sh |
 
 ## Suivi, pas des défauts
 
