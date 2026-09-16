@@ -104,12 +104,17 @@ rm -f "$BAC/id"
 
 titre "K3s absent, et k3s sans désinstallateur"
 monter
-rm -f "$BAC/k3s"
+rm -f "$BAC/k3s" "$RACINE/usr/local/bin/k3s-uninstall.sh"
 lancer --yes
 assert_code 0 "$CODE" "sans binaire ni désinstallateur, le script rend 0"
 assert_contient "$sortie" "n'est pas installé" "et le dit"
 assert_egal "absente" "$(appele)" "rien n'a été exécuté"
 assert_egal "présente" "$(present "$RACINE/var/lib/rancher/k3s/storage/pvc-1/volume")" "et aucune donnée n'a été touchée"
+monter
+rm -f "$BAC/k3s"
+lancer --yes
+assert_code 0 "$CODE" "un binaire absent mais un désinstallateur présent : les restes sont détruits, en 0"
+assert_egal "absente" "$(present "$RACINE/var/lib/rancher/k3s")" "et il ne subsiste aucun répertoire de données"
 monter
 rm -f "$RACINE/usr/local/bin/k3s-uninstall.sh"
 lancer --yes
