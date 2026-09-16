@@ -21,10 +21,11 @@ Usage : pods-status.sh [--namespace <ns>]
   --namespace <ns>   ne lister que les pods de ce namespace
   --help             afficher cette aide
 
-Sans option, les pods de TOUS les namespaces sont listés (kubectl get pods -A
--o wide). Avec --namespace, le namespace est vérifié avant la liste : kubectl
-ne signale pas un namespace inconnu sur « get pods », qui rend alors 0 avec
-« No resources found » — une faute de frappe passerait pour un namespace vide.
+Sans option, les pods de TOUS les namespaces sont listés, par
+« kubectl get pods -A -o wide ». Avec --namespace, le namespace est vérifié
+avant la liste : kubectl ne signale pas un namespace inconnu sur « get pods »,
+qui rend alors 0 avec « No resources found » — une faute de frappe passerait
+alors pour un namespace vide.
 
 Le kubeconfig est celui que kubectl résout lui-même ; ce script ne le remplace
 pas et ne l'affiche pas. Root n'est pas requis, et chaque appel est borné par
