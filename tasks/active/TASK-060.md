@@ -1,7 +1,7 @@
 ---
 id: TASK-060
 title: "Écrire Kubernetes/Maintenance/backup-resources.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
@@ -38,6 +38,11 @@ implementation_notes:
   - chaque appel kubectl borné par --request-timeout ; umask 077 avant toute écriture
   - test — garde /.dockerenv absent → sortie, avant tout trap ou écriture
   - jamais « kubectl get all » + ajouts — lister les types explicitement, Secret n'y figurant pas
+  - "faux kubectl aux vrais formats, codes et messages (« No resources found » sur stderr, code 0 ; NotFound, Forbidden, injoignable) ; stderr tenu à part du YAML écrit"
+  - "erreurs apiserver distinguées ; une rubrique en échec interdit le [SUCCESS] final (A78) ; timeout externe éventuel = délai + 2 s, code 124 nommé « délai dépassé », require_cmd timeout"
+  - "retirer du YAML resourceVersion, uid, managedFields et status ; un Secret n'atterrit jamais dans un export, même par une liste élargie"
+  - "refus du dépôt aussi via lien symbolique ou chemin relatif (chemin résolu) ; export horodaté qui n'écrase jamais une sauvegarde précédente ; droits 0700 et 0600 vérifiés par stat"
+  - "--request-timeout prouvé sur chaque appel par le faux kubectl ; aucun ok inconditionnel, chaque test échoue si le script est faux"
 ---
 
 # TASK-060 — Sauvegarder les manifests
