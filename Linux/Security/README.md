@@ -13,10 +13,11 @@ Debian 12 et 13, Ubuntu 22.04 et 24.04 LTS (décision 14).
 | `configure-firewall.sh` | ufw : règle SSH posée et relue avant tout, deny en entrée, allow en sortie, ports de `SRV_FIREWALL_PORTS` ou `--port` ; refuse si le port réel de sshd diffère de `SRV_SSH_PORT` ; `--dry-run`, `--yes` | root | oui |
 | `configure-ssh.sh` | sshd : dépose `sshd_config.d/10-mgnetworking.conf` — mot de passe et clavier interactif refusés, clé seule, port inchangé ; refuse sans compte non-root membre de sudo avec clé (`SRV_ADMIN_UTILISATEUR` ou `--utilisateur`) ou sans `Include` de `sshd_config.d` ; `sshd -t` puis `systemctl reload ssh`, état antérieur restauré si l'un échoue ; `--dry-run`, `--yes` | root | oui |
 | `disable-root-login.sh` | sshd : dépose `sshd_config.d/05-mgnetworking-root.conf` — `PermitRootLogin no`, lu avant les autres fichiers ; mêmes refus que `configure-ssh.sh` (compte non-root membre de sudo avec clé, `Include` de `sshd_config.d`) ; `sshd -t`, puis `sshd -T` doit annoncer `permitrootlogin no`, puis `systemctl reload ssh`, état antérieur restauré si l'un échoue ; `--dry-run`, `--yes` | root | oui |
+| `configure-fail2ban.sh` | fail2ban : installé par `apt-get` s'il manque ; dépose `jail.d/mgnetworking-sshd.conf` — prison `sshd` activée, valeurs de la distribution (décision 22), sans toucher `jail.conf` ni `jail.local` ; service activé et redémarré seulement si quelque chose a changé ou s'il est arrêté, puis attente bornée du démon (`fail2ban-client ping`) et `fail2ban-client status sshd` ; `--dry-run`, `--yes` | root | oui |
 
 ## Ordre d'utilisation
 
-Les audits d'abord, en lecture seule. Puis `configure-firewall.sh` et `configure-ssh.sh`, fail2ban (à venir), et
+Les audits d'abord, en lecture seule. Puis `configure-firewall.sh`, `configure-ssh.sh` et `configure-fail2ban.sh`, et
 en dernier `disable-root-login.sh` — seulement après avoir créé un compte
 d'administration avec `Linux/System/manage-users.sh` (décision 20).
 
@@ -38,6 +39,8 @@ sudo ./Linux/Security/configure-firewall.sh --dry-run          # état et comman
 sudo ./Linux/Security/configure-firewall.sh --port 443/tcp     # résumé confirmé, puis activation
 sudo ./Linux/Security/configure-ssh.sh --dry-run --utilisateur admin   # compte vérifié, fichier prévu
 sudo ./Linux/Security/configure-ssh.sh --utilisateur admin             # confirmé, sshd -t, reload
+sudo ./Linux/Security/configure-fail2ban.sh --dry-run      # paquet, prison, service : état et actions prévues
+sudo ./Linux/Security/configure-fail2ban.sh                # confirmé, dépôt, redémarrage, status sshd
 sudo ./Linux/Security/disable-root-login.sh --dry-run --utilisateur admin   # compte vérifié, fichier prévu
 sudo ./Linux/Security/disable-root-login.sh --utilisateur admin             # confirmé, sshd -t, sshd -T, reload
 ```

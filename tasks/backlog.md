@@ -54,7 +54,7 @@ de ce que cet ADR a tranché.
 | [TASK-041](completed/TASK-041.md) | Écrire `Linux/Security/audit-users.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-042](completed/TASK-042.md) | Écrire `Linux/Security/audit-ports.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-043](completed/TASK-043.md) | Écrire `Linux/Security/security-check.sh` | `completed` | moyenne | — | conteneur `debian` | non |
-| [TASK-044](active/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | `in_progress` | moyenne | — | conteneur `debian` | **oui** |
+| [TASK-044](completed/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-045](completed/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | `completed` | haute | — | conteneur `debian` | **oui** |
 | [TASK-046](completed/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | `completed` | haute | 025 | conteneur `debian` | **oui** |
 | [TASK-047](completed/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `completed` | haute | 046 | conteneur `debian` | **oui** |
@@ -241,7 +241,7 @@ côté ; elles restent non sélectionnables.
 | `audit-users.sh` | atomisée : [TASK-041](completed/TASK-041.md) |
 | `audit-ports.sh` | atomisée : [TASK-042](completed/TASK-042.md) |
 | `security-check.sh` | atomisée : [TASK-043](completed/TASK-043.md) |
-| `configure-fail2ban.sh` | atomisée : [TASK-044](active/TASK-044.md) |
+| `configure-fail2ban.sh` | atomisée : [TASK-044](completed/TASK-044.md) |
 | `configure-firewall.sh` | atomisée : [TASK-045](completed/TASK-045.md) — **peut couper l'accès à la machine** |
 | `configure-ssh.sh` | atomisée : [TASK-046](completed/TASK-046.md) — **peut couper l'accès à la machine** |
 | `disable-root-login.sh` | atomisée : [TASK-047](completed/TASK-047.md) — **peut couper l'accès à la machine** |
@@ -375,6 +375,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-048](completed/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` | [rapport](reports/TASK-048-report.md) |
 | [TASK-046](completed/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | [rapport](reports/TASK-046-report.md) |
 | [TASK-047](completed/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | [rapport](reports/TASK-047-report.md) |
+| [TASK-044](completed/TASK-044.md) | Écrire `Linux/Security/configure-fail2ban.sh` | [rapport](reports/TASK-044-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

@@ -105,6 +105,9 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A53 | P4 | `disable-root-login.test.sh` (l. 125-128) : le cas `ASSUME_YES` hérité avec terminal ne vérifie pas qu'aucun fichier n'est déposé après la réponse « n » | relecture TASK-047 | ajouter l'assertion d'absence du dépôt |
 | [ ] | A54 | P4 | `disable-root-login.sh` : messages trop longs aux l. 72 et 141 | relecture TASK-047 | raccourcir lors d'une passe de sobriété |
 | [ ] | A55 | P2 | `disable-root-login.test.sh` : le faux `sshd -T` rend une valeur imposée sans lire le fichier déposé, donc l'ordre de priorité (préfixe 05, directive placée avant l'`Include`) n'est jamais éprouvé — rejoint A48 ; le cas sans terminal (l. 123) ne prouve pas la décision 45, seul le cas « script » la prouve | relecture TASK-047 | éprouver sur une VM jetable avec le vrai sshd, session SSH ouverte (comme A48) |
+| [ ] | A56 | P3 | `configure-fail2ban.sh` (l. 83-87) redémarre un service simplement arrêté alors que ni paquet, ni fichier, ni activation n'ont changé : défendable (la prison doit être chargée), mais écart à la lettre du critère « redémarré seulement si quelque chose a changé » de TASK-044 | relecture TASK-044 | trancher : amender le critère ou n'agir que sur changement |
+| [ ] | A57 | P2 | `configure-fail2ban.sh` : la version corrigée après relecture (attente du démon, rattrapage après `enable` raté, `require_cmd fail2ban-client`, fichier de cas passé de 146 à 219 lignes) n'a pas été relue par Opus ; prouvée seulement avec de faux `apt-get`, `systemctl` et `fail2ban-client`, jamais avec le vrai démon | TASK-044 | relire le diff 6906255..6807391 lors d'une passe de sobriété ; éprouver sur une VM jetable (profil `systemd`) |
+| [ ] | A58 | P4 | `configure-fail2ban.test.sh` : 219 lignes (cible 150), justifiées par les huit retours de relecture | TASK-044 | resserrer lors d'une passe de sobriété |
 
 ## Suivi, pas des défauts
 

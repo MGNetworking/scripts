@@ -1,7 +1,7 @@
 ---
 id: TASK-044
 title: "Écrire Linux/Security/configure-fail2ban.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian
