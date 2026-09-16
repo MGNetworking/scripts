@@ -55,6 +55,13 @@ neuf() { rm -rf "$BAC_ETC"; : > "$JOURNAL"; }
 pose() { if [ -e "$1" ]; then echo "présente"; else echo "absente"; fi; }
 lancer() { sortie="$("${LANCER_ENV[@]}" bash "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?; }
 ancien_en_place() { mkdir -p "$BAC_ETC"; rm -f "$BAC_ETC"/*.bak; printf '%s\n' "$ANCIEN" > "$FICHIER"; : > "$JOURNAL"; }
+# Vrai si la première ligne portant le motif $2 précède celle portant $3 dans $1.
+avant() {
+    local a b
+    a="$(printf '%s\n' "$1" | grep -nF -- "$2" | head -1 | cut -d: -f1)"
+    b="$(printf '%s\n' "$1" | grep -nF -- "$3" | head -1 | cut -d: -f1)"
+    [ -n "$a" ] && [ -n "$b" ] && [ "$a" -lt "$b" ]
+}
 
 titre "Codes d'usage"
 sortie="$(bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
@@ -89,6 +96,7 @@ neuf
 sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr,10.0.0.5" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
 assert_code 0 "$code" "un fichier absent est créé : rend 0"
 assert_egal "$ATTENDU" "$(cat "$FICHIER" 2>/dev/null)" "le fichier porte exactement le contenu attendu"
+assert_egal "600" "$(stat -c '%a' "$FICHIER")" "et il est écrit en 0600"
 assert_contient "$(cat "$JOURNAL")" "restart k3s" "K3s est redémarré"
 assert_contient "$sortie" "cluster est sain" "et le diagnostic verify-k3s.sh rend 0"
 
@@ -98,6 +106,16 @@ sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr,10.0.0.5" bash "$CI
 assert_code 0 "$code" "une seconde exécution rend 0"
 assert_contient "$sortie" "déjà conforme" "le script constate au lieu de réécrire"
 assert_egal "" "$(cat "$JOURNAL")" "aucun redémarrage n'a été demandé"
+
+titre "Contenu identique, droits différents : chmod seul"
+neuf
+mkdir -p "$BAC_ETC"; printf '%s\n' "$ATTENDU" > "$FICHIER"; chmod 0644 "$FICHIER"
+sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr,10.0.0.5" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 0 "$code" "un contenu conforme et des droits non conformes rendent 0"
+assert_contient "$sortie" "droits" "le message dit ce qui a été corrigé"
+assert_egal "600" "$(stat -c '%a' "$FICHIER")" "les droits sont passés à 0600"
+assert_egal "$ATTENDU" "$(cat "$FICHIER")" "le contenu n'a pas bougé"
+assert_egal "" "$(cat "$JOURNAL")" "et K3s n'a pas été redémarré"
 
 titre "SRV_K3S_TLS_SAN absente ou vide : la clé tls-san est omise"
 neuf
@@ -121,6 +139,8 @@ assert_egal "" "$(cat "$JOURNAL")" "ni K3s redémarré"
 sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr,10.0.0.5" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
 assert_code 0 "$code" "le remplacement rend 0"
 assert_contient "$sortie" '-write-kubeconfig-mode: "0644"' "la différence est affichée avant confirmation, hors dry-run aussi"
+avant "$sortie" '-write-kubeconfig-mode: "0644"' "Confirmation automatique" && code=oui || code=non
+assert_egal "oui" "$code" "et elle précède la question de confirmation"
 assert_contient "$sortie" "Original sauvegardé" "l'original est sauvegardé avant remplacement"
 assert_egal "$ANCIEN" "$(cat "$BAC_ETC"/*.bak 2>/dev/null)" "la sauvegarde contient l'ancien fichier"
 assert_egal "$ATTENDU" "$(cat "$FICHIER")" "et le fichier porte le nouveau contenu"
@@ -134,15 +154,33 @@ assert_egal "absente" "$(pose "$FICHIER")" "rien n'a été écrit"
 sortie="$("${LANCER_ENV[@]}" ASSUME_YES=true bash "$CIBLE" </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "un ASSUME_YES hérité, sans --yes, rend 1"
 assert_egal "absente" "$(pose "$FICHIER")" "et rien n'est écrit pour autant"
+neuf
+if command -v script >/dev/null 2>&1; then
+    # Avec un terminal, c'est confirm qui décide : ce cas seul prouve que
+    # l'ASSUME_YES du parent est réellement remis à false (décision 45).
+    code=0
+    sortie="$(printf 'n\n' | "${LANCER_ENV[@]}" ASSUME_YES=true script -qec "bash $CIBLE" /dev/null 2>&1)" || code=$?
+    assert_code 1 "$code" "un ASSUME_YES hérité, avec un terminal, rend 1"
+    assert_absent "$sortie" "Confirmation automatique" "l'ASSUME_YES du parent est ignoré"
+    assert_contient "$sortie" "abandonnée" "la question est posée et « n » l'écarte"
+    assert_egal "absente" "$(pose "$FICHIER")" "rien n'est écrit après ce refus"
+else
+    saute_indisponible "ASSUME_YES hérité avec un terminal" "script (util-linux) absent"
+fi
 
 titre "Valeur mal formée dans config/ : refus en 2, sans rien écrire"
-for valeur in "k3s.exemple.fr,10.0.0.5/32" "k3s.exemple.fr,,10.0.0.5" "k3s.exemple.fr,10.0.0.5 10.0.0.6"; do
+for valeur in "k3s.exemple.fr,10.0.0.5/32" "k3s.exemple.fr,,10.0.0.5" "k3s.exemple.fr,10.0.0.5 10.0.0.6" \
+              "-" "10.0.0.999" "-foo.fr" "foo-.fr" "k3s.exemple.fr,"; do
     neuf
     sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="$valeur" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
     assert_code 2 "$code" "« $valeur » est refusée en 2"
     assert_contient "$sortie" "SRV_K3S_TLS_SAN mal formée" "le refus nomme la variable fautive"
     assert_egal "absente" "$(pose "$FICHIER")" "et rien n'a été écrit"
 done
+neuf
+sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="fd00::1" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 0 "$code" "une IPv6 valide est acceptée"
+assert_contient "$(cat "$FICHIER")" '- "fd00::1"' "et recopiée telle quelle"
 
 titre "Écriture suivie d'un échec : l'original est restauré, K3s relancé"
 ancien_en_place
@@ -157,5 +195,17 @@ assert_contient "$sortie" "L'API du cluster ne répond pas" "l'échec rapporté 
 assert_contient "$sortie" "l'original a été restauré" "et le script nomme la restauration"
 assert_egal "$ANCIEN" "$(cat "$FICHIER")" "l'ancien fichier est en place"
 assert_egal "2" "$(grep -c 'restart k3s' "$JOURNAL" || true)" "K3s a été relancé une seconde fois, avec l'ancien fichier"
+sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr" bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 0 "$code" "une relance après restauration rend 0"
+assert_absent "$sortie" "déjà conforme" "elle ne se croit pas déjà conforme"
+assert_contient "$(cat "$FICHIER")" '- "k3s.exemple.fr"' "le contenu attendu est écrit"
+assert_egal "3" "$(grep -c 'restart k3s' "$JOURNAL" || true)" "et K3s est redémarré pour la nouvelle configuration"
+
+titre "Redémarrage en échec sans original : le fichier écrit est retiré"
+neuf
+sortie="$("${LANCER_ENV[@]}" SRV_K3S_TLS_SAN="k3s.exemple.fr" REDEMARRAGE_ECHEC=1 bash "$CIBLE" --yes 2>&1)" && code=0 || code=$?
+assert_code 1 "$code" "un redémarrage en échec sans original rend 1"
+assert_contient "$sortie" "aucun original à restaurer" "le message dit qu'il n'y avait rien à restaurer"
+assert_egal "absente" "$(pose "$FICHIER")" "et le fichier écrit est retiré"
 
 bilan "TASK-052 / configure-k3s.sh"
