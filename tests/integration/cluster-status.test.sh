@@ -58,14 +58,14 @@ cluster_sain() {
 
 CODE=0; codes=""; sortie=""
 # codes garde chaque code rendu : à la fin, le 2 ne doit venir que de l'usage.
-lancer() { sortie="$(KUBECONFIG="$BAC/kubeconfig-essai" PATH="$BAC:$PATH" bash "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
+lancer() { sortie="$(KUBECONFIG="$BAC/kubeconfig-essai" PATH="$BAC:$PATH" bash "$CIBLE" 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
 sans_kubectl() { sortie="$(PATH="/usr/bin:/bin" bash "$CIBLE" 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
 
 titre "Codes d'usage"
 sortie="$(bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
 assert_code 0 "$code" "--help rend 0"
 assert_contient "$sortie" "Codes de retour" "--help documente les codes de retour"
-assert_contient "$sortie" "Nœuds"          "--help nomme les rubriques"
+assert_contient "$sortie" "nœuds (-o wide)" "--help nomme les rubriques et leur forme"
 assert_contient "$sortie" "KUBECONFIG"     "--help dit comment le kubeconfig est résolu"
 bash "$CIBLE" --option-inexistante >/dev/null 2>&1 && code=0 || code=$?
 assert_code 2 "$code" "une option inconnue rend 2"
