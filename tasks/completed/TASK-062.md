@@ -1,7 +1,7 @@
 ---
 id: TASK-062
 title: "Écrire Kubernetes/Installation/install-kubectl.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

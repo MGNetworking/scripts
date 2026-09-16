@@ -1,7 +1,7 @@
 ---
 id: TASK-066
 title: "Écrire Kubernetes/Installation/install-metrics.sh"
-status: pending
+status: ready
 priority: low
 depends_on:
   - TASK-062

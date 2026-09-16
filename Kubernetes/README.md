@@ -6,7 +6,7 @@ cluster managé. Ce qui dépend de K3s lui-même vit dans `Linux/K3s/`.
 
 | Dossier | Rôle | État |
 |---|---|---|
-| `Installation/` | outils et composants de l'écosystème (Helm, cert-manager…) | à venir |
+| [Installation/](Installation/README.md) | vérification de kubectl, outils et composants de l'écosystème (Helm, cert-manager…) | 1 script |
 | `Configuration/` | namespaces, registry, ressources de configuration | à venir |
 | [Maintenance/](Maintenance/README.md) | exploitation et diagnostic du cluster | 7 scripts |
 

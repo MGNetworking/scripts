@@ -85,3 +85,6 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-17 00:44:38	TASK-061	relecteur	opus	6	-	-	27753	57	0	
 2026-09-17 00:52:33	TASK-061	deepseek	deepseek-flash	42	69020	3618560	75950	424	0	0.134
 2026-09-17 01:05:05	TASK-061	conducteur	opus	66	-	-	134611	2272	0	
+2026-09-17 01:14:50	TASK-062	deepseek	deepseek-flash	71	110582	5534336	90800	484	0	0.175
+2026-09-17 01:23:51	TASK-062	relecteur	opus	7	-	-	30849	78	0	
+2026-09-17 01:31:00	TASK-062	deepseek	deepseek-flash	58	85874	4628864	66619	400	0	0.133

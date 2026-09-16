@@ -1,7 +1,7 @@
 ---
 id: TASK-064
 title: "Écrire Kubernetes/Installation/install-ingress.sh"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-062

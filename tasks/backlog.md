@@ -81,11 +81,11 @@ de ce que cet ADR a tranché.
 | [TASK-059](completed/TASK-059.md) | Écrire `Kubernetes/Maintenance/resource-usage.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-060](completed/TASK-060.md) | Écrire `Kubernetes/Maintenance/backup-resources.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-061](completed/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-062](active/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | `in_progress` | moyenne | — | conteneur `debian` | non |
+| [TASK-062](completed/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-063](pending/TASK-063.md) | Écrire `Kubernetes/Installation/install-helm.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
-| [TASK-064](pending/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | `pending` | moyenne | 062 | conteneur `debian` | non |
+| [TASK-064](pending/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | `ready` | moyenne | 062 | conteneur `debian` | non |
 | [TASK-065](pending/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | `pending` | haute | 062, 063 | conteneur `debian` | **oui** |
-| [TASK-066](pending/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | `pending` | basse | 062 | conteneur `debian` | non |
+| [TASK-066](pending/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | `ready` | basse | 062 | conteneur `debian` | non |
 | [TASK-067](pending/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | `pending` | moyenne | 062 | conteneur `debian` | non |
 | [TASK-068](pending/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `pending` | moyenne | 062 | conteneur `debian` | **oui** |
 | [TASK-069](pending/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `pending` | moyenne | 062, 064 | conteneur `debian` | **oui** |
@@ -293,7 +293,7 @@ Découpé en trois lots (plus de sept scripts), tous atomisés le 2026-09-16.
 | Lot | Fiches | Note |
 |---|---|---|
 | Maintenance — plan §7 | [TASK-055](completed/TASK-055.md) à [TASK-061](completed/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; décision 48 |
-| Installation — plan §5 | [TASK-062](active/TASK-062.md) à [TASK-066](pending/TASK-066.md) | vérification seule de kubectl, Traefik et metrics-server ; décision 48 |
+| Installation — plan §5 | [TASK-062](completed/TASK-062.md) à [TASK-066](pending/TASK-066.md) | vérification seule de kubectl, Traefik et metrics-server ; décision 48 |
 | Configuration — plan §6 | [TASK-067](pending/TASK-067.md) à [TASK-071](pending/TASK-071.md) | secrets du registry hors dépôt ; décision 48 |
 
 ### Docker — plan §8 à §10
@@ -414,6 +414,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-059](completed/TASK-059.md) | Écrire `Kubernetes/Maintenance/resource-usage.sh` | [rapport](reports/TASK-059-report.md) |
 | [TASK-060](completed/TASK-060.md) | Écrire `Kubernetes/Maintenance/backup-resources.sh` | [rapport](reports/TASK-060-report.md) |
 | [TASK-061](completed/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | [rapport](reports/TASK-061-report.md) |
+| [TASK-062](completed/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | [rapport](reports/TASK-062-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
