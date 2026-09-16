@@ -83,7 +83,7 @@ echec() {
     local appel="$1" fin="${2:-}"
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
     case "$CODE:$ERREUR" in
-        124:*)       die "Délai dépassé (${DELAI} s) : $appel n'a pas répondu.$fin" ;;
+        124:*)       die "L'appel a été interrompu : délai dépassé (${DELAI} s) — $appel.$fin" ;;
         *Forbidden*) die "Droits insuffisants : $appel a été refusé.$fin" ;;
         *NotFound*)  die "L'apiserver ne connaît pas la ressource demandée par $appel.$fin" ;;
     esac

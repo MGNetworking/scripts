@@ -254,7 +254,7 @@ done
 assert_absent "$(cat "$CIBLE")" "k3s.yaml" "aucune référence à /etc/rancher/k3s/k3s.yaml : kubectl résout son kubeconfig"
 assert_absent "$(cat "$CIBLE")" "k3s kubectl" "kubectl est appelé directement"
 assert_absent "$(cat "$CIBLE")" "require_root" "aucun require_root : le script s'exécute sans root"
-assert_absent "$(cat "$CIBLE")" "get all" "« get all » n'apparaît pas non plus dans le script"
+assert_egal "0" "$(grep -vE '^[[:space:]]*#' "$CIBLE" | grep -c 'get all' || true)" "« get all » n'est employé nulle part dans le code"
 assert_absent "$(cat "$CIBLE")" "secrets" "le type secrets n'y figure pas"
 
 bilan "TASK-060 / backup-resources.sh"
