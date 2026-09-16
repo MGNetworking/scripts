@@ -1,7 +1,7 @@
 ---
 id: TASK-050
 title: "Écrire Linux/K3s/verify-k3s.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian

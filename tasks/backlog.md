@@ -69,7 +69,7 @@ de ce que cet ADR a tranché.
 | [TASK-035](completed/TASK-035.md) | Écrire `Docker/Maintenance/update-images.sh` | `completed` | moyenne | 029 | conteneur `debian` | **oui** |
 | [TASK-036](completed/TASK-036.md) | Écrire `Docker/Maintenance/update-docker.sh` | `completed` | moyenne | 029 | conteneur `systemd` | **oui** |
 | [TASK-037](completed/TASK-037.md) | Écrire `Docker/Cleanup/docker-cleanup.sh` | `completed` | haute | 034 | conteneur `debian` | **oui** |
-| [TASK-050](pending/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-050](active/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | `in_progress` | moyenne | — | conteneur `debian` | non |
 | [TASK-051](pending/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `pending` | haute | 050 | conteneur `debian` | **oui** |
 | [TASK-052](pending/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | `pending` | moyenne | 051 | conteneur `debian` | **oui** |
 | [TASK-053](pending/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `pending` | moyenne | 050, 051 | conteneur `debian` | **oui** |
@@ -263,7 +263,7 @@ besoin, et l'ordre d'installation de `CLAUDE.md` le lui impose déjà. Deux scri
 
 | Entrée | Note |
 |---|---|
-| `verify-k3s.sh` | atomisée : [TASK-050](pending/TASK-050.md) |
+| `verify-k3s.sh` | atomisée : [TASK-050](active/TASK-050.md) |
 | `install-k3s.sh` | atomisée : [TASK-051](pending/TASK-051.md) — deux décisions attendues de user (version, vérification de l'installateur) |
 | `configure-k3s.sh` | atomisée : [TASK-052](pending/TASK-052.md) — deux décisions attendues de user (contenu, fichier cible) |
 | `upgrade-k3s.sh` | atomisée : [TASK-053](pending/TASK-053.md) — décision attendue de user (version cible) |
