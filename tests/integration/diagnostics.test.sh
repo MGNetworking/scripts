@@ -20,7 +20,7 @@ cat > "$BAC/kubectl" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" | tee -a "$BAC/appels" >> "$BAC/tous"
 [ "${KUBECTL_INJOIGNABLE:-0}" = 1 ] && { echo "The connection to the server 127.0.0.1:6443 was refused" >&2; exit 1; }
-[ "${KUBECTL_INTERDIT:-0}" = 1 ] && { echo "Error from server (Forbidden): pods is forbidden" >&2; exit 1; }
+[ "${KUBECTL_INTERDIT:-0}" = 1 ] && [ "$2" = pods ] && { echo "Error from server (Forbidden): pods is forbidden" >&2; exit 1; }
 [ "$1" = get ] || exit 1
 shift
 [ -f "$BAC/$1" ] || exit 1
@@ -31,7 +31,7 @@ chmod +x "$BAC/kubectl"
 for outil in k3s systemctl; do printf '#!/bin/sh\ntouch "%s/%s-appele"\n' "$BAC" "$outil" > "$BAC/$outil" && chmod +x "$BAC/$outil"; done
 CODE=0; sortie=""
 # Chaque lancer repart d'un journal vierge : « appels » ne porte que sur le cas.
-lancer() { : > "$BAC/appels"; sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" "$@" 2>&1)" && CODE=0 || CODE=$?; }
+lancer() { : > "$BAC/appels"; sortie="$(PATH="$BAC:$PATH" bash "$CIBLE" 2>&1)" && CODE=0 || CODE=$?; }
 # Cluster sain — la garde de contraste de tous les cas d'anomalie ci-dessous.
 sain() {
     printf '%s\n' "node-1  Ready  control-plane  10d  v1.31.4" > "$BAC/nodes"
@@ -133,7 +133,7 @@ export KUBECTL_INTERDIT=1
 lancer
 unset KUBECTL_INTERDIT
 assert_code 1 "$CODE" "une rubrique illisible rend 1 sans interrompre le diagnostic"
-assert_contient "$sortie" "Relevé impossible : pods" "elle est signalée en nommant la rubrique"
+assert_contient "$sortie" "Relevé impossible : Pods (tous les namespaces)" "elle est signalée en nommant la rubrique"
 assert_contient "$(cat "$BAC/appels")" "get deployments" "les rubriques suivantes sont quand même tentées"
 
 titre "kubectl seul, appels bornés, lecture seule"
