@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A64**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A67**.
 
 ## Registre
 
@@ -113,6 +113,9 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A61 | P3 | Écarts du conducteur observés sur ses deux premières tâches : activation en deux commits (TASK-047), « prochain identifiant libre » du registre non avancé après A56-A58 (TASK-044, rattrapé à la clôture de TASK-049), TASK-047 annoncée à tort comme dernière de `Linux/Security` | TASK-049 | surveiller sur les tâches suivantes ; préciser `conducteur-tache.md` si l'écart se répète |
 | [ ] | A62 | P2 | `verify-k3s.sh` : la version corrigée après relecture (état du service sur une ligne malgré le code 3 de `systemctl is-active`, rubrique « aucun événement Warning » distincte de l'API muette, fichier de cas passé de 34 à 38 vérifications) n'a pas été relue par Opus ; prouvée seulement avec de faux `k3s` et `systemctl`, jamais contre un vrai cluster | TASK-050 | relire le diff fea10ba..c9abdc9 lors d'une passe de sobriété ; éprouver après `install-k3s.sh` (TASK-051) sur une VM jetable |
 | [ ] | A63 | P4 | `orchestration/schema/orchestration.svg` (et son PNG) ne montre pas le sous-agent `conducteur-tache` introduit par TASK-049 | session, clôture TASK-050 | mettre le schéma et son export PNG à jour |
+| [ ] | A64 | P2 | `install-k3s.sh` : la version corrigée après relecture (garde `/.dockerenv` du fichier de cas, activation ratée et service inactif nommés en 1, faux `systemctl` fidèle, échec de `ss` bloquant, `--proto '=https'`, variables `INSTALL_K3S_*`, `K3S_URL` et `K3S_TOKEN` héritées neutralisées, 49 → 78 vérifications) n'a pas été relue par Opus, seulement lue par le conducteur sur le bloquant et les deux majeurs ; longueurs 164 + 235, au-delà de la cible de 150 ; prouvée seulement avec de faux `curl`, installateur, `k3s`, `systemctl` et `ss`, jamais sur une vraie machine | TASK-051 | relire le diff 9a7ad9c..3149730 lors d'une passe de sobriété ; éprouver sur une VM jetable avec `verify-k3s.sh` (A62) |
+| [ ] | A65 | P3 | `install-k3s.sh` : `ss` absent n'émet qu'un `[WARN]` et saute le contrôle des ports 6443, 80 et 443, alors qu'un `ss` en échec bloque ; seuils de 5 120 Mo de disque et 512 Mo de mémoire repris de la documentation K3s sans vérification dans le dépôt | TASK-051 | décider si `ss` passe dans `require_cmd` ; vérifier les seuils à la source |
+| [ ] | A66 | P3 | Commit de relance de l'agent DeepSeek mal formé : titre `fix: retours de relecture (RETOURS-TASK-051.md)` au lieu de `(TASK-051)`, sans ligne `Tâche : TASK-051`, attribution `Claude Code` ; l'étape 5 de `/tache` repère ce commit par son titre | TASK-051 | préciser dans la consigne de relance de `lancer-agent.sh` le titre et la ligne `Tâche :` attendus |
 
 ## Suivi, pas des défauts
 

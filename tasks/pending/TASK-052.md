@@ -1,7 +1,7 @@
 ---
 id: TASK-052
 title: "Écrire Linux/K3s/configure-k3s.sh"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-051

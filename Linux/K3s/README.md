@@ -9,19 +9,34 @@ Ubuntu 22.04 et 24.04 LTS (décision 14).
 | Script | Rôle | Privilèges | Modifie le système |
 |---|---|---|---|
 | `verify-k3s.sh` | diagnostic en lecture seule, rubriques dans l'ordre : service `k3s` (`systemctl is-active`), version, nœuds, pods de tous les namespaces, namespaces, événements Warning ; tout passe par `k3s kubectl`, chaque appel borné par `--request-timeout` ; un nœud non Ready, un pod ni Running ni Succeeded (« Completed ») ou un service inactif sont nommés en `[WARN]` ; les événements Warning s'affichent sans peser sur le verdict. Codes : 0 cluster sain, 1 K3s absent ou anomalie, 2 option inconnue | root (`/etc/rancher/k3s/k3s.yaml`) | non |
+| `install-k3s.sh` | installe K3s serveur mono-nœud par l'installateur officiel `https://get.k3s.io`. Préflight : root, cible de la décision 14 en amd64 ou arm64, au moins 5 120 Mo libres sous `/var/lib` (bloquant), mémoire sous 512 Mo (`[WARN]` seul), ports 6443, 80 et 443 libres (`ss`, dont l'échec bloque), `get.k3s.io` joignable en HTTPS. K3s déjà présent : version affichée, rien réinstallé, 0. Version : canal `stable`, ou `SRV_K3S_VERSION` de `config/server.env` (décision 47) ; `INSTALL_K3S_*`, `K3S_URL` et `K3S_TOKEN` hérités sont ignorés. Installateur téléchargé en HTTPS seul (`--proto '=https'`) dans un temporaire, exécuté puis retiré, jamais `curl \| sh` ; `systemctl enable k3s`, service actif, puis `verify-k3s.sh`. `--dry-run` : préflight et commande, sans réseau. `--yes` obligatoire hors terminal ; `ASSUME_YES` hérité ignoré (décision 45). Codes : 0 installé et sain ou déjà présent, 1 refus ou échec nommé, 2 option inconnue | root | oui |
 
 ## Ordre d'utilisation
 
-Après `Linux/System` et `Linux/Security`. `verify-k3s.sh` sert de vérification
-finale à l'installation et à la mise à niveau, qui lisent son code de retour.
+Après `Linux/System` et `Linux/Security`. `install-k3s.sh`, puis
+`configure-k3s.sh` (à venir) pour `/etc/rancher/k3s/config.yaml`.
+`verify-k3s.sh` sert de vérification finale à l'installation et à la mise à
+niveau, qui lisent son code de retour.
 
 ```bash
-sudo ./Linux/K3s/verify-k3s.sh          # diagnostic ; code 0 si le cluster est sain
-./Linux/K3s/verify-k3s.sh --help        # rubriques et codes de retour
+sudo ./Linux/K3s/install-k3s.sh --dry-run   # préflight et commande prévue, rien d'installé
+sudo ./Linux/K3s/install-k3s.sh             # résumé, confirmation, installation, diagnostic
+sudo ./Linux/K3s/verify-k3s.sh              # diagnostic ; code 0 si le cluster est sain
+./Linux/K3s/verify-k3s.sh --help            # rubriques et codes de retour
 ```
 
 ## Risques
 
-`verify-k3s.sh` ne modifie rien et n'affiche ni kubeconfig, ni jeton de nœud, ni
-Secret. Il n'a été éprouvé qu'avec de faux `k3s` et `systemctl`, jamais contre
-un vrai cluster.
+`install-k3s.sh` télécharge et exécute l'installateur officiel en root : il pose
+le binaire `k3s`, le service systemd et `/var/lib/rancher/k3s`. Traefik, conservé
+(décision 23), prend 80 et 443 : un reverse proxy Docker déjà en écoute fait
+refuser l'installation. Avec ufw en `deny` (décision 21), le trafic des pods et
+services (10.42.0.0/16, 10.43.0.0/16) peut être bloqué : à autoriser à part, ce
+script ne touche pas au pare-feu. Un installateur qui échoue en cours de route
+laisse un état incertain : relancer le script, qui ne réinstalle pas un K3s
+présent. Les seuils de disque et de mémoire viennent de la documentation K3s,
+non mesurés ici.
+
+Aucun des deux scripts n'affiche ni kubeconfig, ni jeton de nœud, ni Secret. Ils
+n'ont été éprouvés qu'avec de faux `curl`, installateur, `k3s`, `systemctl` et
+`ss`, jamais contre un vrai cluster.

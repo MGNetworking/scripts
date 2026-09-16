@@ -33,6 +33,7 @@ dans la conversation : TASK-045 l'a perdu.
 | TASK-047 `disable-root-login.sh` | peut couper SSH | agent `deepseek` | 3/3 | 92 | 150 + 140 | 0,116 $, 1 lancement | Opus 29 930 | fusionnable au premier jet, aucun défaut corrigé ; 5 mineurs laissés : réserves A51-A55 ; premier conducteur-tache (TASK-049) |
 | TASK-044 `configure-fail2ban.sh` | un effet borné | agent `deepseek` | 3/3 | 100 | 146 + 146 → 150 + 219 | 0,182 $, 2 lancements | Opus 37 561 | 1 majeur (vérification avant que le démon réponde), 3 mineurs et 5 tests creux corrigés ; version corrigée non relue (A57) ; réserves A56-A58 |
 | TASK-050 `verify-k3s.sh` | lecture seule | agent `deepseek` | 3/3 | 38 | 136 + 150 → 149 + 150 | 0,201 $, 2 lancements | Opus 24 826 | 4 mineurs et 1 test creux corrigés (état du service doublé, Warning absents pris pour API muette, `ok` inconditionnel, message « non installé » non vérifié) ; version corrigée non relue (A62) |
+| TASK-051 `install-k3s.sh` | installe en root, télécharge | agent `deepseek` | 3/3 | 78 | 150 + 168 → 164 + 235 | 0,313 $, 2 lancements | Opus 41 940 | 1 bloquant (fichier de cas effaçant `/var/lib/rancher/k3s` hors conteneur), 2 majeurs (activation ratée sortie en ERR anonyme, faux `systemctl` toujours à 0), 3 mineurs, 5 tests manquants et 4 creux corrigés ; version corrigée non relue (A64) |
 
 Le coût de production par Claude n'est mesuré que pour TASK-032, écrite par un
 sous-agent. TASK-029 et les rattrapages de la session principale ne le sont pas.

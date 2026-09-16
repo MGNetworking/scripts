@@ -1,7 +1,7 @@
 ---
 id: TASK-051
 title: "Écrire Linux/K3s/install-k3s.sh"
-status: in_progress
+status: completed
 priority: high
 depends_on:
   - TASK-050
