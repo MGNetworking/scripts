@@ -1,7 +1,7 @@
 ---
 id: TASK-052
 title: "Écrire Linux/K3s/configure-k3s.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on:
   - TASK-051
@@ -18,14 +18,15 @@ scope:
   - config/server.env.example — variables SRV_K3S_* retenues par la décision ci-dessous
 out_of_scope:
   - installer, mettre à niveau ou désinstaller K3s
-  - désactiver Traefik (décision 23), toute clé non listée par la décision attendue
+  - désactiver Traefik (décision 23), toute clé autre que celles de la décision 47
   - les manifestes de /var/lib/rancher/k3s/server/manifests, ufw, cert-manager
 acceptance_criteria:
   - root requis (1) ; K3s absent → refus en 1 en le nommant
+  - contenu entier possédé par le script (décision 47) : write-kubeconfig-mode: "0600" et tls-san tiré de SRV_K3S_TLS_SAN (liste séparée par des virgules, une entrée par nom ou IP), rien d'autre ; SRV_K3S_TLS_SAN absente ou vide → clé tls-san omise
   - le fichier est généré depuis config/, écrit par temporaire puis mv ; identique, rien n'est réécrit ni redémarré
   - une valeur mal formée dans config/ rend 2 sans rien écrire
   - un config.yaml existant qui diffère est affiché en différence avant confirmation, et sauvegardé avant remplacement
-  - résumé confirmé ; --yes seul le confirme ; sans terminal ni --yes, 1 ; --dry-run affiche la différence et rend 0
+  - résumé confirmé ; --yes seul le confirme (ASSUME_YES remise à false, décision 45) ; sans terminal ni --yes, 1 ; --dry-run affiche la différence et rend 0
   - après changement, « systemctl restart k3s » puis verify-k3s.sh ; échec → restauration de l'ancien fichier, redémarrage, 1
 validation:
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
@@ -34,6 +35,7 @@ validation:
 implementation_notes:
   - faux k3s et systemctl en tête de PATH ; le répertoire /etc/rancher/k3s est surchargeable par variable pour le test
   - pas de parseur YAML : le script produit le fichier entier, il ne l'édite pas
+  - le test refuse de tourner hors conteneur (/.dockerenv) avant tout trap ou écriture ; le faux systemctl rend les codes du vrai (is-active inactif 3)
 ---
 
 # TASK-052 — Configurer K3s
