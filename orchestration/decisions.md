@@ -249,3 +249,42 @@ Tranché par `user` sur les options recommandées à l'atomisation de `Linux/K3s
   (`--version` ou `SRV_K3S_VERSION`), jamais « dernière stable » par défaut.
 - **Désinstallation** (TASK-054) : désinstallateur officiel seul, après affichage de
   ce qui sera détruit ; la sauvegarde relève d'un script distinct.
+
+### Décision 48 — Kubernetes : accès, maintenance, installation, configuration (2026-09-16)
+
+Tranché par `user`, question par question, sur les options recommandées à l'atomisation
+de `Kubernetes/` (TASK-055 à TASK-071).
+
+- **Accès au cluster** : aucun script n'exige root ; `kubectl` trouve seul son
+  kubeconfig (`KUBECONFIG`, puis `~/.kube/config`). Sur K3s, `k3s.yaml` se copie une
+  fois dans `~/.kube/config` du compte d'administration (0600), documenté au README.
+- **`resource-usage.sh`** : sans metrics-server, `[WARN]`, capacité des nœuds, code 0.
+- **`backup-resources.sh`** : dossier `SRV_K8S_BACKUP_DIR`, sinon
+  `/var/backups/kubernetes`, `--output` prioritaire ; dossier refusé s'il est dans le
+  dépôt, créé en 0700 ; types exportés : namespaces, deployments, statefulsets,
+  daemonsets, cronjobs, services, ingresses, configmaps, PVC, storageclasses ;
+  jamais de Secrets.
+- **`cleanup-resources.sh`** : ne supprime que les objets nommés un à un en argument.
+- **`install-kubectl.sh`, `install-ingress.sh`, `install-metrics.sh`** : vérification
+  seule, rien n'est installé (K3s fournit kubectl, Traefik et metrics-server) ;
+  `install-kubectl.sh` explique la copie du kubeconfig si `~/.kube/config` manque ;
+  `install-ingress.sh` signale un conflit sur les ports 80/443.
+- **`install-helm.sh`** : script officiel `get-helm-4` (sha256 vérifiée par lui),
+  version par `SRV_HELM_VERSION`.
+- **`install-cert-manager.sh`** : chart Helm officiel jetstack, version obligatoire
+  (`SRV_CERT_MANAGER_VERSION` ou `--version`), CRD installées par le chart.
+- **Réglages Kubernetes** : dans `config/server.env`, préfixe `SRV_K8S_`
+  (liste des namespaces : `SRV_K8S_NAMESPACES`, séparée par des virgules).
+- **`configure-storage.sh`** : exactement une StorageClass par défaut, `local-path`
+  ou `SRV_K8S_STORAGE_CLASS` ; la marque « par défaut » retirée des autres après
+  confirmation, aucune classe créée ni supprimée.
+- **`configure-ingress.sh`** : deux Middlewares Traefik réutilisables, redirection
+  HTTPS et en-têtes de sécurité (HSTS de durée courte au départ) ; chaque site les
+  active dans son Ingress.
+- **`configure-tls.sh`** : ClusterIssuers `letsencrypt-staging` et
+  `letsencrypt-production`, HTTP-01, e-mail `SRV_K8S_ACME_EMAIL` ; aucun certificat
+  demandé.
+- **`configure-registry.sh`** : identifiants dans `config/registry.env` (ignoré par
+  Git, modèle `.example` versionné, droits 0600 exigés) ; Secret docker-registry dans
+  chaque namespace de `SRV_K8S_NAMESPACES` ; jamais affichés, journalisés ni passés
+  en argument.
