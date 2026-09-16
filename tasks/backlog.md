@@ -58,7 +58,7 @@ de ce que cet ADR a tranché.
 | [TASK-045](completed/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | `completed` | haute | — | conteneur `debian` | **oui** |
 | [TASK-046](pending/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | `ready` | haute | 025 | conteneur `debian` | **oui** |
 | [TASK-047](pending/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `pending` | haute | 046 | conteneur `debian` | **oui** |
-| [TASK-048](active/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` (A47) | `ready` | moyenne | — | hôte | non |
+| [TASK-048](completed/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` (A47) | `completed` | moyenne | — | hôte | non |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
@@ -371,6 +371,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-042](completed/TASK-042.md) | Écrire `Linux/Security/audit-ports.sh` | [rapport](reports/TASK-042-report.md) |
 | [TASK-043](completed/TASK-043.md) | Écrire `Linux/Security/security-check.sh` | [rapport](reports/TASK-043-report.md) |
 | [TASK-045](completed/TASK-045.md) | Écrire `Linux/Security/configure-firewall.sh` | [rapport](reports/TASK-045-report.md) |
+| [TASK-048](completed/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` | [rapport](reports/TASK-048-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

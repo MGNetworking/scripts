@@ -24,6 +24,7 @@ dans la conversation : TASK-045 l'a perdu.
 | TASK-026 `reboot-system.sh` | destructif | agent `deepseek` (sonnet non authentifié, A41) | 5/5 | 63 | 133 + 150 → 145 + 149 | 0,300 $, 2 lancements | Opus 28 939 | 3 majeurs corrigés, dont la confirmation héritée (A45) ; validation de la fiche corrigée |
 | TASK-041 `audit-users.sh` | lecture seule | agent `deepseek` | 4/4 | 63 | 115 + 149 → 143 + 150 | 0,233 $, 2 lancements | Opus 21 409 | 3 mineurs et 2 tests creux corrigés |
 | TASK-042 `audit-ports.sh` | lecture seule | agent `deepseek` | 4/4 | 107 | 96 + 150 → 102 + 149 | 0,197 $, 2 lancements | Opus 20 074 | FUSIONNABLE ; 4 mineurs et 3 tests creux corrigés |
+| TASK-048 jetons de relecture | consigne `/tache` | orchestrateur | 1/1 | — | — | — | Opus 20 488 | 4 mineurs corrigés |
 | TASK-045 `configure-firewall.sh` | peut couper SSH | agent `deepseek` + orchestrateur | 3/3 | 84 | 183 + 220 → 168 + 285 | 0,255 $, 2 lancements | Opus, non relevé | 1 bloquant (ufw inactif muet sur ses règles), 3 majeurs, 2 mineurs corrigés ; exigence IPv6 erronée retirée après mesure sur le vrai ufw |
 | TASK-043 `security-check.sh` | lecture seule, cron | agent `deepseek` | 3/3 | 86 | 150 + 150 → 150 + 168 | 0,323 $, 2 lancements | Opus 24 942 | 1 majeur (sortie ufw traduite) et 5 mineurs corrigés |
 | TASK-040 sobriété `manage-users` | refonte sans changement | agent `deepseek` | 3/3 | 138 | 179 + 419 → 150 + 296 | 0,276 $, 2 lancements | Opus 35 683 | 2 messages rétablis, 5 trous de test comblés |
