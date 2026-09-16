@@ -1,7 +1,7 @@
 ---
 id: TASK-059
 title: "Écrire Kubernetes/Maintenance/resource-usage.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on: []
 environment: container-debian
@@ -32,6 +32,9 @@ implementation_notes:
   - chaque appel kubectl borné par --request-timeout
   - test — garde /.dockerenv absent → sortie, avant tout trap ou écriture
   - distinguer « metrics absente » de « apiserver injoignable » — tester l'apiserver d'abord, puis top
+  - faux kubectl aux vrais formats de sortie et codes (kubectl top, describe nodes) ; « No resources found » sur stderr avec code 0 ; stderr tenu à part de la liste affichée
+  - erreurs apiserver distinguées (NotFound, Forbidden, injoignable) ; une rubrique en échec interdit le [SUCCESS] final (A78)
+  - timeout externe éventuel = délai + 2 s, avec require_cmd timeout ; aucun ok inconditionnel, chaque test échoue si le script est faux
 ---
 
 # TASK-059 — Consommation des ressources

@@ -78,7 +78,7 @@ de ce que cet ADR a tranché.
 | [TASK-056](completed/TASK-056.md) | Écrire `Kubernetes/Maintenance/pods-status.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-057](completed/TASK-057.md) | Écrire `Kubernetes/Maintenance/events.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-058](completed/TASK-058.md) | Écrire `Kubernetes/Maintenance/diagnostics.sh` | `completed` | moyenne | — | conteneur `debian` | non |
-| [TASK-059](pending/TASK-059.md) | Écrire `Kubernetes/Maintenance/resource-usage.sh` | `ready` | moyenne | — | conteneur `debian` | non |
+| [TASK-059](active/TASK-059.md) | Écrire `Kubernetes/Maintenance/resource-usage.sh` | `in_progress` | moyenne | — | conteneur `debian` | non |
 | [TASK-060](pending/TASK-060.md) | Écrire `Kubernetes/Maintenance/backup-resources.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-061](pending/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | `ready` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-062](pending/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | `ready` | moyenne | — | conteneur `debian` | non |
