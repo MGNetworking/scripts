@@ -1,7 +1,7 @@
 ---
 id: TASK-055
 title: "Écrire Kubernetes/Maintenance/cluster-status.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

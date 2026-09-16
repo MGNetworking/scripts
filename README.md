@@ -10,7 +10,7 @@ configuration et de maintenance d'infrastructure.
 
 ```text
 Linux/       System | Security | K3s
-Kubernetes/  Installation | Configuration | Maintenance   (à venir)
+Kubernetes/  Installation | Configuration | Maintenance
 Docker/      Installation | Configuration | Maintenance | Cleanup | Diagnostics
 Synology/    Plex | Administration
 lib/         fonctions communes (common.sh)
@@ -31,7 +31,7 @@ d'utilisation dans son propre README.
 |---|---|---|
 | [Linux/](Linux/README.md) | système de base, sécurité, distribution K3s | `System` : 13 scripts ; `Security` : 7 scripts ; `K3s` : 5 scripts |
 | [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 9 scripts |
-| `Kubernetes/` | installation, configuration et maintenance d'un cluster | à venir |
+| [Kubernetes/](Kubernetes/README.md) | installation, configuration et maintenance d'un cluster | `Maintenance` : 1 script |
 | [Synology/](Synology/README.md) | NAS Synology : Plex, administration DSM | 2 scripts hérités |
 
 Socle commun : [config/](config/README.md) pour les configurations,

@@ -74,7 +74,7 @@ de ce que cet ADR a tranché.
 | [TASK-052](completed/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | `completed` | moyenne | 051 | conteneur `debian` | **oui** |
 | [TASK-053](completed/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `completed` | moyenne | 050, 051 | conteneur `debian` | **oui** |
 | [TASK-054](completed/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | `completed` | moyenne | 051 | conteneur `debian` | **oui** |
-| [TASK-055](active/TASK-055.md) | Écrire `Kubernetes/Maintenance/cluster-status.sh` | `in_progress` | moyenne | — | conteneur `debian` | non |
+| [TASK-055](completed/TASK-055.md) | Écrire `Kubernetes/Maintenance/cluster-status.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-056](pending/TASK-056.md) | Écrire `Kubernetes/Maintenance/pods-status.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-057](pending/TASK-057.md) | Écrire `Kubernetes/Maintenance/events.sh` | `ready` | moyenne | — | conteneur `debian` | non |
 | [TASK-058](pending/TASK-058.md) | Écrire `Kubernetes/Maintenance/diagnostics.sh` | `ready` | moyenne | — | conteneur `debian` | non |
@@ -292,7 +292,7 @@ Découpé en trois lots (plus de sept scripts), tous atomisés le 2026-09-16.
 
 | Lot | Fiches | Note |
 |---|---|---|
-| Maintenance — plan §7 | [TASK-055](active/TASK-055.md) à [TASK-061](pending/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; 059 à 061 attendent une décision de user |
+| Maintenance — plan §7 | [TASK-055](completed/TASK-055.md) à [TASK-061](pending/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; 059 à 061 attendent une décision de user |
 | Installation — plan §5 | [TASK-062](pending/TASK-062.md) à [TASK-066](pending/TASK-066.md) | kubectl, Traefik et metrics-server déjà fournis par K3s ; décisions de user attendues |
 | Configuration — plan §6 | [TASK-067](pending/TASK-067.md) à [TASK-071](pending/TASK-071.md) | secrets du registry hors dépôt ; décisions de user attendues |
 
@@ -407,6 +407,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-052](completed/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | [rapport](reports/TASK-052-report.md) |
 | [TASK-053](completed/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | [rapport](reports/TASK-053-report.md) |
 | [TASK-054](completed/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | [rapport](reports/TASK-054-report.md) |
+| [TASK-055](completed/TASK-055.md) | Écrire `Kubernetes/Maintenance/cluster-status.sh` | [rapport](reports/TASK-055-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

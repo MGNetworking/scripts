@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A78**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A80**.
 
 ## Registre
 
@@ -127,6 +127,8 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A75 | P2 | `uninstall-k3s.sh` : la version corrigée après relecture (liste des chemins alignée sur `install.sh` officiel, sans `/var/log/pods` ni `/var/log/containers` ; `/run/k3s`, `/run/flannel`, `k3s.service.env`, `k3s-killall.sh` annoncés ; arrêt anticipé en 0 du désinstallateur nommé ; nœud agent refusé ; `taille()` ; `[WARN]` de racine de test ; `cut` dans `require_cmd` ; tests de taille et d'unité connue de systemd, 75 → 95 vérifications) n'a pas été relue par Opus, seulement lue par le conducteur sur D1, D5 et la garde conteneur ; longueurs 149 + 272, fichier de cas au-delà de la cible de 150 (ajouts imposés par les retours) ; prouvée seulement avec de faux `k3s`, désinstallateur, `systemctl`, `du` et `id`, jamais sur un vrai nœud — la liste des chemins suit `install.sh` de la branche `master` de k3s au 2026-09-16, pas la version installée | TASK-054 | relire le diff 290143e..1526060 lors d'une passe de sobriété ; éprouver sur une VM jetable (A62, A64, A72) |
 | [ ] | A76 | P3 | `uninstall-k3s.sh` l. 69-73 : racine de test `RACINE_TEST` dans le script de production, suivie si `/.dockerenv` existe (annoncée en `[WARN]`) ; lancé dans un conteneur Docker réel avec cette variable héritée, le script viserait une autre racine ; même motif que A69 (`K3S_CONFIG_DIR`) | TASK-054 (relecture, D3) | trancher la convention commune de surcharge réservée aux tests (A69) et l'appliquer ici |
 | [ ] | A77 | P3 | `tests/run.sh integration` affiche `[ERROR] Échec (code 4) à la ligne 1 de assert.sh.` après le bilan de `configure-cron.test.sh` (TASK-009) : le `exit 4` de `bilan` (réussite partielle, cas non applicables) déclenche le trap ERR de `lib/common.sh` ; la suite rend 0, mais le faux `[ERROR]` brouille la lecture des sorties | TASK-054 (lecture du conducteur) | faire sortir `bilan` sans passer par le trap ERR (ou le désarmer avant `exit`), sans toucher à `lib/common.sh` si possible |
+| [ ] | A78 | P3 | `Kubernetes/Maintenance/cluster-status.sh` l. 67-68 et 90 : une rubrique qui échoue après la sonde des nœuds affiche l'erreur brute de kubectl sans `[WARN]`, puis le script conclut `[SUCCESS]` et rend 0, même si l'apiserver tombe entre deux appels ; `--help` ne le dit pas ; branche jamais exercée par le test (l. 23-24 annoncent un fichier absent qu'aucun cas ne retire) | TASK-055 (relecture) | préfixer l'échec d'une rubrique en `[WARN]`, dire dans `--help` que 0 signifie « la sonde a répondu », ajouter le cas d'une rubrique en échec |
+| [ ] | A79 | P3 | `tests/integration/cluster-status.test.sh` partiel : la branche « aucun élément » (script l. 56) n'est jamais testée, et `--help` n'est vérifié que pour une rubrique sur six, sans les codes 0, 1 et 2 (test l. 67-68) | TASK-055 (relecture) | ajouter un cas à sortie vide et les assertions de `--help` manquantes |
 
 ## Suivi, pas des défauts
 
