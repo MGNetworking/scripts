@@ -59,7 +59,7 @@ de ce que cet ADR a tranché.
 | [TASK-046](completed/TASK-046.md) | Écrire `Linux/Security/configure-ssh.sh` | `completed` | haute | 025 | conteneur `debian` | **oui** |
 | [TASK-047](pending/TASK-047.md) | Écrire `Linux/Security/disable-root-login.sh` | `ready` | haute | 046 | conteneur `debian` | **oui** |
 | [TASK-048](completed/TASK-048.md) | Consigner les jetons de relecture à l’étape 6 de `/tache` (A47) | `completed` | moyenne | — | hôte | non |
-| [TASK-049](pending/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | `pending` | haute | — | hôte | **oui** |
+| [TASK-049](active/TASK-049.md) | Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche | `in_progress` | haute | — | hôte | **oui** |
 | [TASK-029](completed/TASK-029.md) | Écrire `Docker/Installation/install-docker.sh` | `completed` | haute | — | conteneur `systemd` | **oui** |
 | [TASK-031](completed/TASK-031.md) | Écrire `Docker/Diagnostics/check-docker.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-033](completed/TASK-033.md) | Écrire `Docker/Diagnostics/list-containers.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |

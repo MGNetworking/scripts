@@ -1,7 +1,7 @@
 ---
 id: TASK-049
 title: "Enchaîner les tâches sans vidage ni « reprends », par un sous-agent jetable par tâche"
-status: pending
+status: in_progress
 priority: high
 depends_on: []
 environment: host
@@ -18,6 +18,7 @@ scope:
   - orchestration/decisions.md
   - orchestration/regles.md
   - orchestration/README.md
+  - orchestration/mode.json
 out_of_scope:
   - lancer-agent.sh, juger.sh et le harnais de tests
   - le contenu des étapes de /tache (vérifier, relire, clore) : seule leur répartition change
