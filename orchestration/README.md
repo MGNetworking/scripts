@@ -24,7 +24,7 @@ msedge --headless=new --hide-scrollbars --screenshot=orchestration/schema/orches
 | Rôle | Qui | Consigne |
 |---|---|---|
 | Orchestrateur | votre session Claude Code, qui dure | [.claude/commands/tache.md](../.claude/commands/tache.md) |
-| Conducteur | sous-agent neuf par tâche : prépare, vérifie, clôt ; ne rend que des résumés | [.claude/agents/conducteur-tache.md](../.claude/agents/conducteur-tache.md) |
+| Conducteur | sous-agent neuf par tâche : prépare, vérifie, fait relire, clôt ; ne rend que des résumés | [.claude/agents/conducteur-tache.md](../.claude/agents/conducteur-tache.md) |
 | Agent exécutant | Claude Code + le modèle de la fiche | [.claude/commands/executer-tache.md](../.claude/commands/executer-tache.md) |
 | Relecteur | sous-agent Opus, lecture seule | [.claude/agents/relecteur.md](../.claude/agents/relecteur.md) |
 | Atomiseur | sous-agent, découpe un domaine en fiches | [.claude/commands/atomiser.md](../.claude/commands/atomiser.md) |

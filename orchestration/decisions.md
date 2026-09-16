@@ -230,7 +230,7 @@ agents ou à l'architecture devient une fiche TASK, en tête si elle est urgente
 Il arrêtait la session et imposait un « reprends » par tâche. La session
 orchestratrice dure ; chaque tâche est conduite par un sous-agent
 `conducteur-tache` neuf, qui porte le contexte lourd et ne rend que des résumés
-de 30 lignes au plus. La session garde le lancement des agents et la relecture,
-qu'un sous-agent ne peut pas faire. En automatique, elle enchaîne la tâche prête
-suivante sans message de `user` ; blocage, plafond, question ouverte ou passage en
-manuel l'arrêtent. La compaction automatique de Claude Code borne ce qui reste.
+de 30 lignes au plus, relecture comprise. La session ne garde que le lancement
+des agents, qui peut durer une heure. En automatique, elle enchaîne la tâche
+prête suivante sans message de `user` ; blocage, plafond de la décision 40,
+question ouverte ou passage en manuel l'arrêtent.

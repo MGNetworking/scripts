@@ -3,30 +3,29 @@ description: Orchestre une tâche du backlog — lancer l'agent, vérifier, reli
 argument-hint: <TASK-XXX>
 ---
 
-Tu es l'**orchestrateur** de la tâche **$1**. Tu n'écris pas le script : un
-agent le fait (orchestration/README.md). Toi, tu prépares, tu lances, tu vérifies, tu relis et
-tu fusionnes. Suis les étapes dans l'ordre.
+Ces étapes 1 à 8 sont conduites par un sous-agent **`conducteur-tache`** ; la
+session qui l'invoque suit l'étape 0 et l'étape 9. Dans les étapes 1 à 8,
+« tu » désigne le conducteur et `$1` la tâche qu'il conduit.
 
 ## 0. Répartition — une session qui dure, un conducteur par tâche
 
 Décision 46 amendée : la session ne se vide plus. Le contexte lourd d'une tâche
-(fiche, règles, diffs, sorties de tests) vit dans un sous-agent **`conducteur-tache`**
-neuf, qui disparaît à la clôture ; la session ne garde que ses résumés. Un
-sous-agent ne peut ni lancer un autre sous-agent, ni attendre un processus d'une
-heure : ces deux gestes restent à la session.
+vit dans un conducteur **neuf**, qui disparaît à la clôture ; la session ne garde
+que ses réponses, 30 lignes au plus chacune. Seul geste resté à la session :
+lancer l'agent, qui peut tourner une heure, en arrière-plan.
 
-| Étape | Qui | Comment |
+| La session envoie | Le conducteur fait | Il rend |
 |---|---|---|
-| 1-3, et 4 si `agent: orchestrateur` | conducteur | Agent `conducteur-tache` : « préparer $1 » (ou « préparer la suivante ») |
-| 4, lancement d'un agent | session | `lancer-agent.sh` en arrière-plan |
-| 5 | conducteur | SendMessage au **même** conducteur : « vérifier » |
-| 6, relecture et ligne `relecteur` | session | sous-agent `relecteur` ; ses défauts transmis au conducteur (« retours »), qui écrit le fichier de retours ; relance par la session, puis « vérifier » |
-| 7-8 | conducteur | SendMessage : « clore » |
-| 9 | session | enchaîner |
+| Agent `conducteur-tache` : « préparer $1 » ou « préparer la suivante » | 1-3 ; fiche `agent: orchestrateur` : 1-8 d'un trait | `PRÊTE <tâche> <commande>`, `CLOSE`, `REFUS` |
+| `lancer-agent.sh` en arrière-plan, puis SendMessage « agent terminé » + sa sortie | 5, 6 ; fusionnable : 7-8 | `RELANCER <fichier de retours>`, `CLOSE`, `BLOQUÉE` |
+| relance en arrière-plan, puis SendMessage « relance terminée » + sa sortie | 5 ; puis 7-8, ou finir lui-même, ou bloquer (étape 6) | `CLOSE`, `BLOQUÉE` |
 
-Chaque retour de conducteur ajoute une ligne `conducteur` à `agents.tsv`, même
-format que la ligne `relecteur` de l'étape 6. Un conducteur qui rend `BESOIN_USER`
-arrête la boucle : la session pose sa question à `user`, telle quelle.
+Toute réponse peut être `BESOIN_USER` : la session pose la question telle quelle
+et s'arrête. Après `CLOSE` ou `BLOQUÉE`, la session ajoute à `agents.tsv` une ligne
+`conducteur` (jetons de sa **dernière** réponse, cumulés) et la commite seule :
+`chore: mesure conducteur $1`. Identifiant du conducteur perdu (compaction) :
+la session lance un conducteur neuf avec « reprendre $1 »,
+l'état étant dans la fiche, la branche et le rapport.
 
 ## 1. Charger le contexte
 
@@ -59,16 +58,18 @@ puis `git commit -m "chore: $1 en cours"`. L'agent la lira dans sa copie.
 bash orchestration/outils/lancer-agent.sh <agent> $1
 ```
 
-En **arrière-plan** (`run_in_background`) : tu es notifié à la fin, ne sonde pas.
-L'agent travaille dans `../script-agents/$1`, branche `agent/$1`, écrit, teste,
-corrige 3 fois au plus, commite, et rend une ligne `VERDICT`.
+Tu ne lances pas cette commande : tu la rends à la session (`PRÊTE`), qui la lance
+en **arrière-plan** et te renvoie sa sortie. L'agent travaille dans
+`../script-agents/$1`, branche `agent/$1`, écrit, teste, corrige 3 fois au plus,
+commite, et rend une ligne `VERDICT`.
 
 **`agent: orchestrateur`** : pas de lancement. Crée la branche `agent/$1` et
 écris toi-même, puis passe à l'étape 5.
 
 ## 5. Vérifier — ne jamais croire l'agent sur parole
 
-Dans la copie `../script-agents/$1` :
+Dans la copie `../script-agents/$1`, chaque commande au premier plan avec un délai de
+600000 ms ; un délai dépassé vaut NON EXÉCUTÉ et se rend en `BESOIN_USER` :
 
 1. `bash orchestration/outils/juger.sh tasks/active/$1.md` — tu relances toi-même ;
 2. **périmètre** : `git diff --name-only master...agent/$1` ne contient que des
@@ -100,10 +101,12 @@ colonne `sortie` ne se somme pas avec les autres), durée en secondes, `0`, vide
 Une session interrompue ne perd ainsi pas la mesure (A47).
 
 - **Fusionnable** : étape 7.
-- **Défauts** : écris-les dans un fichier du scratchpad, et relance **une fois**
-  `lancer-agent.sh <agent> $1 <ce fichier>`. Puis refais l'étape 5.
+- **Défauts** : écris-les dans un fichier du scratchpad et rends `RELANCER <ce
+  fichier>` : la session relance **une fois** `lancer-agent.sh <agent> $1 <ce fichier>`,
+  puis te renvoie sa sortie ; refais l'étape 5. `agent: orchestrateur` : corrige
+  toi-même, une fois, puis refais l'étape 5.
 - **Encore en échec** : termine toi-même dans la copie, ou bloque la tâche.
-  Aucun troisième lancement.
+  Aucun troisième lancement ni seconde relecture.
 
 Si un défaut touche `lib/common.sh` : ne le corrige pas, consigne-le et bloque.
 
@@ -164,16 +167,17 @@ ni de `push --force`. `git status` final.
 ## 9. Résumer et enchaîner
 
 Quelques lignes, reprises du résumé du conducteur : fait, prouvé, en suspens,
-prochaine tâche prête. Aucun vidage (décision 46 amendée) : ne garde de la tâche
+prochaine tâche prête. Aucun vidage (décision 46 amendée) : la session ne garde de la tâche
 que ce résumé, jamais les diffs ni les sorties. Puis lis `orchestration/mode.json` :
 
-- **`automatique`** : relance aussitôt l'étape 1 avec un conducteur **neuf** sur la
-  tâche `ready` suivante, tous domaines confondus, urgentes d'abord, sans rien
+- **`automatique`** : la session lance aussitôt un conducteur **neuf**, « préparer la suivante » —
+  tâche `ready` suivante, tous domaines confondus, urgentes d'abord —, sans rien
   demander et sans attendre de message de `user` ;
-- **`manuel`** : tu attends une consigne explicite de `user`.
+- **`manuel`** : la session attend une consigne explicite de `user`.
 
 La boucle s'arrête d'elle-même sur : aucune tâche `ready`, tâche `blocked`,
-plafond atteint, `BESOIN_USER`, ou `mode` passé à `manuel`.
+plafond de la décision 40 atteint, `BESOIN_USER`, erreur système, conducteur
+mort sans réponse, ou `mode` passé à `manuel`.
 
 Quand `user` demande l'arrêt du mode automatique, écris `"mode": "manuel"` dans le
 fichier, termine la tâche en cours, puis arrête-toi.
