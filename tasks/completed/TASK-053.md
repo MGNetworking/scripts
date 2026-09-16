@@ -1,7 +1,7 @@
 ---
 id: TASK-053
 title: "Écrire Linux/K3s/upgrade-k3s.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-050

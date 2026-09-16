@@ -72,7 +72,7 @@ de ce que cet ADR a tranché.
 | [TASK-050](completed/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-051](completed/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | `completed` | haute | 050 | conteneur `debian` | **oui** |
 | [TASK-052](completed/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | `completed` | moyenne | 051 | conteneur `debian` | **oui** |
-| [TASK-053](active/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `in_progress` | moyenne | 050, 051 | conteneur `debian` | **oui** |
+| [TASK-053](completed/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | `completed` | moyenne | 050, 051 | conteneur `debian` | **oui** |
 | [TASK-054](pending/TASK-054.md) | Écrire `Linux/K3s/uninstall-k3s.sh` | `ready` | moyenne | 051 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
@@ -266,7 +266,7 @@ besoin, et l'ordre d'installation de `CLAUDE.md` le lui impose déjà. Deux scri
 | `verify-k3s.sh` | atomisée : [TASK-050](completed/TASK-050.md) |
 | `install-k3s.sh` | atomisée : [TASK-051](completed/TASK-051.md) |
 | `configure-k3s.sh` | atomisée : [TASK-052](completed/TASK-052.md) — décisions prises (décision 47) |
-| `upgrade-k3s.sh` | atomisée : [TASK-053](active/TASK-053.md) — décisions prises (décision 47) |
+| `upgrade-k3s.sh` | atomisée : [TASK-053](completed/TASK-053.md) — décisions prises (décision 47) |
 | `uninstall-k3s.sh` | atomisée : [TASK-054](pending/TASK-054.md) — décisions prises (décision 47) |
 
 ### Kubernetes — plan §5 à §7
@@ -390,6 +390,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-050](completed/TASK-050.md) | Écrire `Linux/K3s/verify-k3s.sh` | [rapport](reports/TASK-050-report.md) |
 | [TASK-051](completed/TASK-051.md) | Écrire `Linux/K3s/install-k3s.sh` | [rapport](reports/TASK-051-report.md) |
 | [TASK-052](completed/TASK-052.md) | Écrire `Linux/K3s/configure-k3s.sh` | [rapport](reports/TASK-052-report.md) |
+| [TASK-053](completed/TASK-053.md) | Écrire `Linux/K3s/upgrade-k3s.sh` | [rapport](reports/TASK-053-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

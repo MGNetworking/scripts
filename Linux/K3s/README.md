@@ -11,11 +11,13 @@ Ubuntu 22.04 et 24.04 LTS (décision 14).
 | `verify-k3s.sh` | diagnostic en lecture seule, rubriques dans l'ordre : service `k3s` (`systemctl is-active`), version, nœuds, pods de tous les namespaces, namespaces, événements Warning ; tout passe par `k3s kubectl`, chaque appel borné par `--request-timeout` ; un nœud non Ready, un pod ni Running ni Succeeded (« Completed ») ou un service inactif sont nommés en `[WARN]` ; les événements Warning s'affichent sans peser sur le verdict. Codes : 0 cluster sain, 1 K3s absent ou anomalie, 2 option inconnue | root (`/etc/rancher/k3s/k3s.yaml`) | non |
 | `install-k3s.sh` | installe K3s serveur mono-nœud par l'installateur officiel `https://get.k3s.io`. Préflight : root, cible de la décision 14 en amd64 ou arm64, au moins 5 120 Mo libres sous `/var/lib` (bloquant), mémoire sous 512 Mo (`[WARN]` seul), ports 6443, 80 et 443 libres (`ss`, dont l'échec bloque), `get.k3s.io` joignable en HTTPS. K3s déjà présent : version affichée, rien réinstallé, 0. Version : canal `stable`, ou `SRV_K3S_VERSION` de `config/server.env` (décision 47) ; `INSTALL_K3S_*`, `K3S_URL` et `K3S_TOKEN` hérités sont ignorés. Installateur téléchargé en HTTPS seul (`--proto '=https'`) dans un temporaire, exécuté puis retiré, jamais `curl \| sh` ; `systemctl enable k3s`, service actif, puis `verify-k3s.sh`. `--dry-run` : préflight et commande, sans réseau. `--yes` obligatoire hors terminal ; `ASSUME_YES` hérité ignoré (décision 45). Codes : 0 installé et sain ou déjà présent, 1 refus ou échec nommé, 2 option inconnue | root | oui |
 | `configure-k3s.sh` | écrit `/etc/rancher/k3s/config.yaml` entier (décision 47), jamais édité : `write-kubeconfig-mode: "0600"` et `tls-san` tiré de `SRV_K3S_TLS_SAN` (`config/server.env`, virgules ; clé omise si vide), rien d'autre. Chaque entrée doit être une IPv4, une IPv6 ou un nom d'hôte, sinon 2 sans rien écrire. Contenu et droits (0600) identiques : rien réécrit ni redémarré ; seuls les droits diffèrent : `chmod` seul. Sinon différence affichée, confirmation, original sauvegardé en `config.yaml.<horodatage>.bak`, écriture par temporaire puis `mv`, `systemctl restart k3s`, puis `verify-k3s.sh` ; échec de l'un ou l'autre : original restauré (ou fichier retiré s'il n'y en avait pas), K3s relancé, 1. `--dry-run` : différence seule, 0. `--yes` obligatoire hors terminal ; `ASSUME_YES` hérité ignoré (décision 45). Codes : 0 écrit, conforme ou `--dry-run`, 1 root, K3s absent, redémarrage ou diagnostic en échec, 2 option inconnue ou valeur mal formée | root | oui |
+| `upgrade-k3s.sh` | met K3s à niveau par l'installateur officiel vers une version **explicite et obligatoire** (décision 47) : `--version vX.Y.Z+k3sN` ou `SRV_K3S_VERSION`, forme validée strictement, jamais « dernière stable ». Versions en place et cible affichées ; identiques : 0 sans rien télécharger. Refusés en 1 sans rien modifier : cible absente ou invalide, K3s absent (renvoi vers `install-k3s.sh`), changement de majeure, recul, saut de plus d'une mineure (comparaison champ à champ en base dix), `verify-k3s.sh` en échec avant. `INSTALL_K3S_*`, `K3S_URL` et `K3S_TOKEN` hérités neutralisés, seule `INSTALL_K3S_VERSION` transmise. Résumé, confirmation ; installateur en HTTPS seul (`--proto '=https' --tlsv1.2`) dans un temporaire, exécuté puis retiré ; version relue, qui doit égaler la cible ; puis `verify-k3s.sh`. Tout échec après le téléchargement rend 1 en affichant la version réellement en place ; aucun retour arrière automatique. `--dry-run` : versions, diagnostic et commande prévue, sans téléchargement ; root requis quand même. `--yes` obligatoire hors terminal ; `ASSUME_YES` hérité ignoré (décision 45). Codes : 0 à niveau, déjà à jour ou simulé, 1 refus ou échec nommé, 2 option inconnue | root | oui |
 
 ## Ordre d'utilisation
 
 Après `Linux/System` et `Linux/Security`. `install-k3s.sh`, puis
-`configure-k3s.sh` pour `/etc/rancher/k3s/config.yaml`.
+`configure-k3s.sh` pour `/etc/rancher/k3s/config.yaml`. `upgrade-k3s.sh` plus
+tard, une version mineure à la fois.
 `verify-k3s.sh` sert de vérification finale à l'installation et à la mise à
 niveau, qui lisent son code de retour.
 
@@ -24,6 +26,8 @@ sudo ./Linux/K3s/install-k3s.sh --dry-run   # préflight et commande prévue, ri
 sudo ./Linux/K3s/install-k3s.sh             # résumé, confirmation, installation, diagnostic
 sudo ./Linux/K3s/configure-k3s.sh --dry-run # différence avec config.yaml, rien d'écrit
 sudo ./Linux/K3s/configure-k3s.sh           # différence, confirmation, écriture, redémarrage, diagnostic
+sudo ./Linux/K3s/upgrade-k3s.sh --version v1.31.1+k3s1 --dry-run # versions, diagnostic, commande prévue
+sudo ./Linux/K3s/upgrade-k3s.sh --version v1.31.1+k3s1           # résumé, confirmation, mise à niveau, diagnostic
 sudo ./Linux/K3s/verify-k3s.sh              # diagnostic ; code 0 si le cluster est sain
 ./Linux/K3s/verify-k3s.sh --help            # rubriques et codes de retour
 ```
@@ -43,6 +47,12 @@ non mesurés ici.
 `configure-k3s.sh` possède `config.yaml` entier : toute clé ajoutée à la main est
 écrasée au prochain passage. Un changement redémarre `k3s`, ce qui coupe l'API le
 temps du redémarrage. Les `.bak` s'accumulent dans `/etc/rancher/k3s`, sans purge.
+
+`upgrade-k3s.sh` remplace le binaire et fait redémarrer `k3s` par l'installateur :
+l'API est coupée le temps du redémarrage. Il ne revient jamais en arrière de
+lui-même ; un échec à mi-chemin rend 1 en affichant la version réellement en
+place, à diagnostiquer par `verify-k3s.sh`. Ses messages d'échec suggèrent un
+retour par `install-k3s.sh`, qui ne réinstalle pas un K3s présent (A74).
 
 Aucun de ces scripts n'affiche ni kubeconfig, ni jeton de nœud, ni Secret. Ils
 n'ont été éprouvés qu'avec de faux `curl`, installateur, `k3s`, `systemctl` et
