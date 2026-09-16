@@ -26,10 +26,14 @@ faux k3s <<'EOF'
 #!/bin/sh
 case "$*" in
   --version) echo "k3s version $(cat "$BAC/version") (aaaaaaa)" ;;
-  *) [ ! -f "$BAC/muet" ] || exit 1 ;;
-  *"kubectl get nodes"*) echo "nœud-1   Ready   control-plane,master   5d   $(cat "$BAC/version")" ;;
-  *"kubectl get pods"*) echo "kube-system   coredns-aaa   1/1   Running   0   5d" ;;
-  *"kubectl get namespaces"*) echo "kube-system" ;;
+  *kubectl*)
+    [ ! -f "$BAC/muet" ] || exit 1
+    case "$*" in
+      *"get nodes"*)      echo "nœud-1   Ready   control-plane,master   5d   $(cat "$BAC/version")" ;;
+      *"get pods"*)       echo "kube-system   coredns-aaa   1/1   Running   0   5d" ;;
+      *"get namespaces"*) echo "kube-system" ;;
+      *) exit 1 ;;
+    esac ;;
   *) exit 1 ;;
 esac
 EOF
