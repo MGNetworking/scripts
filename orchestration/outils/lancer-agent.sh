@@ -91,10 +91,20 @@ node -e '
     const u = j.usage || {};
     const cache = (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
     const [date, tache, profil, modele, duree, code, pe, pc, ps] = champs;
-    const cout = pe && u.output_tokens !== undefined
-        ? ((u.input_tokens * pe + cache * pc + u.output_tokens * ps) / 1e6).toFixed(3) : "";
-    console.log([date, tache, profil, modele, j.num_turns ?? "?", u.input_tokens ?? "?", cache,
-                 u.output_tokens ?? "?", duree, code, cout].join("\t"));
+    // Relevé incomplet (A122). claude -p ne rend que la dernière boucle de la
+    // session : une notification de tâche de fond (Monitor, commande passée en
+    // arrière-plan) arrivée après la réponse en relance une d’un tour, seule
+    // comptée (TASK-071 : 1 tour, 243 jetons, pour 81 appels au modèle en 2269 s).
+    // Une sortie vide ou illisible (agent tué par DUREE_MAX) ne se compte pas non plus.
+    if (!j.usage || !(j.num_turns > 1 || (j.num_turns === 1 && +duree <= 600))) {
+        console.log([date, tache, profil, modele, "incomplet", "?", "?", "?", duree, code, "?"].join("\t"));
+        console.error(`RELEVÉ INCOMPLET : ${j.num_turns ?? "?"} tour(s) pour ${duree} s ; jetons réels dans ` +
+            `~/.claude/projects/<copie>/${j.session_id ?? "<session>"}.jsonl`);
+    } else {
+        const cout = pe ? ((u.input_tokens * pe + cache * pc + u.output_tokens * ps) / 1e6).toFixed(3) : "";
+        console.log([date, tache, profil, modele, j.num_turns, u.input_tokens, cache,
+                     u.output_tokens, duree, code, cout].join("\t"));
+    }
     console.error(j.result || "(aucune réponse lisible de cet agent)");
 ' "$sortie" "$(date '+%F %T')" "$tache" "$profil" "$MODELE" "$(( $(date +%s) - debut ))" "$code" \
     "$PRIX_ENTREE" "$PRIX_CACHE" "$PRIX_SORTIE" >> "$journal"

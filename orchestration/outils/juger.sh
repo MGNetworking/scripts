@@ -28,6 +28,56 @@ done
 [ -n "$cas" ] || { echo "FAIL  aucun fichier de cas dans le périmètre de $fiche"; exit 1; }
 
 cd "$racine"
+# Faux binaire écrit à travers un lien (A122, tests/README.md) : « ln -s » puis « > »
+# vers le même chemin remplace le vrai binaire du conteneur. Refusé avant tout
+# lancement. Comparaison textuelle des chemins ; seuls sont développés les
+# « for v in … » et l'argument d'une fonction qui écrit « …/$1 ».
+lien_ecrit="$(awk '
+    function net(s) { gsub(/["{}]/, "", s); return s }
+    function dev(p, prof,   v, n, i, it, r, av, ap) {
+        if (prof < 4) for (v in liste) if (match(p, "[$]" v "([^A-Za-z0-9_]|$)")) {
+            # RSTART gardé : les appels imbriqués le réécrivent.
+            av = substr(p, 1, RSTART - 1); ap = substr(p, RSTART + 1 + length(v))
+            n = split(liste[v], it, " "); r = ""
+            for (i = 1; i <= n; i++) r = r " " dev(av it[i] ap, prof + 1)
+            return r
+        }
+        return p
+    }
+    function ecrit(p,   n, i, it) {
+        n = split(dev(net(p), 0), it, " ")
+        for (i = 1; i <= n; i++) if (it[i] in lien)
+            printf "FAIL  faux binaire écrit à travers un lien : %s:%d, %s (lien ligne %d) — tests/README.md\n",
+                FILENAME, FNR, it[i], lien[it[i]]
+    }
+    {
+        l = $0; sub(/(^|[ \t])#.*/, "", l)
+        if (match(l, /for [A-Za-z_][A-Za-z0-9_]* in [^;]*/)) {
+            s = substr(l, RSTART, RLENGTH); split(s, m, " ")
+            liste[m[2]] = net(substr(s, 9 + length(m[2])))
+        }
+        if (match(l, /(^|[;&|{( \t])ln +-[A-Za-z]*s[^;&|]*/)) {
+            n = split(substr(l, RSTART, RLENGTH), m, " ")
+            n = split(dev(net(m[n]), 0), d, " ")
+            for (i = 1; i <= n; i++) if (!(d[i] in lien)) lien[d[i]] = FNR
+        }
+        if (match(l, /^[ \t]*[A-Za-z_][A-Za-z0-9_]*\(\)/)) {
+            f = substr(l, RSTART, RLENGTH - 2); sub(/^[ \t]*/, "", f)
+            if (match(l, /[^0-9&>]>>? *"?[^" ;|&)]*\$1/)) {
+                p = net(substr(l, RSTART, RLENGTH)); sub(/^[^>]*>+ */, "", p); fonction[f] = p; next
+            }
+        }
+        for (f in fonction) if (match(l, "(^|[;&|{( \t])" f " +[A-Za-z0-9_.-]+")) {
+            a = substr(l, RSTART, RLENGTH); sub(/^.*[ \t]/, "", a)
+            p = fonction[f]; sub(/\$1/, a, p); ecrit(p)
+        }
+        while (match(l, /(^|[^0-9&>])>>? *"?[^" ;|&)<>]+/)) {
+            p = substr(l, RSTART, RLENGTH); l = substr(l, RSTART + RLENGTH)
+            sub(/^[^>]*>+ */, "", p); ecrit(p)
+        }
+    }' "$cas")"
+[ -z "$lien_ecrit" ] || { echo "$lien_ecrit"; echo "JUGE  fichier de cas refusé avant lancement : ÉCHEC"; exit 1; }
+
 # Le conteneur rend le code de sa propre enveloppe : les verdicts utiles sont
 # imprimés par la commande elle-même, puis relus.
 sortie="$(bash tests/env/run-in-container.sh -- bash -c \
