@@ -55,6 +55,7 @@ LISTE="${SRV_K8S_NAMESPACES:-}"
 [ -n "$LISTE" ] || die "Liste des namespaces absente : renseigner SRV_K8S_NAMESPACES dans config/server.env (modèle : config/server.env.example). Rien n'a été tenté." 2
 case "$LISTE" in
     ,*|*,|*,,*) die "Liste mal formée dans SRV_K8S_NAMESPACES : entrée vide (virgule en tête ou en trop). Rien n'a été tenté." 2 ;;
+    *[[:space:]]*) die "Liste mal formée dans SRV_K8S_NAMESPACES : blanc ou retour à la ligne (read n'en lirait que la première). Rien n'a été tenté." 2 ;;
 esac
 
 IFS=',' read -r -a VOULUS <<< "$LISTE"
@@ -134,6 +135,7 @@ EOF
     # ci-dessous le dit plutôt que de laisser croire à une liste complète.
     if [ "$CODE" != 0 ]; then
         [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
+        [ "$CODE" != 124 ] || error "Création de « $n » interrompue : délai dépassé (${DELAI} s sur kubectl apply)."
         ECHEC="$n"
         break
     fi

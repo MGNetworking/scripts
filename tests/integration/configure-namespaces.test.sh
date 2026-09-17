@@ -29,7 +29,11 @@ non() { printf 'manifeste : %s\n' "$1" >&2; exit 2; }
 case "$1 $2" in
     "get namespaces")
         [ "${3:-} ${4:-}" = "-o name" ] || non 'get namespaces sans -o name'
-        for n in ${EXISTANTS:-}; do printf 'namespace/%s\n' "$n"; done ;;
+        for n in ${EXISTANTS:-}; do printf 'namespace/%s\n' "$n"; done
+        # Ce que le cluster garde : un apply réussi laisse une trace, que la
+        # lecture suivante rend comme un existant. C'est ce qui rend deux
+        # exécutions enchaînées comparables.
+        for f in "$BAC"/cree-*; do [ -e "$f" ] || continue; printf 'namespace/%s\n' "${f##*/cree-}"; done ;;
     "apply -f")
         m="$BAC/recu"; cat > "$m"
         grep -qxE 'apiVersion: v1' "$m" || non 'apiVersion v1 attendue'
@@ -58,10 +62,12 @@ timeout 30 bash "$CIBLE" --option-inexistante >/dev/null 2>&1 && code=0 || code=
 assert_code 2 "$code" "une option inconnue rend 2"
 titre "Liste absente ou mal formée — refusée en 2, avant tout appel kubectl"
 sain
-for m in "" ",web" "web," "web,,data" "web data" "Web" "-web" "web-" "a.b" "web,web" "default" "kube-system" "kube-x"; do
+for m in "" ",web" "web," "web,,data" "web data" "Web" "-web" "web-" "a.b" "web,web" "default" "kube-system" "kube-x" $'web\nkube-x' $'web\n'; do
     LISTE="$m"; lancer --yes
     assert_code 2 "$CODE" "la liste « $m » est refusée en 2"
 done
+LISTE=$'web\nkube-x'; lancer --yes
+assert_contient "$sortie" "SRV_K8S_NAMESPACES" "un retour à la ligne est refusé en nommant la variable"
 LISTE="kube-system"; lancer --yes
 assert_contient "$sortie" "réservé" "un namespace système est refusé pour ce motif"
 LISTE="$(printf 'a%.0s' {1..64})"; lancer --yes
@@ -96,6 +102,23 @@ assert_code 0 "$CODE" "tous les namespaces présents : le script rend 0"
 assert_contient "$sortie" "existent déjà" "il annonce l'état au lieu d'agir"
 assert_contient "$sortie" "aucun changement" "et le dit en toutes lettres"
 assert_absent "$(appels)" "apply" "aucun namespace n'est réappliqué"
+titre "Idempotence démontrée par deux exécutions enchaînées (regles.md §10)"
+sain; LISTE="web,data"; EXTRA=(EXISTANTS=""); lancer --yes; EXTRA=()
+assert_code 0 "$CODE" "la 1re exécution crée les absents et rend 0"
+assert_egal "2" "$(grep -c -- 'apply -f -' <<<"$(appels)")" "un apply par namespace absent"
+# Le journal des appels est vidé, les traces de création NON : c'est la
+# deuxième exécution qui éprouve l'idempotence, sur l'état laissé par la première.
+: > "$BAC/kubectl-appels"
+lancer --yes
+assert_code 0 "$CODE" "la 2e exécution rend 0 sans rien recréer"
+assert_contient "$sortie" "existent déjà" "ce que la 1re a créé est relu comme existant"
+assert_contient "$sortie" "aucun changement" "et l'absence de changement est annoncée"
+assert_egal "0" "$(grep -c -- 'apply -f -' <<<"$(appels)")" "aucun apply à la seconde exécution"
+assert_contient "$(appels)" "get namespaces -o name" "l'existant est relu à chaque exécution"
+sain; LISTE="web"; EXTRA=(EXISTANTS="web-prod"); lancer --yes; EXTRA=()
+assert_code 0 "$CODE" "un existant au nom seulement voisin ne dispense pas de créer"
+assert_egal "1" "$(grep -c -- 'apply -f -' <<<"$(appels)")" "« web » est appliqué malgré « web-prod »"
+assert_contient "$sortie" "namespace/web created" "la correspondance des existants est exacte"
 sain; LISTE="web,data"; EXTRA=(EXISTANTS="web"); lancer --dry-run; EXTRA=()
 assert_code 0 "$CODE" "--dry-run rend 0"
 assert_contient "$sortie" "Namespaces à créer" "les namespaces à créer sont annoncés"
@@ -138,6 +161,20 @@ assert_code 1 "$CODE" "un appel kubectl qui expire rend 1"
 assert_contient "$sortie" "délai dépassé" "le délai est nommé pour ce qu'il est"
 assert_contient "$sortie" "kubectl get namespaces -o name" "et l'appel qui a expiré est nommé"
 assert_egal "7 kubectl get namespaces -o name --request-timeout=5s" "$(head -1 "$BAC/timeout-appels")" "le délai externe vaut 7 (5 + 2), et l'appel reste borné à 5 s"
+rm -f "$BAC/timeout"
+titre "Délai dépassé sur un apply — le namespace est nommé, avec le bilan"
+faux timeout <<EOF
+#!/bin/sh
+case "\${TIMEOUT_SUR:-}:\$*" in "apply:7 kubectl apply "*)
+    printf '%s\n' "\$*" >> "$BAC/timeout-apply"; exit 124 ;; esac
+exec $(command -v timeout) "\$@"
+EOF
+sain; LISTE="web,data,monitoring"; EXTRA=(EXISTANTS="" TIMEOUT_SUR=apply); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "un apply qui expire rend 1"
+assert_contient "$sortie" "délai dépassé" "le délai est nommé pour ce qu'il est"
+assert_contient "$sortie" "« web »" "et le namespace dont l'apply a expiré est nommé"
+assert_contient "$sortie" "0 créé(s), 1 échoué (web), 2 non tenté(s)" "le bilan compte créés, échoué et non tentés"
+assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque l'échec partiel"
 rm -f "$BAC/timeout"
 titre "Ce que le script ne fait jamais"
 assert_egal "0" "$(grep -c require_root "$CIBLE" || true)" "aucun require_root"
