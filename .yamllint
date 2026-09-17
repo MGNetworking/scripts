@@ -1,0 +1,37 @@
+---
+# .yamllint — style YAML du dépôt (Ansible/, .github/).
+#
+# Base « default » de yamllint, assouplie sur trois points seulement, chacun
+# justifié ici. Tout le reste reste au niveau d'erreur d'origine.
+
+extends: default
+
+rules:
+  # 80 colonnes est trop court pour une chaîne de commande ou une URL ; la
+  # limite s'aligne sur celle des scripts et des documents du dépôt.
+  line-length:
+    max: 120
+
+  # « on: » est le déclencheur d'un workflow GitHub, pas le booléen « oui » ;
+  # la règle ne contrôle donc que les valeurs, où true et false seuls sont admis.
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false
+
+  # Un commentaire aligné sur une valeur reste lisible avec un seul espace.
+  comments:
+    min-spaces-from-content: 1
+
+  # Les quatre règles suivantes sont celles qu'ansible-lint exige d'une
+  # configuration yamllint personnalisée : sans elles, il avertit et renonce à
+  # son mode de correction automatique.
+  comments-indentation: false
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
+ignore: |
+  logs/
+  .idea/

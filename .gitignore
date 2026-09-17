@@ -39,3 +39,12 @@ build/
 ### Configuration locale des scripts ###
 config/*.env
 !config/*.env.example
+
+### Ansible — inventaire, variables de machines et secrets réels ###
+Ansible/inventory.yml
+Ansible/host_vars/*.yml
+!Ansible/host_vars/*.example.yml
+Ansible/group_vars/*.yml
+!Ansible/group_vars/*.example.yml
+Ansible/**/vault*.yml
+Ansible/**/*.vault.yml

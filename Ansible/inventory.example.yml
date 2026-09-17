@@ -1,0 +1,28 @@
+---
+# Ansible/inventory.example.yml — modèle d'inventaire.
+#
+# Copier en « inventory.yml », qui n'est jamais versionné, et y mettre les
+# adresses et les comptes réels :
+#
+#   cp inventory.example.yml inventory.yml
+#
+# Les adresses ci-dessous appartiennent au bloc de documentation 203.0.113.0/24
+# (RFC 5737) : elles ne joignent aucune machine.
+
+all:
+  children:
+    vps:
+      hosts:
+        vps1:
+          ansible_host: 203.0.113.10
+        vps2:
+          ansible_host: 203.0.113.11
+      vars:
+        ansible_user: exemple
+        ansible_port: 22
+
+    # Sous-ensemble des VPS qui portent K3s. Un hôte peut appartenir à
+    # plusieurs groupes : il est ici repris par son nom, sans être redéfini.
+    k3s:
+      hosts:
+        vps2:
