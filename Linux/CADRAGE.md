@@ -44,8 +44,8 @@ règle de pare-feu ; sauvegarder les données d'un cluster.
 - **Fonction globale** : une fois ses scripts appliqués, la machine a son répertoire de
   journaux et leur rotation, son nom d'hôte cohérent avec `/etc/hosts`, son fuseau, son
   fichier d'échange inscrit dans `/etc/fstab`, ses paquets à jour, un compte
-  d'administration à clé SSH, et la mise à jour hebdomadaire planifiée dans
-  `/etc/cron.d/mgnetworking`. Les diagnostics la relèvent sans rien modifier.
+  d'administration à clé SSH, et la mise à jour des paquets planifiée dans
+  `/etc/cron.d/mgnetworking` (hebdomadaire par défaut). Les diagnostics la relèvent sans rien modifier.
 - **Scripts membres et ordre** (`Linux/System/`) :
   1. `configure-logging.sh`, `configure-hostname.sh`, `configure-timezone.sh` (avant
      `configure-cron.sh`, dont l'horaire suit le fuseau), `configure-swap.sh`,
@@ -56,15 +56,18 @@ règle de pare-feu ; sauvegarder les données d'un cluster.
   3. à la demande : `notify-failure.sh` (appelé par personne à ce jour),
      `reboot-system.sh`.
 - **Conventions communes** :
-  - les diagnostics (`system-info.sh`, `check-*.sh`) n'exigent aucun privilège et ne
-    rendent jamais 1 sur un constat ; les autres exigent root, `--dry-run` compris, sauf
+  - les diagnostics (`system-info.sh`, `check-*.sh`) n'exigent aucun privilège ; seul
+    `check-services.sh --service` porte un constat dans son code (1 si le service n'est
+    pas actif), les autres rendent 0 quel que soit l'état relevé ; les autres scripts exigent root, `--dry-run` compris, sauf
     `notify-failure.sh`, `configure-swap.sh` sans taille et `configure-timezone.sh --list` ;
   - une valeur fautive tapée sur la ligne de commande rend 2 ; venue de
     `config/server.env`, elle rend un `[WARN]` et un repli dans `check-disk.sh` et
-    `check-memory.sh`, et 2 ailleurs ;
+    `check-memory.sh`, et 2 ailleurs ; un `LOG_DIR` non absolu vaut partout un `[WARN]`
+    et le défaut du socle ;
   - confirmation : `-y`/`--yes` confirme ; un `ASSUME_YES` hérité confirme aussi, sauf
-    dans `reboot-system.sh` ; une confirmation refusée, ou lue sur une entrée sans
-    terminal, abandonne en **0** sans rien modifier ; `manage-users.sh` et
+    dans `reboot-system.sh` (A134) ; la réponse est lue sur l'entrée standard, terminal ou non :
+    `o`, `oui`, `y` ou `yes` confirme, toute autre réponse ou une entrée vide abandonne en
+    **0** sans rien modifier ; `manage-users.sh` et
     `notify-failure.sh` ne demandent aucune confirmation ;
   - fichiers système remplacés : `/etc/hosts` et `/etc/fstab` sauvegardés en
     `<fichier>.bak-AAAAMMJJ-HHMMSS` avant modification ;
@@ -76,9 +79,11 @@ règle de pare-feu ; sauvegarder les données d'un cluster.
 
 ### Sécurité du serveur
 
-- **Fonction globale** : une fois ses scripts appliqués, ufw refuse l'entrant sauf SSH
-  et les ports déclarés, sshd refuse le mot de passe, le clavier interactif et la
-  connexion directe de root, et fail2ban surveille sshd. Les audits relèvent comptes,
+- **Fonction globale** : une fois ses scripts appliqués, ufw est actif, refuse l'entrant
+  par défaut et autorise SSH et les ports déclarés (les règles `allow` antérieures
+  restent) ; sshd a reçu les fichiers qui refusent le mot de passe, le clavier
+  interactif et la connexion directe de root (seule cette dernière valeur est relue par
+  `sshd -T`) ; fail2ban surveille sshd. Les audits relèvent comptes,
   ports et bilan de sécurité sans rien modifier.
 - **Scripts membres et ordre** (`Linux/Security/`) :
   1. à tout moment : `audit-users.sh`, `audit-ports.sh`, `security-check.sh` ;
@@ -95,8 +100,9 @@ règle de pare-feu ; sauvegarder les données d'un cluster.
     sans compte non-root, membre de `sudo`, à clé dans `authorized_keys` ;
     `configure-firewall.sh` pose et relit la règle SSH avant d'activer ufw ;
   - fichiers déposés dans des répertoires `.d` en 0644 par temporaire puis `mv`, jamais
-    dans le fichier principal ; SSH rechargé (`reload`), jamais redémarré ; état
-    antérieur restauré si la validation ou le rechargement échoue ;
+    dans le fichier principal ; SSH rechargé (`reload`), jamais redémarré, fichier
+    antérieur restauré si la validation ou le rechargement échoue ; fail2ban redémarré
+    (`restart`), sans restauration en cas d'échec ;
   - réglages dans `config/server.env` : `SRV_SSH_PORT`, `SRV_FIREWALL_PORTS`,
     `SRV_ADMIN_UTILISATEUR`.
 
@@ -148,7 +154,8 @@ Aucun dans `Linux/`.
 
 - Besoin : mettre à jour les paquets installés.
 - Fait : `DEBIAN_FRONTEND=noninteractive` ; `apt-get update` (`--dry-run` compris) ;
-  paquets listés par `apt-get -s upgrade` ; aucun : 0 ; sinon liste, confirmation,
+  paquets listés par `apt-get -s upgrade` ; aucun, ou simulation en échec (avalée,
+  A135) : « à jour » et 0 ; sinon liste, confirmation,
   `apt-get upgrade -y` ; paquets retenus et `/var/run/reboot-required` signalés en
   `[WARN]`. Ne fait pas : `dist-upgrade`, supprimer un paquet, redémarrer.
 - Options et défauts : `--dry-run` (index rafraîchi, liste seule) ; `-y`, `--yes` ;
@@ -230,7 +237,9 @@ Aucun dans `Linux/`.
   fichier actif à la bonne taille mais absent de fstab est recréé (A133). Ne fait pas :
   gérer une partition de swap, créer un répertoire.
 - Options et défauts : `[taille]` positionnel, `2G`, `512M` ou mégaoctets seuls, unités
-  G, GB, GO, M, MB, MO sans casse, 64 Mo au moins (défaut `SRV_SWAP_SIZE` ; absente :
+  G, GB, GO, M, MB, MO sans casse, 64 Mo au moins ; nombre formé de tous les chiffres de
+  la valeur et unité de tous ses autres caractères, où qu'ils soient (`2G5` vaut 25 Go,
+  A135) (défaut `SRV_SWAP_SIZE` ; absente :
   état seul) ; `--file <chemin>` (défaut `/swapfile`, absolu, ni lien symbolique, ni
   objet autre qu'un fichier, ni fichier existant qui ne soit pas un swap, parent
   existant) ; `--dry-run` ; `-y`, `--yes` ; `-h`, `--help`.
@@ -250,8 +259,9 @@ Aucun dans `Linux/`.
 
 - Besoin : un compte d'administration non-root, à clé SSH, prérequis de la sécurisation.
 - Fait : compte créé par `useradd --create-home --shell` s'il manque (shell d'un compte
-  existant inchangé) ; ajouté à chaque groupe demandé qui lui manque (`usermod --append
-  --groups`) ; avec `--sudo-sans-mot-de-passe`, `/etc/sudoers.d/mgnetworking-<nom>`
+  existant inchangé) ; ajouté à chaque groupe demandé, `sudo` compris avec `--sudo`, qui
+  lui manque (`usermod --append --groups` ; appartenance jugée par mot entier dans `id
+  -nG`, A135) ; avec `--sudo-sans-mot-de-passe`, `/etc/sudoers.d/mgnetworking-<nom>`
   (`<nom> ALL=(ALL) NOPASSWD:ALL`, 0440, `root:root`, contrôlé par `visudo -c` s'il est
   présent) ; clé ajoutée à `~/.ssh/authorized_keys` si la ligne manque, `~/.ssh` en 0700
   et `authorized_keys` en 0600, au compte, réappliqués à chaque passage ; sans
@@ -261,7 +271,7 @@ Aucun dans `Linux/`.
 - Options et défauts : `--utilisateur <nom>` (défaut `SRV_ADMIN_UTILISATEUR`) ;
   `--cle-fichier <chemin>` (défaut `SRV_ADMIN_CLE_PUBLIQUE`, une seule ligne utile, type
   `ssh-ed25519`, `ssh-rsa`, `ecdsa-sha2-*` ou `sk-*`) ; `--groupe <nom>` (répétable) ;
-  `--sudo` ; `--sudo-sans-mot-de-passe` (implique `--sudo`) ; `--shell <chemin>` (défaut
+  `--sudo` (ajout au groupe `sudo`) ; `--sudo-sans-mot-de-passe` (implique `--sudo`) ; `--shell <chemin>` (défaut
   `/bin/bash`, absolu) ; `--dry-run` ; `-h`, `--help`.
 - Codes de retour : 0 compte conforme ou `--dry-run` ; 1 root, distribution, `useradd`,
   `usermod`, `getent`, `id`, `stat`, `cut` ou `mktemp` absent, groupe `sudo` ou groupe
@@ -280,7 +290,7 @@ Aucun dans `Linux/`.
 - Fait : horaire validé avant root (cinq champs, caractères `0-9A-Za-z*,/-`, raccourcis
   `@` refusés), quelle qu'en soit l'origine ; refus si `update-system.sh` manque, si son
   chemin contient une espace ou un `%`, sans démon `cron` ou `crond` (`[WARN]` sous
-  `--dry-run`) ou sans `/etc/cron.d` ; planification de `update-system.sh` trouvée
+  `--dry-run`) ou sans `/etc/cron.d` (hors `--dry-run`) ; planification de `update-system.sh` trouvée
   ailleurs dans `/etc/cron.d` ou `/etc/crontab` : `[WARN]` ; dépose
   `/etc/cron.d/mgnetworking` : `SHELL=/bin/bash`, `PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin`,
   `<horaire> root /bin/bash <dépôt>/Linux/System/update-system.sh --yes >/dev/null` ;
@@ -473,8 +483,9 @@ Aucun dans `Linux/`.
   et que ce répertoire existe ; dépose `10-mgnetworking.conf` : `PasswordAuthentication
   no`, `KbdInteractiveAuthentication no`, `PubkeyAuthentication yes` ; identique : rien
   réécrit ni rechargé ; sinon `sshd -t -f <sshd_config>`, puis `systemctl reload ssh` ;
-  l'un en échec : fichier précédent restauré (ou retiré). Ne fait pas : changer le port,
-  `restart`, créer `sshd_config.d`, toucher `sshd_config`.
+  l'un en échec : fichier précédent restauré (ou retiré). Ne fait pas : relire la valeur
+  effective par `sshd -T` (une directive de `sshd_config` lue avant l'`Include`
+  l'emporte), changer le port, `restart`, créer `sshd_config.d`, toucher `sshd_config`.
 - Options et défauts : `--utilisateur <nom>` (défaut `SRV_ADMIN_UTILISATEUR`) ;
   `--dry-run` ; `-y`, `--yes` ; `-h`, `--help`.
 - Codes de retour : 0 appliqué, conforme ou `--dry-run` ; 1 aucun compte nommé, `root`,
@@ -522,7 +533,8 @@ Aucun dans `Linux/`.
   distribution, `apt-get`, `dpkg-query`, `systemctl` ou `fail2ban-client` absent, hors
   terminal sans `--yes`, confirmation refusée, installation, `enable` ou `restart` en
   échec, démon muet après les essais, prison `sshd` non chargée ; 2 option inconnue.
-- Modifie sur la machine : paquet fail2ban, `<jail.d>/mgnetworking-sshd.conf`, activation
+- Modifie sur la machine : paquet fail2ban, `<jail.d>` créé s'il manque (0755),
+  `<jail.d>/mgnetworking-sshd.conf`, activation
   et redémarrage du service.
 - Lit : `FAIL2BAN_JAIL_D` (défaut `/etc/fail2ban/jail.d`), `FAIL2BAN_ESSAIS` (défaut
   10), `FAIL2BAN_DELAI` (défaut 1 s entre essais), état du paquet et du service.
@@ -565,7 +577,8 @@ Aucun dans `Linux/`.
   `/etc/rancher/k3s`, `/var/lib/rancher/k3s` ; activation du service ; journal complet
   du script.
 - Lit : `SRV_K3S_VERSION` (absente : canal `stable`), `/var/lib` (`df`),
-  `/proc/meminfo`, `ss`.
+  `/proc/meminfo`, `ss` ; les autres `INSTALL_K3S_*` et `K3S_*` hérités passent à
+  l'installateur, qui les honore.
 - État : actif.
 
 ### configure-k3s.sh — ensemble « Gestion de K3s »
@@ -585,7 +598,8 @@ Aucun dans `Linux/`.
   `systemctl`, `diff`, `install`, `mktemp` ou `stat` absent, K3s absent, `diff` en
   erreur, hors terminal sans `--yes`, confirmation refusée, redémarrage ou diagnostic en
   échec ; 2 option inconnue, `SRV_K3S_TLS_SAN` mal formée.
-- Modifie sur la machine : `config.yaml` (0600), ses `.bak`, redémarrage de `k3s`.
+- Modifie sur la machine : `K3S_CONFIG_DIR` créé s'il manque (0755), `config.yaml`
+  (0600), ses `.bak`, redémarrage de `k3s`.
 - Lit : `SRV_K3S_TLS_SAN` (virgules), `K3S_CONFIG_DIR` (défaut `/etc/rancher/k3s`), le
   fichier en place.
 - État : actif.
@@ -608,7 +622,8 @@ Aucun dans `Linux/`.
   téléchargement ou installateur en échec, version relue différente, diagnostic final en
   échec ; 2 option inconnue, `--version` sans valeur.
 - Modifie sur la machine : binaire `k3s` et redémarrage du service, par l'installateur.
-- Lit : `SRV_K3S_VERSION`, `k3s --version`.
+- Lit : `SRV_K3S_VERSION`, `k3s --version` ; les `K3S_*` hérités autres que `K3S_URL` et
+  `K3S_TOKEN` passent à l'installateur, qui les honore.
 - État : actif.
 
 ### uninstall-k3s.sh — ensemble « Gestion de K3s »
