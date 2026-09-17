@@ -30,6 +30,7 @@ dévier du travail en cours. `docs/points-en-suspens.md` n'est plus qu'une archi
 ## Arborescence cible
 
 ```text
+Ansible/     roles | playbooks | inventory.example.yml | CADRAGE.md
 Linux/       System | Security | K3s
 Kubernetes/  Installation | Configuration | Maintenance
 Docker/      Installation | Configuration | Maintenance | Cleanup | Diagnostics
@@ -51,6 +52,22 @@ qui reste plat.
 Frontière `Docker/Diagnostics/` ↔ le reste de `Docker/` : `Diagnostics/` est en
 lecture seule, sans exception. Un script qui modifie quoi que ce soit sur la
 machine n'y a pas sa place, même si sa sortie ressemble à un rapport.
+
+Frontière `Ansible/` ↔ Bash ([décision 50](orchestration/decisions.md)) : installer
+et configurer une machine relève d'un rôle Ansible ; diagnostiquer en lecture seule,
+exploiter ponctuellement (sauvegarde, nettoyage, redémarrage, notification) et
+`Synology/` restent en Bash. Un script remplacé par un rôle est déprécié avec une
+date dans son cadrage, jamais supprimé sans décision de Maxime.
+
+## Conventions minimales d'un rôle
+
+- Contrat dans `meta/argument_specs.yml` : chaque variable, son type, son défaut ;
+  état garanti et fichiers ou services touchés dans `Ansible/CADRAGE.md`.
+- Idempotent : un second passage ne change rien (étape `idempotence` de Molecule).
+- Scénario Molecule avec `verify.yml` ; `ansible-lint` et `yamllint` sans faute.
+- Inventaire réel, `host_vars` réels et secrets hors Git : seuls les
+  `*.example.yml` sont versionnés ; secrets par Ansible Vault.
+- Application : `--check --diff`, puis sans `--check`, serveur par serveur (`--limit`).
 
 ## Conventions de script
 

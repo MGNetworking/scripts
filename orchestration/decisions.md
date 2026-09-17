@@ -5,7 +5,7 @@ Ghalem. Les raisonnements et les décisions abandonnées restent dans l'historiq
 Git (anciens `docs/agent/decisions/ADR-0001` à `ADR-0006`, retirés le 2026-09-14).
 
 **Les numéros sont conservés** pour que les renvois du dépôt restent justes. Un
-numéro absent désigne une décision remplacée : 5, 27, 29 et 30 à 35.
+numéro absent désigne une décision remplacée : 5, 27, 29, 30 à 35 et 43 (par la 50).
 
 ---
 
@@ -197,11 +197,6 @@ Les pistes de relance automatique touchent la configuration des services Windows
 que l'agent n'a pas le droit de modifier. Si le démon manque, l'orchestrateur
 s'arrête et le signale ; `DELAI_DISPONIBILITE` garde sa valeur jugée de 300 s.
 
-### Décision 43 — Pas d'intégration continue pendant le chantier (A18)
-
-Les validations exigent un démon Docker et le profil `systemd` privilégié ; le
-juge et `/tache` en tiennent lieu. Sujet à rouvrir à la fin du chantier des scripts.
-
 ### Décision 44 — `tests/README.md` n'est pas scindé (A34)
 
 Sa lecture par sections suffit aux agents ; le scinder casserait des liens dans
@@ -387,3 +382,82 @@ sur ce dossier attend son cadrage.
 **Portée** : le cadrage engage les scripts des quatre grands dossiers. Une fiche
 d'orchestration (`orchestration/`, `.claude/`, `tests/`, `tasks/`) née d'un écart reste
 régie par la décision 46.
+
+---
+
+## G. Outils d'installation et cadre de test
+
+### Décision 50 — Ansible installe et configure, Bash diagnostique et exploite ; trois niveaux de preuve (2026-09-17)
+
+Validé par `user` le 2026-09-17 (boucle de la décision 49). **Pourquoi** : parc de 2 VPS
+(Debian/Ubuntu, dont un en K3s) et 1 NAS Synology ; objectif d'un outillage qui fonctionne
+**et** d'une montée en compétence professionnelle. Une bonne part des scripts reconstruit à
+la main ce qu'Ansible fournit (idempotence, simulation, inventaire) ; aucun cadre ne reliait
+les tests aux contrats des `CADRAGE.md` ; aucune CI ; tout changement de `master` atteignait
+les serveurs au `git pull`.
+
+**Réponses de `user`** :
+
+1. **Répartition validée** :
+
+   | Domaine | Outil | Forme |
+   |---|---|---|
+   | `Linux/System`, `Linux/Security` : `configure-*`, `manage-users` | Ansible | rôles |
+   | `Docker/Installation`, `Docker/Configuration`, `Docker/Maintenance/update-docker` | Ansible | rôles |
+   | `Linux/K3s` : installation, configuration, mise à jour, désinstallation | Ansible | rôle |
+   | `Kubernetes/Installation` et `Configuration` | Ansible, collection `kubernetes.core` | manifestes et valeurs Helm versionnés, appliqués par un rôle |
+   | diagnostics en lecture seule : `check-*`, `audit-*`, `security-check`, `verify-k3s`, `Docker/Diagnostics`, `Kubernetes/Maintenance` | Bash, conservé | scripts sur le serveur ou en cron |
+   | exploitation ponctuelle : `notify-failure`, `backup-resources`, `cleanup-resources`, `docker-cleanup`, `update-images`, `reboot-system` | Bash, conservé | scripts |
+   | `Synology/` | Bash, conservé, non prioritaire | scripts |
+
+   Pas de GitOps (Flux, Argo CD) : un seul nouvel outil à la fois.
+2. **Harnais Bash conservé** (`tests/run.sh`, `assert.sh`, conteneurs) ; pas de `bats-core`.
+3. **Pilote** : le rôle `securite_base` (SSH, pare-feu `ufw`, fail2ban).
+4. **Refonte de `tests/README.md` d'abord**, avant cette décision (faite par TASK-078).
+
+**Fonctionnement** :
+
+- **Poste de contrôle** : WSL Ubuntu 24.04 ; Ansible, `ansible-lint` et Molecule installés
+  par `pipx`. Les serveurs n'ont besoin que de SSH et de Python.
+- **Application** : pour ce qui relève d'Ansible, les serveurs ne tirent plus rien. `user`
+  lance `ansible-playbook --check --diff`, puis la même commande sans `--check`, serveur par
+  serveur (`--limit`). Les scripts Bash conservés gardent le `git clone`.
+- **Dépôt public** : inventaire réel et variables par machine hors Git, comme
+  `config/*.env` ; seuls `inventory.example.yml` et `host_vars/*.example.yml` sont
+  versionnés ; secrets par Ansible Vault ou fichiers locaux ignorés.
+- **Arborescence** : dossier racine `Ansible/` (`roles/`, `playbooks/`,
+  `inventory.example.yml`, `CADRAGE.md`, `README.md`).
+
+**Continuité avec la décision 49** :
+
+- **Contrat d'un rôle** : ses variables et leurs défauts dans `meta/argument_specs.yml`
+  (Ansible refuse une variable inconnue ou mal typée), plus l'état garanti et les fichiers ou
+  services touchés ; `Ansible/CADRAGE.md` porte ces contrats.
+- **Script remplacé par un rôle** : changement incompatible. Le script est **déprécié avec
+  une date** dans son cadrage, supprimé seulement par décision de `user` une fois les 2 VPS
+  passés par le rôle. Ses écarts du registre ne se corrigent pas : le rôle naît sans eux.
+
+**Cadre de test** :
+
+- **Contrat → preuve** : chaque contrat d'un `CADRAGE.md` porte une ligne `Prouvé par :`
+  nommant le fichier de cas ou le scénario Molecule ; une clause sans preuve est un manque
+  que le relecteur signale. La ligne s'ajoute aux cadrages existants dans une tâche à part,
+  après le pilote.
+- **Trois niveaux de preuve, toujours nommés** : **simulé** (faux binaires, la logique
+  seule), **conteneur** (l'outil réel dans un conteneur jetable), **machine** (constaté sur
+  un VPS par `user`). Une preuve ne se présente jamais comme plus forte qu'elle n'est.
+- **Rôles** : `ansible-lint` et `yamllint` ; Molecule (pilote Docker) : `converge`,
+  `idempotence` qui échoue si un second passage change quelque chose, `verify.yml` en
+  assertions Ansible ; `--check --diff` sur un VPS pour le niveau machine.
+- **Scripts Bash conservés** : `shellcheck` et le harnais actuel ; les fichiers de cas d'un
+  script déprécié disparaissent avec lui.
+- **CI obligatoire** (GitHub Actions, remplace la décision 43) : sur chaque push et pull
+  request, lint (`shellcheck`, `ansible-lint`, `yamllint`), tests Bash en conteneur Debian,
+  Molecule sur les rôles modifiés ; moins de 15 minutes visées. Aucun push sur `master`
+  dont la CI est rouge.
+
+**Pilote et suite** : poste de contrôle, squelette et CI (TASK-080), puis le rôle
+`securite_base` (TASK-081). Le pilote **se clôt par un bilan comparatif** avec les trois
+scripts Bash (lignes, durée des tests, lisibilité, défauts). **`user` décide seul** de
+poursuivre la migration ou non ; ensuite seulement, un plan de migration par domaine,
+selon la boucle de la décision 49.

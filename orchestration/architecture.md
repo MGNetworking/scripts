@@ -268,10 +268,19 @@ session, coût), chaque relecture et chaque conducteur ajoutent une ligne à
 | chaque réserve porte un `Axx` existant | `/tache` 7 | rien de perdu à la clôture | — |
 | `verifier-liens.sh` | `/tache` 8.6 | aucun lien Markdown mort après déplacement de fiche | — |
 | sondes, mutations, stabilité | pratique non prescrite (A128) | comportement sur les chemins à risque ; suite qui échoue quand le script est faux ; test déterministe | comportement contre un vrai système |
+| `ansible-lint`, `yamllint` | décision 50, regles.md §10 | rôle et YAML conformes | le comportement |
+| Molecule `converge`, `idempotence`, `verify` | décision 50, regles.md §10 | rôle appliqué en conteneur ; second passage sans changement ; état vérifié | le comportement sur un vrai VPS |
+| `ansible-playbook --check --diff --limit` | décision 50, lancé par user | changements prévus sur la machine réelle | l'application elle-même |
+| CI GitHub Actions | décision 50 | lint et tests verts sur chaque push | ce que les tests ne couvrent pas |
 
 **Limite commune** : les tests tournent contre des faux (`kubectl`, `helm`, `systemctl`,
 `ufw`…) dont les messages sont parfois imités de mémoire. Aucun script n'est éprouvé sur
 un vrai serveur tant qu'un essai sur machine virtuelle n'a pas eu lieu.
+
+**Niveaux de preuve** (décision 50), toujours nommés : **simulé** (faux binaires, la
+logique seule), **conteneur** (l'outil réel dans un conteneur jetable), **machine**
+(constaté sur un VPS par user). Une preuve ne se présente jamais comme plus forte
+qu'elle n'est.
 
 ## 9. Arrêts et reprise
 

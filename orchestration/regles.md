@@ -120,6 +120,15 @@ Niveaux : `lint` (shellcheck, `bash -n`), `unit` (`lib/common.sh`), `integration
 d'administration livré sans fichier de cas n'est pas terminé ; l'idempotence se
 démontre en exécutant deux fois.
 
+**Rôle Ansible** ([décision 50](decisions.md)) : `ansible-lint` et `yamllint` à 0 ;
+Molecule `converge`, `idempotence` (un second passage ne change rien) et `verify` à 0 ;
+`--check --diff` sur un VPS, lancé par Maxime seul, pour le niveau machine.
+
+**Niveau de preuve, toujours nommé** : **simulé** (faux binaires, la logique seule),
+**conteneur** (l'outil réel dans un conteneur jetable), **machine** (constaté sur un VPS
+par Maxime). Une preuve ne se présente jamais comme plus forte qu'elle n'est. La CI doit
+être verte avant tout push sur `master`.
+
 ## 11. Documentation
 
 Dans le même commit que le script : README de son dossier, nombre de scripts du README racine,
