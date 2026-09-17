@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-083**.
+Prochain identifiant libre : **TASK-084**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -101,6 +101,7 @@ de ce que cet ADR a tranché.
 | [TASK-079](completed/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | `completed` | haute | 078 | hôte | non |
 | [TASK-080](completed/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | `completed` | haute | 079 | hôte | **oui** |
 | [TASK-081](pending/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `ready` | haute | 080 | hôte | **oui** |
+| [TASK-083](pending/TASK-083.md) | Essai DeepSeek : lignes « Prouvé par : » des scripts qui restent en Bash | `ready` | moyenne | — | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
