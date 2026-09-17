@@ -216,7 +216,8 @@ prouvait à l'usage (TASK-049).
 
 Aucune fiche ne naît hors de la boucle de réflexion de la [décision 49](decisions.md) :
 user exprime un besoin en langage normal, la session lit le `CADRAGE.md` du dossier et
-propose, user seul valide. Le plan initial n'alimente plus que le chantier en cours.
+propose, user seul valide. Le plan initial n'alimente plus que le chantier en cours. Les
+fiches d'orchestration nées d'un écart (pointillés) restent régies par la décision 46.
 
 ```mermaid
 flowchart TD
@@ -234,7 +235,7 @@ flowchart TD
     Q -- "non" --> At
     Lots --> At["/atomiser appliqué par la session :<br/>rédacteurs, une fiche par script"]
     At --> Dec{"choix non tranchés<br/>par decisions.md ?"}
-    Dec -- "oui" --> Qu["Questions à user"]
+    Dec -- "oui" --> Qu["Choix techniques restants<br/>à user, en une série"]
     Qu --> DN["Décision numérotée<br/>+ fiches alignées"]
     Dec -- "non" --> Ready
     DN --> Ready["Fiches ready,<br/>lecture seule d'abord"]

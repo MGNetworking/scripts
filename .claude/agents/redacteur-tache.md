@@ -26,7 +26,8 @@ critère.
 5. lis un script existant du même domaine, pour savoir ce qui existe déjà ;
 6. lis le `CADRAGE.md` du grand dossier (décision 49) : **refuse** d'écrire une fiche
    hors du contrat validé par `user`, ou que la boucle de réflexion n'a pas validée.
-   Dis-le dans ce que tu rends.
+   Dis-le dans ce que tu rends. Dossier encore sans `CADRAGE.md` : seules une correction
+   ou l'écriture de ce cadrage s'écrivent ; le contrat est le comportement actuel du script.
 
 ## Ce que tu produis
 

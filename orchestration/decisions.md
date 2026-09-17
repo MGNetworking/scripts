@@ -380,6 +380,10 @@ de l'écrire, le conducteur la refuse à l'étape 2 de `/tache`, le relecteur cl
 BLOQUANT un travail qui sort du contrat.
 
 **Transition** : un dossier dont le `CADRAGE.md` n'est pas encore écrit n'empêche pas
-une tâche de correction déjà au backlog ; le contrat de référence est alors le
-comportement actuel du script (choix 4). Toute nouvelle demande sur ce dossier attend
-son cadrage.
+une tâche de correction déjà au backlog, ni la tâche qui écrit ce cadrage ; le contrat
+de référence est alors le comportement actuel du script (choix 4). Toute autre demande
+sur ce dossier attend son cadrage.
+
+**Portée** : le cadrage engage les scripts des quatre grands dossiers. Une fiche
+d'orchestration (`orchestration/`, `.claude/`, `tests/`, `tasks/`) née d'un écart reste
+régie par la décision 46.
