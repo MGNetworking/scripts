@@ -54,8 +54,9 @@ tourner en parallèle, une fois trois tâches passées sans incident (décision 
 | [mode.json](mode.json) | `automatique` : enchaînement sans message de `user` ; `manuel` : attente d’une consigne |
 | [limites.json](limites.json) | les droits techniques d'un agent (écriture, commandes) |
 | `modeles/` | un fichier par modèle **externe** : adresse d'API, nom, variable de clé |
-| `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons |
+| `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons dans le transcript de la session (« incomplet » s'il est introuvable) |
 | `outils/juger.sh` | shellcheck et fichier de cas d'une fiche, en conteneur |
+| `outils/lien-ecrit.awk` | lu par `juger.sh` : refuse un fichier de cas qui écrit un faux binaire à travers un lien (A122) |
 | `mesures/journal.md` | coût, défauts et rattrapage de chaque tâche |
 | `mesures/agents.tsv` | jetons de chaque lancement d'agent (créé au premier) |
 

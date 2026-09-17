@@ -1,7 +1,7 @@
 ---
 id: TASK-072
 title: "Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122)"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian

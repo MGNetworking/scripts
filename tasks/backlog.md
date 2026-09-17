@@ -91,7 +91,7 @@ de ce que cet ADR a tranché.
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `completed` | moyenne | 062, 064 | conteneur `debian` | **oui** |
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `completed` | moyenne | 062, 065 | conteneur `debian` | **oui** |
 | [TASK-071](completed/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `completed` | moyenne | 062, 067 | conteneur `debian` | **oui** |
-| [TASK-072](active/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | `in_progress` | moyenne | — | conteneur `debian` | non |
+| [TASK-072](completed/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | `completed` | moyenne | — | conteneur `debian` | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -424,6 +424,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-067](completed/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | [rapport](reports/TASK-067-report.md) |
 | [TASK-068](completed/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | [rapport](reports/TASK-068-report.md) |
 | [TASK-071](completed/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | [rapport](reports/TASK-071-report.md) |
+| [TASK-072](completed/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | [rapport](reports/TASK-072-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
