@@ -10,7 +10,8 @@ root ; `kubectl` résout seul son kubeconfig (décision 48).
 - `configure-namespaces.sh` : `SRV_K8S_NAMESPACES` dans `config/server.env`, droit de lister et de créer des namespaces ;
 - `configure-ingress.sh` : Traefik installé (CRD `middlewares.traefik.io`, vérifiable par `install-ingress.sh`), droit de lire les CRD à l'échelle du cluster et d'écrire des Middlewares dans le namespace visé ;
 - `configure-tls.sh` : cert-manager installé (CRD `clusterissuers.cert-manager.io`, webhook prêt, voir `install-cert-manager.sh`), `SRV_K8S_ACME_EMAIL` dans `config/server.env`, le pod cert-manager capable de joindre Let's Encrypt en HTTPS sortant, droit de lire les CRD et d'écrire des ClusterIssuers ;
-- `configure-storage.sh` : la classe cible présente dans le cluster (`SRV_K8S_STORAGE_CLASS` dans `config/server.env`, facultative, `local-path` à défaut), droit de lister et d'annoter les StorageClass.
+- `configure-storage.sh` : la classe cible présente dans le cluster (`SRV_K8S_STORAGE_CLASS` dans `config/server.env`, facultative, `local-path` à défaut), droit de lister et d'annoter les StorageClass ;
+- `configure-registry.sh` : `timeout`, `base64`, `sha256sum` et `stat` (coreutils) ; `config/registry.env` copié de `config/registry.env.example`, en `chmod 600`, appartenant à l'utilisateur qui lance le script ; `SRV_K8S_NAMESPACES` dans `config/server.env`, chaque namespace déjà créé (`configure-namespaces.sh`) ; droit de lister les namespaces, de lire et d'appliquer des Secrets dans chacun.
 
 ## Scripts
 
@@ -20,6 +21,7 @@ root ; `kubectl` résout seul son kubeconfig (décision 48).
 | `configure-ingress.sh` | pose deux Middlewares Traefik réutilisables (`apiVersion: traefik.io/v1alpha1`), label `app.kubernetes.io/managed-by=mgnetworking`, dans le namespace `--namespace` (défaut `default`) : `redirect-https` (`redirectScheme`, `scheme: https`, `permanent: true`) et `security-headers` (`headers` : `stsSeconds: 3600`, `stsIncludeSubdomains: false`, `stsPreload: false`, `contentTypeNosniff`, `frameDeny` et `browserXssFilter` à true, `referrerPolicy: strict-origin-when-cross-origin`). Namespace validé DNS-1123 avant tout appel ; puis CRD et namespace lus ; `kubectl diff -f -` juge : 0, rien appliqué ; 1, différence affichée, confirmation, `kubectl apply -f -`, relecture par le label (exactement deux). `--dry-run` : différence seule, jamais d'apply. Confirmation : `--yes` ou réponse sous terminal ; un `ASSUME_YES` hérité ne confirme pas (décision 45) ; sans terminal ni `--yes`, 1. Rien n'est jamais supprimé (ni `delete` ni `--prune`). Causes distinguées : délai dépassé (124), droits insuffisants, kubeconfig invalide, ressource inconnue de l'API, CRD Middleware absente ou non servie (`no matches for kind`), apiserver injoignable (erreurs réseau seules), sinon refus du cluster avec son message (validation, webhook). Chaque appel borné par `--request-timeout` (5 s) et `timeout` (7 s). Codes : 0 à l'état voulu, appliqué ou déjà là, ou `--dry-run` ; 1 kubectl absent, CRD ou namespace absent, échec d'appel, confirmation refusée, relecture incomplète ; 2 option inconnue, `--namespace` sans valeur ou mal formé | utilisateur (droits sur les Middlewares du namespace) | oui : deux Middlewares |
 | `configure-tls.sh` | pose deux ClusterIssuers (`cert-manager.io/v1`, ressources de cluster), label `app.kubernetes.io/managed-by=mgnetworking` : `letsencrypt-staging` (`https://acme-staging-v02.api.letsencrypt.org/directory`) et `letsencrypt-production` (`https://acme-v02.api.letsencrypt.org/directory`), e-mail `SRV_K8S_ACME_EMAIL` entre guillemets, clé de compte `letsencrypt-<nom>-account-key`, solveur HTTP-01 `ingressClassName: traefik`. E-mail absent ou hors de la forme `local@domaine.tld` : 2 avant tout appel (garde contre l'injection YAML). Puis CRD lue ; `kubectl diff -f -` juge : 0, rien appliqué ; 1, différence, confirmation, `kubectl apply -f -`, relecture par le label (exactement deux), puis `kubectl wait --for=condition=Ready` de chaque issuer, 120 s par ClusterIssuer. `--dry-run` : différence seule, ni apply ni wait. Confirmation comme `configure-ingress.sh` (décision 45). Aucun certificat demandé, rien supprimé, Secret de clé jamais lu. Causes distinguées : délai dépassé (124), webhook cert-manager non prêt (`failed calling webhook`), droits, kubeconfig, CRD absente, ressource inconnue, apiserver injoignable, issuer non prêt après le délai (compte ACME non enregistré), sinon refus du cluster. Appels bornés par `--request-timeout` (10 s) et `timeout` (12 s), l'attente par 120 s et 122 s. Codes : 0 à l'état voulu ou `--dry-run` ; 1 échec nommé ci-dessus ou confirmation refusée ; 2 option inconnue, e-mail absent ou mal formé | utilisateur (droits sur les ClusterIssuers) | oui : deux ClusterIssuers, et deux comptes ACME chez Let's Encrypt créés par cert-manager |
 | `configure-storage.sh` | laisse une seule StorageClass par défaut : la cible, `SRV_K8S_STORAGE_CLASS` ou `local-path`. Nom validé en sous-domaine RFC 1123 (253 caractères au plus) avant tout appel, sinon 2. Un seul relevé `kubectl get storageclass -o jsonpath` lit les deux clés, GA `storageclass.kubernetes.io/is-default-class` et bêta `storageclass.beta.kubernetes.io/is-default-class` : une classe est par défaut si l'une vaut `"true"`. Cible absente : 1, rien modifié. Déjà seule par défaut : 0, « aucun changement », aucun annotate. Sinon plan affiché — la cible reçoit la clé GA à `true` **en premier**, puis chaque clé à `true` d'une autre classe est posée à `false` par `kubectl annotate --overwrite` (jamais supprimée) : le cluster ne passe jamais par zéro classe par défaut. `--dry-run` : plan seul, aucun annotate. Confirmation : `--yes` ou réponse sous terminal ; un `ASSUME_YES` hérité ne confirme pas (décision 45) ; sans terminal ni `--yes`, 1. Le premier annotate refusé arrête la boucle : cause nommée, bilan appliquées et restantes, 1, sans `[SUCCESS]`. Relecture finale : même nombre de classes, exactement une par défaut, la cible, sinon 1. Aucune StorageClass créée, supprimée ni réappliquée. Causes distinguées : délai dépassé (124), droits insuffisants, kubeconfig invalide, ressource absente, apiserver injoignable, sinon refus du cluster. Appels bornés par `--request-timeout` (10 s) et `timeout` (12 s). Codes : 0 cible seule par défaut, déjà ou après annotation, ou `--dry-run` ; 1 échec nommé, cible absente, confirmation refusée, relecture en écart ; 2 option inconnue ou nom mal formé | utilisateur (droits sur les StorageClass) | oui : annotations par défaut des StorageClass |
+| `configure-registry.sh` | pose le Secret `registry-credentials`, type `kubernetes.io/dockerconfigjson`, dans chaque namespace de `SRV_K8S_NAMESPACES`, à partir de `config/registry.env` (`REGISTRY_SERVEUR`, `REGISTRY_IDENTIFIANT`, `REGISTRY_JETON`). Fichier absent, droits autres que 600 ou propriétaire autre que l'utilisateur courant : 1, **avant** de le lire. Variables absentes, caractère de contrôle, serveur hors `hôte[:port numérique]` (schéma, `/`, `_`, `::`, tiret en tête, port non numérique), liste mal formée ou nom de plus de 63 caractères : 2, sans afficher la valeur. Le JSON `{"auths":{"<serveur>":{"username","password","auth"}}}` (guillemets et antislashs échappés) et son base64 sont construits localement ; le manifeste part à `kubectl apply -f -` par l'entrée standard, jamais en argument ni sur disque ; jamais `kubectl create secret docker-registry --docker-password`, que la documentation Kubernetes signale comme exposé dans l'historique et aux autres utilisateurs, ni `kubectl diff`. Toute trace héritée (`bash -x`, `-v`, `SHELLOPTS`, `allexport`) est coupée dès la 2e ligne ; les variables sont retirées de l'environnement dès leur lecture. Idempotence sans relire le Secret : annotation `mgnetworking/empreinte` = sha256 du JSON, comparée par jsonpath ; identique partout, 0 et « aucun changement ». Namespace absent du cluster : 1, nommé, rien appliqué. `--dry-run` : Secrets à créer ou à mettre à jour, sans contenu, aucun apply. Confirmation : `--yes` ou réponse sous terminal ; `ASSUME_YES` hérité remis à false (décision 45) ; sans terminal ni `--yes`, 1. Le premier apply refusé arrête la boucle : cause résumée (le message brut de kubectl, qui peut contenir le manifeste, n'est jamais recopié), bilan appliqués, échoué, non tentés, 1, sans `[SUCCESS]`. Rien n'est jamais supprimé. Causes distinguées : délai dépassé (124), droits insuffisants, kubeconfig invalide, ressource absente, apiserver injoignable. Appels bornés par `--request-timeout` (10 s) et `timeout` (12 s). Codes : 0 Secrets à jour ou `--dry-run` ; 1 échec nommé ou confirmation refusée ; 2 option inconnue, valeur absente ou mal formée | utilisateur (droits sur les Secrets des namespaces) | oui : un Secret par namespace de la liste |
 
 ## Émettre les certificats
 
@@ -62,7 +64,26 @@ namespace du site : `--namespace <ns-du-site>`.
 ./Kubernetes/Configuration/configure-tls.sh                          # différence, confirmation, apply, attente Ready
 ./Kubernetes/Configuration/configure-storage.sh --dry-run            # annotations qui changeraient, rien annoté
 ./Kubernetes/Configuration/configure-storage.sh --yes                # cible seule StorageClass par défaut
+cp config/registry.env.example config/registry.env && chmod 600 config/registry.env   # puis le renseigner
+./Kubernetes/Configuration/configure-registry.sh --dry-run           # Secrets à créer ou mettre à jour, sans contenu
+./Kubernetes/Configuration/configure-registry.sh --yes               # Secret registry-credentials dans chaque namespace
 ```
+
+## Tirer une image privée
+
+`configure-registry.sh` ne lie le Secret à **aucun** Pod ni ServiceAccount. Chaque
+Pod du namespace qui tire une image du registry le nomme :
+
+```yaml
+spec:
+  imagePullSecrets:
+    - name: registry-credentials
+```
+
+Ne jamais créer ce Secret par `kubectl create secret docker-registry
+--docker-password=…` : la documentation Kubernetes avertit que le mot de passe
+reste alors dans l'historique du shell et reste visible des autres utilisateurs de
+la machine pendant l'exécution.
 
 ## Risques
 
@@ -95,6 +116,14 @@ n'y remédie pas ; relancé, il le signale et le corrige. Un annotate refusé en
 de plan laisse la cible marquée et une partie des autres encore par défaut : relancer.
 Version corrigée non relue et jamais lancée contre un vrai cluster (A118) ;
 longueurs (A119).
+
+`configure-registry.sh` — le Secret porte le jeton en base64, pas chiffré : toute
+personne autorisée à lire les Secrets du namespace le lit. Un Secret de même nom
+dont l'empreinte diffère est remplacé ; retirer un namespace de la liste n'y
+supprime pas le Secret. Changer le jeton impose de relancer le script. Un apply
+refusé en cours de liste laisse posés ceux qui précèdent : relancer. Version
+corrigée non relue et jamais lancée contre un vrai cluster (A120) ; longueurs
+(A121).
 
 ## Systèmes supportés
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-071
 title: "Écrire Kubernetes/Configuration/configure-registry.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-062

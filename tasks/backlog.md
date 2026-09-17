@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-072**.
+Prochain identifiant libre : **TASK-073**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -90,7 +90,8 @@ de ce que cet ADR a tranché.
 | [TASK-068](completed/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `completed` | moyenne | 062 | conteneur `debian` | **oui** |
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `completed` | moyenne | 062, 064 | conteneur `debian` | **oui** |
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `completed` | moyenne | 062, 065 | conteneur `debian` | **oui** |
-| [TASK-071](active/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `in_progress` | moyenne | 062, 067 | conteneur `debian` | **oui** |
+| [TASK-071](completed/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `completed` | moyenne | 062, 067 | conteneur `debian` | **oui** |
+| [TASK-072](pending/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | `ready` | moyenne | — | conteneur `debian` | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -294,7 +295,7 @@ Découpé en trois lots (plus de sept scripts), tous atomisés le 2026-09-16.
 |---|---|---|
 | Maintenance — plan §7 | [TASK-055](completed/TASK-055.md) à [TASK-061](completed/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; décision 48 |
 | Installation — plan §5 | [TASK-062](completed/TASK-062.md) à [TASK-066](pending/TASK-066.md) | vérification seule de kubectl, Traefik et metrics-server ; décision 48 |
-| Configuration — plan §6 | [TASK-067](completed/TASK-067.md) à [TASK-071](active/TASK-071.md) | secrets du registry hors dépôt ; décision 48 |
+| Configuration — plan §6 | [TASK-067](completed/TASK-067.md) à [TASK-071](completed/TASK-071.md) | secrets du registry hors dépôt ; décision 48 |
 
 ### Docker — plan §8 à §10
 
@@ -422,6 +423,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | [rapport](reports/TASK-070-report.md) |
 | [TASK-067](completed/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | [rapport](reports/TASK-067-report.md) |
 | [TASK-068](completed/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | [rapport](reports/TASK-068-report.md) |
+| [TASK-071](completed/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | [rapport](reports/TASK-071-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
