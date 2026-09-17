@@ -1,7 +1,7 @@
 ---
 id: TASK-075
 title: "Écrire le cadrage de Linux/ à partir de l'état actuel des scripts"
-status: ready
+status: completed
 priority: medium
 depends_on:
   - TASK-074
