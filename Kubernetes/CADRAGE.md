@@ -18,8 +18,9 @@ cluster (namespaces, StorageClass par défaut, Middlewares Traefik, émetteurs L
 Encrypt, accès au registry privé), puis l'exploiter et le diagnostiquer.
 
 Contexte visé : un VPS Debian ou Ubuntu en K3s mono-nœud (décisions 14, 17 et 23),
-Traefik comme Ingress Controller, `local-path` comme stockage. Les scripts ne parlent
-qu'à `kubectl` et `helm` : ils survivraient au remplacement de K3s par un cluster managé.
+Traefik comme Ingress Controller, `local-path` comme stockage. Les scripts parlent au
+cluster par `kubectl` et `helm` seuls : ils survivraient au remplacement de K3s par un
+cluster managé.
 
 **Hors besoin** : installer, configurer ou désinstaller K3s lui-même (`Linux/K3s/`) ;
 déployer une application ou demander un certificat (chaque site le fait dans son
@@ -51,18 +52,23 @@ Ingress) ; administrer un workload par `docker restart` ; supprimer des données
     script ne fixe, n'affiche ni ne copie ;
   - codes de retour : `0` succès ou état déjà voulu (avertissements compris), `1` échec
     nommé (outil absent, cluster injoignable, droits, délai dépassé, confirmation
-    refusée), `2` option inconnue ou valeur mal formée, avant tout appel au cluster ;
-  - chaque appel `kubectl` est borné par `--request-timeout` et par `timeout` ; le code
-    124 est dit « délai dépassé », jamais « cluster injoignable » ;
-  - scripts qui modifient : résumé ou différence, puis confirmation ; `--dry-run`
-    n'appelle aucune écriture ; `-y`/`--yes` obligatoire hors terminal ; rien n'est
+    refusée), `2` option inconnue ; la valeur mal formée rend 2 ou 1 selon le script,
+    que dit son contrat ;
+  - les appels `kubectl` sont bornés par `--request-timeout` et par `timeout`, sauf
+    l'attente `rollout status` de `install-cert-manager.sh` ; le code 124 n'est pas
+    traité pareil partout : « délai dépassé » partout, sauf `cluster-status.sh`,
+    `pods-status.sh`, `events.sh` et `diagnostics.sh`, qui le disent « apiserver
+    injoignable » (A130) ;
+  - scripts qui modifient le cluster ou installent sur la machine : résumé ou différence, puis
+    confirmation ; `--dry-run` n'écrit rien ; `-y`/`--yes` confirme hors terminal, et
+    seul `configure-namespaces.sh` accepte aussi un `ASSUME_YES` hérité ; rien n'est
     jamais supprimé, sauf par `cleanup-resources.sh` ;
   - réglages dans `config/server.env` : `SRV_K8S_NAMESPACES`, `SRV_K8S_STORAGE_CLASS`,
     `SRV_K8S_ACME_EMAIL`, `SRV_K8S_BACKUP_DIR`, plus `SRV_HELM_VERSION` et
     `SRV_CERT_MANAGER_VERSION` ; identifiants du registry dans `config/registry.env` ;
-  - **hors contrat** : les variables réservées aux tests en conteneur (`DELAI_TEST`,
-    `ATTENTE_TEST`, lues seulement si `/.dockerenv` existe, et `TIMEOUT_HELM`), le
-    libellé exact des messages et la mise en page des rubriques.
+  - **hors contrat** : `DELAI_TEST` et `ATTENTE_TEST`, lues seulement si `/.dockerenv`
+    existe (tests en conteneur), le libellé exact des messages et la mise en page des
+    rubriques.
 
 ## Scripts individuels
 
@@ -81,7 +87,7 @@ Aucun dans `Kubernetes/`.
 - Options et défauts : `--help`.
 - Codes de retour : 0 `kubectl` présent et cluster joignable ; 1 `kubectl` ou `timeout`
   absent, kubeconfig absent, illisible ou invalide, apiserver injoignable, droits
-  insuffisants, délai dépassé ; 2 option inconnue.
+  insuffisants, délai dépassé, aucun nœud rendu ; 2 option inconnue.
 - Modifie sur la machine ou le cluster : rien (journal seul).
 - Lit : `KUBECONFIG`, `~/.kube/config` (existence et droit de lecture).
 - État : actif.
@@ -98,7 +104,7 @@ Aucun dans `Kubernetes/`.
   `ss` absent, IngressClass ou déploiement absent ou non prêt, appel en échec ou délai
   dépassé ; 2 option inconnue.
 - Modifie sur la machine ou le cluster : rien.
-- Lit : IngressClasses, déploiement `kube-system/traefik`, Services, `ss -ltn`.
+- Lit : IngressClasses, déploiement `kube-system/traefik`, Services, `ss -ltn` (`ss -ltnp` sous root).
 - État : actif.
 
 ### install-metrics.sh — ensemble « Gestion de Kubernetes »
@@ -130,7 +136,7 @@ Aucun dans `Kubernetes/`.
   `openssl` ou `bash` absent, confirmation refusée, téléchargement ou `get-helm-4` en
   échec, version illisible ou différente de l'épingle ; 2 option inconnue.
 - Modifie sur la machine ou le cluster : `/usr/local/bin/helm`, par le `sudo` de
-  `get-helm-4`.
+  `get-helm-4` ; journal du script.
 - Lit : `SRV_HELM_VERSION` (absente : dernière version publiée).
 - État : actif.
 
@@ -144,15 +150,16 @@ Aucun dans `Kubernetes/`.
   voulue inférieure, release non `deployed`, CRD `cert-manager.io` sans release. Ne fait
   pas : revenir en arrière, désinstaller, supprimer une CRD.
 - Options et défauts : `--version vX.Y.Z` (obligatoire, sinon `SRV_CERT_MANAGER_VERSION`) ;
-  `--dry-run` (version et commande, sans `helm` ni `kubectl`) ; `-y`, `--yes` (seuls à
+  `--dry-run` (version et commande, sans appeler `helm` ni `kubectl`, qui doivent pourtant être présents) ; `-y`, `--yes` (seuls à
   confirmer hors terminal ; `ASSUME_YES` hérité ignoré) ; `--help`.
 - Codes de retour : 0 à la version voulue, installée ou déjà là ; 1 `helm`, `kubectl` ou
   `timeout` absent, cluster injoignable, version absente, invalide ou inférieure, release
   non `deployed`, CRD orphelines, confirmation refusée, échec ou délai de `helm`,
   déploiement non prêt, CRD manquante ; 2 option inconnue.
 - Modifie sur la machine ou le cluster : release Helm, namespace, CRD et déploiements
-  cert-manager.
-- Lit : `SRV_CERT_MANAGER_VERSION`, releases Helm du namespace, CRD `cert-manager.io`.
+  cert-manager ; journal du script.
+- Lit : `SRV_CERT_MANAGER_VERSION`, `TIMEOUT_HELM` (défaut 330 s, borne externe du
+  `helm upgrade`), releases Helm du namespace, CRD `cert-manager.io`.
 - État : actif.
 
 ### configure-namespaces.sh — ensemble « Gestion de Kubernetes »
@@ -165,7 +172,7 @@ Aucun dans `Kubernetes/`.
   retiré de la liste.
 - Options et défauts : `--dry-run` (namespaces à créer) ; `-y`, `--yes` ; un
   `ASSUME_YES` hérité confirme aussi (script non destructif, décision 45) ; `--help`.
-- Codes de retour : 0 liste présente ou créée, ou `--dry-run` ; 1 `kubectl` absent, échec
+- Codes de retour : 0 liste présente ou créée, ou `--dry-run` ; 1 `kubectl` ou `timeout` absent, échec
   nommé ou confirmation refusée ; 2 option inconnue, liste absente ou mal formée.
 - Modifie sur la machine ou le cluster : namespaces de la liste absents du cluster.
 - Lit : `SRV_K8S_NAMESPACES` (noms séparés par des virgules), namespaces du cluster.
@@ -182,7 +189,7 @@ Aucun dans `Kubernetes/`.
 - Options et défauts : `--dry-run` (plan seul) ; `-y`, `--yes` (seuls à confirmer hors
   terminal ; `ASSUME_YES` hérité ignoré) ; `--help`.
 - Codes de retour : 0 cible seule par défaut, déjà ou après annotation, ou `--dry-run` ;
-  1 échec nommé, cible absente, confirmation refusée, relecture en écart ; 2 option
+  1 `kubectl` ou `timeout` absent, échec nommé, cible absente, confirmation refusée, relecture en écart ; 2 option
   inconnue ou nom mal formé.
 - Modifie sur la machine ou le cluster : annotations « par défaut » des StorageClass.
 - Lit : `SRV_K8S_STORAGE_CLASS` (défaut `local-path`), StorageClasses du cluster.
@@ -200,7 +207,7 @@ Aucun dans `Kubernetes/`.
 - Options et défauts : `--namespace <ns>` (défaut `default`) ; `--dry-run` (différence
   seule) ; `-y`, `--yes` (seuls à confirmer hors terminal) ; `--help`.
 - Codes de retour : 0 à l'état voulu, appliqué ou déjà là, ou `--dry-run` ; 1 `kubectl`
-  absent, CRD ou namespace absent, échec d'appel, confirmation refusée, relecture
+  ou `timeout` absent, CRD ou namespace absent, échec d'appel, confirmation refusée, relecture
   incomplète ; 2 option inconnue, `--namespace` sans valeur ou mal formé.
 - Modifie sur la machine ou le cluster : deux Middlewares du namespace.
 - Lit : CRD Middleware, namespace cible, Middlewares existants.
@@ -216,7 +223,7 @@ Aucun dans `Kubernetes/`.
   supprimer.
 - Options et défauts : `--dry-run` (différence seule, ni apply ni attente) ; `-y`,
   `--yes` (seuls à confirmer hors terminal) ; `--help`.
-- Codes de retour : 0 à l'état voulu ou `--dry-run` ; 1 `kubectl` absent, CRD absente,
+- Codes de retour : 0 à l'état voulu ou `--dry-run` ; 1 `kubectl` ou `timeout` absent, CRD absente,
   webhook cert-manager non prêt, échec d'appel, issuer non Ready après le délai,
   confirmation refusée ; 2 option inconnue, e-mail absent ou mal formé.
 - Modifie sur la machine ou le cluster : deux ClusterIssuers ; cert-manager crée en
@@ -237,8 +244,8 @@ Aucun dans `Kubernetes/`.
   créer ou à mettre à jour, sans contenu) ; `-y`, `--yes` (seuls à confirmer hors
   terminal) ; `--help`.
 - Codes de retour : 0 Secrets à jour ou `--dry-run` ; 1 fichier absent, droits ou
-  propriétaire refusés, namespace absent, `kubectl` absent, échec nommé, confirmation
-  refusée ; 2 option inconnue, `REGISTRY_SERVEUR`, `REGISTRY_IDENTIFIANT` ou
+  propriétaire refusés, namespace absent, `kubectl`, `timeout`, `base64` ou `sha256sum` absent, échec nommé, confirmation
+  refusée ; 2 option inconnue, `--config` sans valeur, `REGISTRY_SERVEUR`, `REGISTRY_IDENTIFIANT` ou
   `REGISTRY_JETON` absent ou mal formé, liste des namespaces absente ou mal formée.
 - Modifie sur la machine ou le cluster : un Secret par namespace de la liste.
 - Lit : `config/<nom>.env`, `SRV_K8S_NAMESPACES`, annotations des Secrets existants.
