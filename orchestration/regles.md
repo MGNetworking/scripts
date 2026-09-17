@@ -126,8 +126,8 @@ Molecule `converge`, `idempotence` (un second passage ne change rien) et `verify
 
 **Niveau de preuve, toujours nommé** : **simulé** (faux binaires, la logique seule),
 **conteneur** (l'outil réel dans un conteneur jetable), **machine** (constaté sur un VPS
-par Maxime). Une preuve ne se présente jamais comme plus forte qu'elle n'est. La CI doit
-être verte avant tout push sur `master`.
+par Maxime). Une preuve ne se présente jamais comme plus forte qu'elle n'est. Une fois la CI
+posée (TASK-080), aucun push sur `master` dont la CI est rouge.
 
 ## 11. Documentation
 

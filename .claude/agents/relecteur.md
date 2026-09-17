@@ -39,7 +39,7 @@ l'essai comparatif de TASK-034 (`orchestration/mesures/journal.md`).
 7. **Le niveau de preuve** (décision 50) : chaque preuve avancée est nommée
    **simulé** (faux binaires), **conteneur** (outil réel en conteneur jetable) ou
    **machine** (constaté sur un VPS par user). Une preuve présentée plus forte
-   qu'elle n'est, ou non nommée, est un défaut **MAJEUR**. Un rôle Ansible se prouve
+   qu'elle n'est, ou non nommée, est un défaut. Un rôle Ansible se prouve
    par `ansible-lint`, `yamllint` et Molecule (`converge`, `idempotence`, `verify`).
 8. **La ligne `Prouvé par :`** : dans un `CADRAGE.md` qui l'a introduite, toute
    clause de contrat sans elle, ou dont le fichier de cas ou le scénario nommé
