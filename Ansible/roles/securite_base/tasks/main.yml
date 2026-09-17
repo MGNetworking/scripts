@@ -1,0 +1,35 @@
+---
+# Ansible/roles/securite_base/tasks/main.yml — enchaînement du rôle.
+#
+# L'ordre n'est pas indifférent : SSH est durci d'abord, tant que le pare-feu
+# laisse tout passer ; le pare-feu ensuite, en ouvrant le port SSH avant toute
+# politique ; fail2ban en dernier, qui ne peut couper aucun accès.
+
+- name: Refuser une distribution hors Debian et Ubuntu
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+    fail_msg: >-
+      Ce rôle ne connaît qu'apt, ufw et les unités systemd de Debian et
+      d'Ubuntu ; la machine annonce
+      « {{ ansible_facts['distribution'] | default('inconnue') }} ».
+      Rien n'a été modifié.
+    quiet: true
+
+- name: Vérifier la forme des ports à ouvrir
+  ansible.builtin.assert:
+    that:
+      - item is match('^[1-9][0-9]{0,4}/(tcp|udp)$')
+      - item.split('/')[0] | int <= 65535
+    fail_msg: "Port mal formé : « {{ item }} » — forme attendue : 443/tcp."
+    quiet: true
+  loop: "{{ securite_base_ports_autorises }}"
+
+- name: Durcir l'accès SSH
+  ansible.builtin.include_tasks: ssh.yml
+
+- name: Poser le pare-feu ufw
+  ansible.builtin.include_tasks: pare-feu.yml
+
+- name: Activer la prison sshd de fail2ban
+  ansible.builtin.include_tasks: fail2ban.yml

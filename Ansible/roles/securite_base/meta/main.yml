@@ -1,0 +1,27 @@
+---
+# Ansible/roles/securite_base/meta/main.yml — carte d'identité du rôle.
+
+galaxy_info:
+  role_name: securite_base
+  namespace: mgnetworking
+  author: MGNetworking
+  description: >-
+    Durcit l'accès d'un serveur Debian ou Ubuntu : SSH par clé seule, pare-feu
+    ufw fermé en entrée sans couper SSH, prison sshd de fail2ban active.
+  license: MIT
+  min_ansible_version: "2.15"
+  galaxy_tags:
+    - security
+    - ssh
+    - firewall
+    - fail2ban
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - noble
+
+# Rôle autonome : il n'en appelle aucun autre et ne dépend d'aucun.
+dependencies: []

@@ -1,0 +1,16 @@
+---
+# Ansible/roles/securite_base/handlers/main.yml
+#
+# « reload » et jamais « restart » pour ssh : un rechargement ne coupe pas les
+# connexions en cours — une configuration fautive ne se verrait qu'à la
+# connexion suivante, et laisse le temps de corriger.
+
+- name: Recharger ssh
+  ansible.builtin.service:
+    name: ssh
+    state: reloaded
+
+- name: Redémarrer fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted

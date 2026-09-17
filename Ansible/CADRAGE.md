@@ -5,11 +5,9 @@ Ce document **engage** : besoin du dossier et contrat de chacun de ses rôles
 Le [README](README.md) **explique** (installation du poste de contrôle, commandes, risques).
 Tout ce qui figure au contrat est réputé utilisé : le modifier est une rupture.
 
-État initial : le dossier ne porte **aucun rôle**. La section « Contrats » est donc vide,
-et le restera jusqu'à ce qu'un rôle y soit écrit — le premier est `securite_base`
-(TASK-081). Un contrat de rôle décrit ses variables (`meta/argument_specs.yml`), l'état
-qu'il garantit, les fichiers et services qu'il touche, et porte une ligne `Prouvé par :`
-nommant son scénario Molecule.
+Le dossier porte un rôle, `securite_base`. Un contrat de rôle décrit ses variables
+(`meta/argument_specs.yml`), l'état qu'il garantit, les fichiers et services qu'il touche,
+et porte une ligne `Prouvé par :` nommant son scénario Molecule.
 
 ## Besoin
 
@@ -56,8 +54,38 @@ ensemble est dit **autonome** et le déclare dans son contrat.
 
 ## Contrats
 
-Aucun : le dossier ne porte encore aucun rôle. Le premier contrat sera écrit par la
-tâche qui livre `securite_base`, avec sa ligne `Prouvé par :`.
+### securite_base — rôle autonome
+
+- **Besoin** : un serveur Debian ou Ubuntu dont l'accès SSH ne s'ouvre qu'à une clé,
+  dont l'entrée est fermée sauf SSH, et dont les tentatives répétées sont bannies.
+- **Garantit**, après application : `sshd -T` annonce `passwordauthentication no`,
+  `kbdinteractiveauthentication no` et `pubkeyauthentication yes`, le port inchangé et
+  le service `ssh` toujours actif ; `ufw` actif, `deny (incoming)`, `allow (outgoing)`,
+  le port SSH et les ports demandés autorisés ; `fail2ban-client status sshd` répond,
+  prison chargée avec les valeurs de la distribution (décision 22).
+- **Gardes** (décisions 20 et 21), avant toute écriture : compte
+  `securite_base_compte_admin` existant, non-root, membre de `sudo` et porteur d'au
+  moins une clé dans `authorized_keys` ; `sshd_config` incluant `sshd_config.d/*.conf` ;
+  `sshd -T` confirmant le port déclaré ; `sshd -t` avant tout rechargement, dont l'échec
+  restaure la version antérieure et arrête le play sans recharger ; règle SSH relue dans
+  `ufw show added` avant l'activation du pare-feu.
+- **Variables** (`meta/argument_specs.yml`) : `securite_base_compte_admin` (requis, sans
+  défaut) ; `securite_base_ssh_port` (22) ; `securite_base_ports_autorises` (`[]`, forme
+  `443/tcp`) ; `securite_base_fail2ban_essais` (10) et `securite_base_fail2ban_delai`
+  (1 s) ; `securite_base_sshd_config`, `securite_base_sshd_config_d`,
+  `securite_base_fail2ban_jail_d` (chemins du système).
+- **Modifie sur la machine** : `<sshd_config.d>/10-mgnetworking.conf` (0644, root),
+  `<jail.d>/mgnetworking-sshd.conf` (0644, root), paquets `ufw` et `fail2ban`, règles et
+  politiques ufw, activation d'ufw, rechargement de `ssh`, activation et redémarrage de
+  `fail2ban`.
+- **Ne fait pas** : changer le port de sshd, modifier `sshd_config`, `jail.conf` ou
+  `jail.local`, fixer une valeur de prison, supprimer une règle ufw, créer un compte,
+  interdire la connexion de root (`PermitRootLogin`, resté à `disable-root-login.sh`),
+  redémarrer `ssh`.
+- **Prouvé par** : `roles/securite_base/molecule/default` — Debian 12 et Ubuntu 24.04,
+  conteneurs systemd, étapes `converge`, `idempotence` et `verify`. Niveau **conteneur** ;
+  le niveau **machine** demande un `--check --diff` de `user` sur un VPS.
+- **État** : pilote (voir ci-dessous).
 
 ## Statut du pilote
 
@@ -70,3 +98,4 @@ restent la référence : aucun n'est supprimé, aucun n'est déprécié par ce c
 | Date | Changement | Nature | Validé par user |
 |---|---|---|---|
 | 2026-09-17 | Création du cadrage : besoin, conventions du dossier, aucun contrat | ajout compatible | décision 50, boucle du 2026-09-17 |
+| 2026-09-17 | Contrat du premier rôle, `securite_base`, avec sa ligne « Prouvé par » (TASK-081) | ajout compatible | fiche TASK-081, décision 50 |

@@ -1,0 +1,42 @@
+# Image des instances Molecule — systemd en PID 1, comme un serveur.
+#
+# Reprend tests/env/Dockerfile.systemd : mêmes paquets, mêmes unités masquées,
+# mêmes raisons. Ce qui s'y ajoute est ce dont le rôle a besoin pour exister :
+# python3 (Ansible), sudo (le groupe sudo de la garde de la décision 20),
+# openssh-server (sshd, son sshd_config et son Include). ufw et fail2ban, eux,
+# ne sont pas installés : c'est le rôle qui doit les poser.
+FROM {{ item.image }}
+
+ENV container=docker \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        systemd \
+        systemd-sysv \
+        dbus \
+        tzdata \
+        python3 \
+        sudo \
+        openssh-server \
+        iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ces unités n'ont pas d'objet sans noyau propre ni matériel : masquées, elles
+# ne rapprochent pas le démarrage de « degraded », où une vraie défaillance
+# passerait inaperçue.
+RUN systemctl mask \
+        systemd-udevd.service \
+        systemd-udevd-control.socket \
+        systemd-udevd-kernel.socket \
+        systemd-udev-trigger.service \
+        systemd-journald-audit.socket \
+        sys-kernel-config.mount \
+        sys-kernel-debug.mount \
+        sys-kernel-tracing.mount \
+        dev-hugepages.mount \
+        dev-mqueue.mount \
+        console-getty.service \
+    && systemctl set-default multi-user.target

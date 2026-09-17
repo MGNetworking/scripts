@@ -1,0 +1,64 @@
+---
+# Ce que le rôle suppose déjà fait, et qu'il ne fait pas lui-même : un compte
+# d'administration joignable par clé, et sshd démarré.
+
+- name: Préparer l'instance comme un serveur fraîchement livré
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    compte: exploitant
+
+  tasks:
+    - name: Créer le compte d'administration, membre de sudo
+      ansible.builtin.user:
+        name: "{{ compte }}"
+        groups: sudo
+        append: true
+        shell: /bin/bash
+        create_home: true
+
+    - name: Créer le répertoire .ssh du compte
+      ansible.builtin.file:
+        path: "/home/{{ compte }}/.ssh"
+        state: directory
+        owner: "{{ compte }}"
+        group: "{{ compte }}"
+        mode: "0700"
+
+    # La paire est engendrée dans l'instance, qui sera détruite : aucune clé
+    # n'entre dans le dépôt, et la publique est une vraie clé, pas une chaîne
+    # qui y ressemble.
+    - name: Engendrer une paire de clés dans l'instance
+      ansible.builtin.command:
+        cmd: ssh-keygen -t ed25519 -N '' -C molecule -f /home/{{ compte }}/.ssh/id_ed25519
+        creates: "/home/{{ compte }}/.ssh/id_ed25519"
+
+    - name: Autoriser cette clé pour le compte
+      ansible.builtin.copy:
+        src: "/home/{{ compte }}/.ssh/id_ed25519.pub"
+        dest: "/home/{{ compte }}/.ssh/authorized_keys"
+        remote_src: true
+        owner: "{{ compte }}"
+        group: "{{ compte }}"
+        mode: "0600"
+
+    - name: Démarrer sshd
+      ansible.builtin.service:
+        name: ssh
+        state: started
+        enabled: true
+
+    # Sur un serveur Debian, rsyslog tient /var/log/auth.log et la prison sshd
+    # l'y lit. L'image de base n'a ni rsyslog ni ce fichier, et fail2ban
+    # refuserait de démarrer : « Have not found any log file for sshd jail ».
+    # Ubuntu 24.04 n'est pas concerné, sa prison lit le journal systemd.
+    - name: Donner à fail2ban le journal d'authentification que Debian tient
+      ansible.builtin.file:
+        path: /var/log/auth.log
+        state: touch
+        owner: root
+        group: adm
+        mode: "0640"
+      when: ansible_facts['distribution'] == 'Debian'

@@ -1,0 +1,29 @@
+---
+# Ansible/roles/securite_base/defaults/main.yml — valeurs par défaut du rôle.
+#
+# Le contrat de ces variables — type, obligation, effet — est dans
+# meta/argument_specs.yml, qu'Ansible vérifie avant la première tâche.
+
+# securite_base_compte_admin n'a délibérément aucune valeur ici : le compte
+# non-root joignable par clé, sans lequel refuser le mot de passe SSH fermerait
+# l'accès à la machine (décision 20), est déclaré « required » dans
+# meta/argument_specs.yml. Un défaut, fût-il vide, ferait passer cette
+# obligation pour satisfaite et remplacerait le refus d'Ansible par une erreur
+# plus tardive.
+
+# Port sur lequel sshd écoute déjà. Le rôle ne le change jamais : il le lit pour
+# l'ouvrir dans ufw, et refuse d'agir si le démon écoute ailleurs.
+securite_base_ssh_port: 22
+
+# Ports à ouvrir en plus de SSH, forme « 443/tcp ».
+securite_base_ports_autorises: []
+
+# Attente du démon fail2ban après son redémarrage : il n'ouvre son socket
+# qu'une fois ses prisons chargées.
+securite_base_fail2ban_essais: 10
+securite_base_fail2ban_delai: 1
+
+# Chemins du système, surchargeables pour une distribution qui les déplacerait.
+securite_base_sshd_config: /etc/ssh/sshd_config
+securite_base_sshd_config_d: /etc/ssh/sshd_config.d
+securite_base_fail2ban_jail_d: /etc/fail2ban/jail.d

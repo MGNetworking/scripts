@@ -1,0 +1,60 @@
+---
+# Ansible/roles/securite_base/tasks/fail2ban.yml — prison sshd.
+#
+# Valeurs de la distribution (décision 22) : le rôle ne fixe ni bantime, ni
+# maxretry, ni findtime, et ne touche ni jail.conf ni jail.local. Il dépose un
+# fichier dans jail.d/, que les mises à jour du paquet ne remplacent pas.
+
+- name: Installer fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: S'assurer que le répertoire des prisons existe
+  ansible.builtin.file:
+    path: "{{ securite_base_fail2ban_jail_d }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Déposer la prison sshd
+  ansible.builtin.template:
+    src: mgnetworking-sshd.conf.j2
+    dest: "{{ securite_base_fail2ban_jail_d }}/mgnetworking-sshd.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer fail2ban
+
+- name: Activer fail2ban au démarrage et le lancer
+  ansible.builtin.service:
+    name: fail2ban
+    enabled: true
+    state: started
+
+# Sans ce passage, la vérification qui suit interrogerait un démon qui n'a pas
+# encore relu la prison déposée.
+- name: Redémarrer fail2ban maintenant, avant de vérifier
+  ansible.builtin.meta: flush_handlers
+
+# Le fichier déposé ne dit rien de l'état réel : seul le démon prouve la
+# prison. Il n'ouvre son socket qu'une fois ses prisons chargées, et « ping »,
+# qui ne dépend d'aucune d'elles, est la sonde qui ne le devance pas.
+- name: Attendre que le démon fail2ban réponde
+  ansible.builtin.command:
+    cmd: fail2ban-client ping
+  register: securite_base_ping
+  until: securite_base_ping.rc == 0
+  retries: "{{ securite_base_fail2ban_essais }}"
+  delay: "{{ securite_base_fail2ban_delai }}"
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Vérifier que la prison sshd est chargée
+  ansible.builtin.command:
+    cmd: fail2ban-client status sshd
+  changed_when: false
+  when: not ansible_check_mode

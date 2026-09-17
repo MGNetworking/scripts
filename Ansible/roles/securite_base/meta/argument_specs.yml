@@ -1,0 +1,69 @@
+---
+# Ansible/roles/securite_base/meta/argument_specs.yml — contrat des variables.
+#
+# Ansible valide ces spécifications avant la première tâche : une variable
+# absente, mal typée ou hors domaine arrête le play sans rien modifier.
+
+argument_specs:
+  main:
+    short_description: Sécurité de base d'un serveur Debian ou Ubuntu
+    description:
+      - Dépose un fragment sshd qui refuse le mot de passe et le clavier
+        interactif, garde la clé publique et ne touche jamais au port.
+      - Pose ufw — entrée refusée, sortie autorisée — en ouvrant le port SSH
+        avant toute politique et en relisant la règle avant l'activation.
+      - Active la prison sshd de fail2ban avec les valeurs de la distribution.
+    options:
+      securite_base_compte_admin:
+        type: str
+        required: true
+        description:
+          - Compte non-root, membre du groupe sudo et joignable par clé
+            publique, dont l'existence conditionne tout le durcissement SSH.
+          - Sans lui, refuser le mot de passe couperait l'accès à la machine.
+
+      securite_base_ssh_port:
+        type: int
+        default: 22
+        description:
+          - Port sur lequel sshd écoute déjà ; le rôle ne le change pas.
+          - Le rôle refuse d'agir si le démon écoute un autre port.
+
+      securite_base_ports_autorises:
+        type: list
+        elements: str
+        default: []
+        description:
+          - Ports à ouvrir dans ufw en plus de SSH, forme « 443/tcp ».
+
+      securite_base_fail2ban_essais:
+        type: int
+        default: 10
+        description:
+          - Nombre d'essais de « fail2ban-client ping » après un redémarrage.
+
+      securite_base_fail2ban_delai:
+        type: int
+        default: 1
+        description:
+          - Secondes entre deux essais de « fail2ban-client ping ».
+
+      securite_base_sshd_config:
+        type: str
+        default: /etc/ssh/sshd_config
+        description:
+          - >-
+            Configuration principale de sshd, lue seulement : le rôle exige
+            qu'elle inclue sshd_config.d/*.conf, et ne la modifie jamais.
+
+      securite_base_sshd_config_d:
+        type: str
+        default: /etc/ssh/sshd_config.d
+        description:
+          - Répertoire des fragments sshd, où le rôle dépose son fichier.
+
+      securite_base_fail2ban_jail_d:
+        type: str
+        default: /etc/fail2ban/jail.d
+        description:
+          - Répertoire des prisons fail2ban, où le rôle dépose la sienne.

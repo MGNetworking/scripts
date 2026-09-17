@@ -30,7 +30,7 @@ d'utilisation dans son propre README.
 
 | Domaine | Contenu | État |
 |---|---|---|
-| [Ansible/](Ansible/README.md) | installation et configuration des machines, en pilote ([décision 50](orchestration/decisions.md)) | squelette, aucun rôle |
+| [Ansible/](Ansible/README.md) | installation et configuration des machines, en pilote ([décision 50](orchestration/decisions.md)) | 1 rôle (`securite_base`) |
 | [Linux/](Linux/README.md) | système de base, sécurité, distribution K3s | `System` : 13 scripts ; `Security` : 7 scripts ; `K3s` : 5 scripts |
 | [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 9 scripts |
 | [Kubernetes/](Kubernetes/README.md) | installation, configuration et maintenance d'un cluster | `Installation` : 5 scripts ; `Configuration` : 5 scripts ; `Maintenance` : 7 scripts |
@@ -39,7 +39,7 @@ d'utilisation dans son propre README.
 Socle commun : [config/](config/README.md) pour les configurations,
 [tests/](tests/README.md) pour les validations. Chaque push et chaque pull request
 passent par la CI GitHub Actions (`.github/workflows/ci.yml`) : analyse statique,
-tests Bash en conteneur Debian, `yamllint` et `ansible-lint`.
+tests Bash en conteneur Debian, `yamllint`, `ansible-lint` et Molecule sur les rôles.
 
 ## Installation sur un serveur
 
