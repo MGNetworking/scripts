@@ -15,7 +15,7 @@ if [ ! -e /.dockerenv ]; then
     bilan "TASK-063 / install-helm.sh"
 fi
 BAC="$(mktemp -d)"; export BAC
-trap 'rm -rf "$BAC" /usr/local/bin/helm' EXIT
+trap 'rm -rf "$BAC"' EXIT
 
 faux() { cat > "$BAC/$1"; chmod +x "$BAC/$1"; }
 # Faux helm, en modèle : c'est l'installateur qui le met en place.
@@ -28,32 +28,35 @@ exit 1
 EOF
 # Faux curl : il dépose l'installateur, qui dit d'où il a été exécuté et ce que
 # l'environnement lui a transmis, puis pose le faux helm. Aucun octet du réseau.
+# L'installateur officiel est du bash : celui-ci porte un bashisme et sa trace
+# BASH_VERSION, pour que « sh <temporaire> » se voie au lieu de passer.
 faux curl <<'EOF'
 #!/bin/sh
 echo "curl $*" >> "$BAC/curl-appels"
 [ -z "${CURL_ECHEC:-}" ] || exit 7
 cible=""; while [ $# -gt 0 ]; do if [ "$1" = "-o" ]; then shift; cible="$1"; fi; shift; done
 cat > "$cible" <<'INSTALLATEUR'
+[[ -n "$BASH_VERSION" ]] || exit 3
+printf '%s\n' "$BASH_VERSION" > "$BAC/installateur-bash"
 printf '%s\n' "$0" > "$BAC/installateur-appele"
 printf '%s\n' "$*" > "$BAC/installateur-args"
 printf '%s\n' "${VERIFY_CHECKSUM:-aucune}" "${USE_SUDO:-aucune}" "${HELM_INSTALL_DIR:-aucune}" \
     "${BINARY_NAME:-aucune}" "${DESIRED_VERSION:-aucune}" "${DEBUG:-aucune}" > "$BAC/installateur-env"
-openssl sha1 -sha256 "$0" >/dev/null
 cp "$BAC/helm.modele" "$BAC/helm"; chmod +x "$BAC/helm"
 exit "${INSTALLATEUR_CODE:-0}"
 INSTALLATEUR
 EOF
-# La somme de contrôle et l'élévation appartiennent à get-helm-4, pas au script :
-# ces deux faux laissent une trace si l'un ou l'autre est appelé.
-for outil in openssl sudo; do
-    printf '#!/bin/sh\ntouch "%s/%s-appele"\nexit 0\n' "$BAC" "$outil" > "$BAC/$outil"
-    chmod +x "$BAC/$outil"
-done
+# Faux sudo en tête de PATH, journal CUMULATIF — « neuf » ne l'efface pas : vide
+# après tous les cas d'installation, il prouve qu'install-helm.sh n'appelle
+# jamais sudo lui-même, l'élévation restant celle de get-helm-4. Faux openssl,
+# pour que require_cmd trouve l'outil.
+printf '#!/bin/sh\ntouch "%s/sudo-appele"\nexit 0\n' "$BAC" > "$BAC/sudo"; chmod +x "$BAC/sudo"
+printf '#!/bin/sh\nexit 0\n' > "$BAC/openssl"; chmod +x "$BAC/openssl"
 
 CHEMIN="$BAC:$PATH"
-neuf() {   # remet la machine d'essai à zéro : aucun helm posé, aucune trace
+neuf() {   # machine d'essai à zéro : aucun helm posé, appels remis à zéro
     rm -f "$BAC/helm" "$BAC/installateur-appele" "$BAC/installateur-args" \
-          "$BAC/installateur-env" "$BAC/sudo-appele" "$BAC/openssl-appele"
+          "$BAC/installateur-env" "$BAC/installateur-bash"
     : > "$BAC/curl-appels"; : > "$BAC/helm-appels"; }
 pose() { if [ -e "$1" ]; then echo "présente"; else echo "absente"; fi; }
 EXTRA=(); codes=""
@@ -61,18 +64,20 @@ lancer() {
     sortie="$(env TMPDIR="$BAC" PATH="$CHEMIN" "${EXTRA[@]}" timeout 30 bash "$CIBLE" "$@" </dev/null 2>&1)" \
         && CODE=0 || CODE=$?
     codes="$codes $CODE"; }
-# Réponse tapée sous un pseudo-terminal : ni --yes, ni ASSUME_YES (décision 45).
+# Réponse tapée sous un pseudo-terminal, sans --yes — le terrain de la décision
+# 45. EXTRA comme pour « lancer », pour y éprouver un environnement hérité.
 lancer_pty() {
-    sortie="$(printf '%s\n' "$1" | env TMPDIR="$BAC" PATH="$CHEMIN" \
+    sortie="$(printf '%s\n' "$1" | env TMPDIR="$BAC" PATH="$CHEMIN" "${EXTRA[@]}" \
         timeout 30 script -qec "bash $CIBLE" /dev/null 2>&1)" && CODE=0 || CODE=$?
     codes="$codes $CODE"; }
 
 titre "Codes d'usage"
-sortie="$(bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
+sortie="$(timeout 30 bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
 assert_code 0 "$code" "--help rend 0"
 assert_contient "$sortie" "Debian 12" "--help nomme les systèmes supportés"
+assert_contient "$sortie" "mot de passe" "--help dit que le sudo de get-helm-4 réclame un terminal"
 assert_contient "$sortie" "2  option" "--help documente les codes de retour"
-bash "$CIBLE" --option-inexistante >/dev/null 2>&1 && code=0 || code=$?
+timeout 30 bash "$CIBLE" --option-inexistante >/dev/null 2>&1 && code=0 || code=$?
 assert_code 2 "$code" "une option inconnue rend 2"
 
 titre "Cibles hors décision 14"
@@ -116,7 +121,7 @@ assert_egal "" "$(cat "$BAC/curl-appels")" "aucun appel à curl : le préflight 
 neuf; EXTRA=(SRV_HELM_VERSION=v4.1.0); lancer --dry-run; EXTRA=()
 assert_code 0 "$CODE" "--dry-run avec version épinglée rend 0"
 assert_contient "$sortie" "v4.1.0 (épinglée)" "le résumé affiche la version épinglée"
-assert_contient "$sortie" "sh <temporaire> --version v4.1.0" "et l'épingle est passée à l'installateur"
+assert_contient "$sortie" "bash <temporaire> --version v4.1.0" "et l'épingle est passée à l'installateur, annoncé sous bash"
 
 titre "Hors terminal et sans --yes, le script refuse avant de télécharger"
 neuf
@@ -129,6 +134,12 @@ assert_egal "" "$(cat "$BAC/curl-appels")" "rien n'est téléchargé"
 neuf; EXTRA=(ASSUME_YES=true); lancer; EXTRA=()
 assert_code 1 "$CODE" "un ASSUME_YES hérité, sans --yes, rend 1"
 assert_egal "absente" "$(pose "$BAC/helm")" "et rien n'est installé"
+# Décision 45 sous terminal, cette fois : la question EST posée, donc seule la
+# remise à false d'ASSUME_YES fait décider la réponse.
+neuf; EXTRA=(ASSUME_YES=true); lancer_pty n; EXTRA=()
+assert_code 1 "$CODE" "sous terminal, un ASSUME_YES hérité ne confirme pas à la place du --yes"
+assert_contient "$sortie" "Installation abandonnée" "c'est la réponse « n » qui décide"
+assert_egal "" "$(cat "$BAC/curl-appels")" "et rien n'est téléchargé"
 # Sous pseudo-terminal, la question est posée et la réponse est lue.
 neuf; lancer_pty n
 assert_code 1 "$CODE" "une réponse « n » sous terminal abandonne en 1"
@@ -155,6 +166,8 @@ assert_egal "$(printf 'true\naucune\naucune\naucune\naucune\naucune')" "$(cat "$
     "VERIFY_CHECKSUM reposée à true ; USE_SUDO, HELM_INSTALL_DIR, BINARY_NAME, DESIRED_VERSION et DEBUG neutralisées"
 assert_egal "version --short" "$(cat "$BAC/helm-appels")" \
     "seule « helm version --short » est appelée : ni dépôt de charts, ni plugin"
+assert_non_vide "$(cat "$BAC/installateur-bash")" \
+    "l'installateur tourne sous bash : BASH_VERSION y est renseignée"
 assert_contient "$sortie" "Helm v4.0.0+g3fc9f4b est installé" "le succès nomme la version relue"
 
 titre "Version relue après installation"
@@ -180,8 +193,10 @@ assert_contient "$sortie" "get-helm-4 a échoué" "le message nomme l'installate
 
 titre "Ce que le script ne fait jamais"
 assert_egal "0" "$(grep -c require_root "$CIBLE" || true)" "aucun require_root : l'élévation est celle de get-helm-4"
-assert_egal "absente" "$(pose "$BAC/sudo-appele")" "et le script n'appelle jamais sudo lui-même"
-assert_egal "présente" "$(pose "$BAC/openssl-appele")" "la somme de contrôle passe par l'openssl du PATH, comme chez get-helm-4"
+# Faux sudo en tête de PATH, journal cumulatif que « neuf » n'efface pas : vide
+# après tous les cas d'installation, il prouve qu'install-helm.sh n'appelle
+# jamais sudo lui-même — l'élévation reste celle de get-helm-4.
+assert_egal "absente" "$(pose "$BAC/sudo-appele")" "install-helm.sh n'appelle jamais sudo lui-même"
 cas2="non"; case "$codes" in *" 2"*) cas2="oui" ;; esac
 assert_egal "non" "$cas2" "aucun chemin éprouvé ne rend 2 : le 2 reste réservé à l'usage"
 

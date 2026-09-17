@@ -33,15 +33,18 @@ Usage : install-helm.sh [--dry-run] [-y|--yes] [--help]
 Systèmes supportés : Debian 12 et 13, Ubuntu 22.04 et 24.04 LTS, sur amd64 ou
 arm64 (décision 14). Toute autre distribution ou architecture est refusée.
 
-get-helm-4 part dans un fichier temporaire, exécuté puis retiré — jamais
+get-helm-4, qui est du bash, part dans un fichier temporaire — jamais
 « curl | sh » — et en HTTPS seulement. Il vérifie la sha256 de l'archive et
-élève par sudo vers /usr/local/bin : ce script n'exige donc pas root. Version :
-la dernière publiée, ou celle qu'épingle SRV_HELM_VERSION dans config/server.env.
+élève par sudo vers /usr/local/bin : ce script n'exige donc pas root, mais ce
+sudo réclame le mot de passe sur un terminal — avec --yes hors terminal et sans
+root, il ne peut pas le demander et l'installation échoue. Version : la dernière
+publiée, ou celle qu'épingle SRV_HELM_VERSION dans config/server.env.
 
 Codes de retour :
   0  Helm est installé et sa version relue, ou l'était déjà
-  1  système non supporté, curl ou openssl absent, get-helm-4 irrécupérable ou
-     en échec, version installée absente ou différente de celle épinglée
+  1  système non supporté, curl, openssl ou bash absent, get-helm-4
+     irrécupérable ou en échec, version installée absente ou différente de
+     celle épinglée
   2  option inconnue
 EOF
 }
@@ -68,7 +71,7 @@ case "$OS_ARCH" in
     *) die "Architecture non supportée : $OS_ARCH (attendu : x86_64 ou aarch64)" ;;
 esac
 info "Système : $OS_ID $OS_VERSION ($ARCH), cible des binaires Helm publiés."
-require_cmd curl openssl
+require_cmd curl openssl bash
 
 if command -v helm >/dev/null 2>&1; then
     success "Helm est déjà installé : $(helm version --short 2>/dev/null || echo 'version illisible')"
@@ -91,7 +94,7 @@ printf '  Version                %s\n' "$VERSION"
 printf '  Destination            /usr/local/bin/helm, par le sudo de get-helm-4\n\n'
 
 if [ "$DRY_RUN" = "true" ]; then
-    info "[dry-run] Commande prévue : curl -fsSL $URL_INSTALLATEUR -o <temporaire> --proto '=https' --tlsv1.2, puis sh <temporaire>${SRV_HELM_VERSION:+ --version $SRV_HELM_VERSION}"
+    info "[dry-run] Commande prévue : curl -fsSL $URL_INSTALLATEUR -o <temporaire> --proto '=https' --tlsv1.2, puis bash <temporaire>${SRV_HELM_VERSION:+ --version $SRV_HELM_VERSION}"
     info "[dry-run] Préflight local seul : aucune requête réseau, aucune écriture. Rien n'a été installé."
     exit 0
 fi
@@ -101,7 +104,9 @@ fi
 confirm "Installer Helm ($VERSION) sur cette machine ?" || die "Installation abandonnée."
 
 # Jamais « curl | sh » : un tube ne rend pas le code de curl à sh, et le script
-# exécuté ne serait ni relisible ni rejouable.
+# exécuté ne serait ni relisible ni rejouable. get-helm-4 est du bash — [[ ]],
+# $EUID, local : sous dash, EUID serait vide et la copie vers /usr/local/bin
+# refusée à un compte non root.
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 if ! curl -fsSL --max-time 120 --proto '=https' --tlsv1.2 -o "$TMP" "$URL_INSTALLATEUR" || [ ! -s "$TMP" ]; then
@@ -110,9 +115,9 @@ fi
 
 ECHEC=""
 if [ -n "${SRV_HELM_VERSION:-}" ]; then
-    run_logged sh "$TMP" --version "$SRV_HELM_VERSION" || ECHEC="oui"
+    run_logged bash "$TMP" --version "$SRV_HELM_VERSION" || ECHEC="oui"
 else
-    run_logged sh "$TMP" || ECHEC="oui"
+    run_logged bash "$TMP" || ECHEC="oui"
 fi
 [ -z "$ECHEC" ] || die "get-helm-4 a échoué : l'état de la machine est incertain. Relancer ce script, qui ne réinstalle pas un Helm présent."
 
