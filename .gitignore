@@ -41,10 +41,16 @@ config/*.env
 !config/*.env.example
 
 ### Ansible — inventaire, variables de machines et secrets réels ###
-Ansible/inventory.yml
-Ansible/host_vars/*.yml
-!Ansible/host_vars/*.example.yml
-Ansible/group_vars/*.yml
-!Ansible/group_vars/*.example.yml
-Ansible/**/vault*.yml
+# Seuls les modèles *.example.yml sont versionnés : tout inventaire et toute
+# variable de machine réels restent locaux, quel que soit leur nom ou leur
+# extension.
+Ansible/inventory*
+!Ansible/inventory*.example.yml
+Ansible/hosts*
+Ansible/host_vars/**
+!Ansible/host_vars/**/*.example.yml
+Ansible/group_vars/**
+!Ansible/group_vars/**/*.example.yml
+Ansible/**/vault*
 Ansible/**/*.vault.yml
+Ansible/**/*.vault.yaml

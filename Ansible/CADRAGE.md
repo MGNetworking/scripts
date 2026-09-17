@@ -49,6 +49,11 @@ Aucun pour l'instant. Un ensemble naîtra le jour où plusieurs rôles devront s
 dans un ordre imposé ; il sera alors décrit ici, et porté par un playbook de
 `playbooks/`.
 
+## Scripts individuels
+
+Aucun : `Ansible/` ne porte pas de script Bash. Un rôle qui n'appartient à aucun
+ensemble est dit **autonome** et le déclare dans son contrat.
+
 ## Contrats
 
 Aucun : le dossier ne porte encore aucun rôle. Le premier contrat sera écrit par la
@@ -59,3 +64,9 @@ tâche qui livre `securite_base`, avec sa ligne `Prouvé par :`.
 Ansible est en **pilote** (décision 50). Jusqu'au bilan comparatif du rôle
 `securite_base` et à la décision de `user` de poursuivre, les scripts Bash existants
 restent la référence : aucun n'est supprimé, aucun n'est déprécié par ce cadrage.
+
+## Historique du cadrage
+
+| Date | Changement | Nature | Validé par user |
+|---|---|---|---|
+| 2026-09-17 | Création du cadrage : besoin, conventions du dossier, aucun contrat | ajout compatible | décision 50, boucle du 2026-09-17 |

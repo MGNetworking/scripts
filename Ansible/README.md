@@ -84,9 +84,10 @@ Le dépôt est public. Ne sont versionnés que des **modèles** : `inventory.exa
 `host_vars/*.example.yml`, dont les adresses appartiennent au bloc de documentation
 `203.0.113.0/24` (RFC 5737) et ne joignent aucune machine.
 
-Restent hors Git, et sont ignorés explicitement par [`.gitignore`](../.gitignore) :
-`Ansible/inventory.yml`, tout `Ansible/host_vars/*.yml` qui n'est pas un `.example.yml`,
-`group_vars/` réels, et tout fichier `vault*` ou `*.vault.yml`.
+Restent hors Git, et sont ignorés par [`.gitignore`](../.gitignore) : tout inventaire
+quel que soit son nom ou son extension (`inventory*`, `hosts*`), tout le contenu de
+`host_vars/` et de `group_vars/` sauf les `*.example.yml`, et tout fichier `vault*` ou
+`*.vault.yml`.
 
 Un secret ne se met jamais en clair dans un fichier de variables : il passe par Ansible
 Vault (`ansible-vault encrypt_string`) ou par un fichier local ignoré. Vérifier avant un

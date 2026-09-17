@@ -9,10 +9,20 @@
 # Debian 12 jetable et y exécute tests/run.sh. La CI valide donc exactement ce
 # qu'un humain valide à la main.
 #
-# Le profil « systemd » n'est pas lancé ici : son conteneur démarre sur
-# /sbin/init et exige --privileged, ce que le runner GitHub ne garantit pas.
-# Le niveau « environment » reste donc validé sur le poste de travail.
-# Molecule n'a pas encore de travail : aucun rôle n'existe (TASK-081).
+# Trois niveaux de tests sur cinq seulement, et c'est délibéré :
+#
+#   environment  exige le profil « systemd », dont le conteneur démarre sur
+#                /sbin/init avec --privileged — non garanti sur un runner
+#                GitHub. Il reste validé sur le poste de travail (registre A153).
+#   acceptance   valide les critères d'UNE tâche, pas l'état du dépôt : ses
+#                fichiers vont et viennent avec les tâches. Il se lance à la
+#                clôture d'une tâche, pas à chaque push.
+#
+# Molecule n'a pas encore de travail : aucun rôle n'existe (TASK-081, A154).
+#
+# Les versions d'ansible-lint et de yamllint sont épinglées : sans cela, une
+# publication amont pourrait faire rougir la CI sans qu'une ligne du dépôt
+# change. Elles suivent celles du poste de contrôle (Ansible/README.md).
 
 name: CI
 
@@ -34,7 +44,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Analyse statique et tests unitaires, conteneur Debian jetable
-        run: tests/env/run-in-container.sh -- tests/run.sh lint unit
+        run: bash tests/env/run-in-container.sh -- bash tests/run.sh lint unit
 
   bash-integration:
     name: Bash — integration en conteneur
@@ -49,7 +59,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Exécuter les scripts dans un conteneur Debian jetable
-        run: tests/env/run-in-container.sh -- tests/run.sh integration
+        run: bash tests/env/run-in-container.sh -- bash tests/run.sh integration
 
   ansible:
     name: Ansible — yamllint et ansible-lint
@@ -61,8 +71,8 @@ jobs:
 
       - name: Installer l'outillage par pipx
         run: |
-          pipx install ansible-lint
-          pipx install yamllint
+          pipx install ansible-lint==26.8.0
+          pipx install yamllint==1.38.0
 
       - name: Contrôler le style YAML de tout le dépôt
         run: yamllint .
