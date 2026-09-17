@@ -146,3 +146,5 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-17 20:32:44	TASK-080	relecteur	opus	30	-	-	77467	226	0	
 2026-09-17 20:41:54	TASK-080	conducteur	opus	86	-	-	114260	1487	0	
 2026-09-17 21:47:09	TASK-081	relecteur	opus	31	-	-	75491	297	0	
+2026-09-18 00:47:34	TASK-081	conducteur	sonnet	45	-	-	100406	311	0	
+2026-09-18 00:47:34	TASK-081	conducteur	opus	364	-	-	314859	4447	0	coupé par la limite d'usage
