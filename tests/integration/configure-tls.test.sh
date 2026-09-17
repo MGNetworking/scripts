@@ -22,7 +22,7 @@ MAIL="acme@exemple.fr"
 faux kubectl <<'SH'
 #!/bin/sh
 printf 'kubectl %s\n' "$*" >> "$BAC/kubectl-appels"
-printf 'kubectl %s\n' "$*" >> "$BAC/kubectl-tous"
+printf 'kubectl %s\n' "$*" >> "${KUBECTL_JOURNAL:-$BAC/kubectl-tous}"
 case " $* " in *" create "*|*" delete "*|*" patch "*|*" replace "*|*" edit "*|*" prune "*)
     printf 'verbe proscrit : %s\n' "$*" >&2; exit 3 ;; esac
 [ -z "${KUBECTL_ERREUR:-}" ] || { printf '%s\n' "$KUBECTL_ERREUR" >&2; exit "${KUBECTL_CODE:-1}"; }
@@ -206,7 +206,9 @@ rm -f "$BAC/timeout"
 titre "Mutations du manifeste — la suite doit les voir, sinon elle ne prouve rien"
 mkdir -p "$BAC/mut/Kubernetes/Configuration"; ln -sfn "$SCRIPTS_ROOT/lib" "$BAC/mut/lib"
 MUT="$BAC/mut/Kubernetes/Configuration/configure-tls.sh"
-lancer_mut() { sortie="$(env PATH="$CHEMIN" SRV_K8S_ACME_EMAIL="$MAIL" ACME_EMAIL="$MAIL" "${BASE[@]}" "${EXTRA[@]}" timeout 60 bash "$MUT" "$@" </dev/null 2>&1)" && CODE=0 || CODE=$?; }
+# Journal à part : ces exécutions sont fautives par construction, et saliraient
+# les relevés de « Ce que le script ne fait jamais ».
+lancer_mut() { sortie="$(env PATH="$CHEMIN" SRV_K8S_ACME_EMAIL="$MAIL" ACME_EMAIL="$MAIL" KUBECTL_JOURNAL="$BAC/kubectl-mut" "${BASE[@]}" "${EXTRA[@]}" timeout 60 bash "$MUT" "$@" </dev/null 2>&1)" && CODE=0 || CODE=$?; }
 cp "$CIBLE" "$MUT"; lancer_mut --yes
 assert_code 0 "$CODE" "copie intacte : le chemin nominal rend 0"; assert_absent "$sortie" "manifeste :" "le faux kubectl ne rejette pas un manifeste sain"
 for m in serveur ingress email certificat suppression; do

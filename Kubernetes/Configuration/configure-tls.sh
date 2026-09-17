@@ -63,7 +63,7 @@ done
 EMAIL="${SRV_K8S_ACME_EMAIL:-}"
 [ -n "$EMAIL" ] || die "Adresse ACME absente : renseigner SRV_K8S_ACME_EMAIL dans config/server.env (modèle : config/server.env.example). Rien n'a été tenté." 2
 [[ "$EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$ ]] \
-    || die "Adresse ACME mal formée : « $EMAIL » — forme attendue local@domaine.tld. Rien n'a été tenté." 2
+    || die "Adresse ACME mal formée dans SRV_K8S_ACME_EMAIL : « $EMAIL » — forme attendue local@domaine.tld. Rien n'a été tenté." 2
 
 command -v kubectl >/dev/null 2>&1 || die "kubectl est introuvable dans le PATH : voir Kubernetes/Installation/install-kubectl.sh (TASK-062)."
 require_cmd timeout
