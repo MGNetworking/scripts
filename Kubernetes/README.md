@@ -7,7 +7,7 @@ cluster managé. Ce qui dépend de K3s lui-même vit dans `Linux/K3s/`.
 | Dossier | Rôle | État |
 |---|---|---|
 | [Installation/](Installation/README.md) | vérification de kubectl et de Traefik, installation de Helm et de cert-manager, outils de l'écosystème | 4 scripts |
-| `Configuration/` | namespaces, registry, ressources de configuration | à venir |
+| [Configuration/](Configuration/README.md) | Middlewares Traefik ; à venir : namespaces, stockage, TLS, registry | 1 script |
 | [Maintenance/](Maintenance/README.md) | exploitation et diagnostic du cluster | 7 scripts |
 
 Prérequis communs : `kubectl` installé et un kubeconfig que `kubectl` résout

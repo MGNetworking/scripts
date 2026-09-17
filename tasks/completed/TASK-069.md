@@ -1,7 +1,7 @@
 ---
 id: TASK-069
 title: "Écrire Kubernetes/Configuration/configure-ingress.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-062
