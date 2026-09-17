@@ -93,7 +93,7 @@ de ce que cet ADR a tranché.
 | [TASK-071](completed/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `completed` | moyenne | 062, 067 | conteneur `debian` | **oui** |
 | [TASK-072](completed/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-073](completed/TASK-073.md) | Instituer le cadrage par grand dossier et la boucle de réflexion (décision 49) | `completed` | haute | — | hôte | non |
-| [TASK-074](pending/TASK-074.md) | Écrire le cadrage de `Kubernetes/` | `ready` | haute | 073 | hôte | **oui** |
+| [TASK-074](completed/TASK-074.md) | Écrire le cadrage de `Kubernetes/` | `completed` | haute | 073 | hôte | **oui** |
 | [TASK-075](pending/TASK-075.md) | Écrire le cadrage de `Linux/` | `pending` | moyenne | 074 | hôte | **oui** |
 | [TASK-076](pending/TASK-076.md) | Écrire le cadrage de `Docker/` | `pending` | moyenne | 074 | hôte | **oui** |
 | [TASK-077](pending/TASK-077.md) | Écrire le cadrage de `Synology/` | `pending` | moyenne | 074 | hôte | **oui** |
@@ -432,6 +432,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-072](completed/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | [rapport](reports/TASK-072-report.md) |
 | [TASK-073](completed/TASK-073.md) | Instituer le cadrage par grand dossier et la boucle de réflexion (décision 49) | [rapport](reports/TASK-073-report.md) |
 | [TASK-066](completed/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | [rapport](reports/TASK-066-report.md) |
+| [TASK-074](completed/TASK-074.md) | Écrire le cadrage de `Kubernetes/` (état initial, en attente de validation par user) | [rapport](reports/TASK-074-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

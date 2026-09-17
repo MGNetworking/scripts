@@ -1,7 +1,7 @@
 ---
 id: TASK-074
 title: "Écrire le cadrage de Kubernetes/ à partir de l'état actuel des scripts"
-status: ready
+status: completed
 priority: high
 depends_on:
   - TASK-073
@@ -19,7 +19,7 @@ out_of_scope:
   - Linux/K3s/, qui relève du cadrage de Linux/
   - décrire un usage ou un serveur réel
 acceptance_criteria:
-  - chacun des 18 scripts de Kubernetes/Installation, Configuration et Maintenance a un contrat avec options et défauts, codes de retour, ce qu'il modifie, ce qu'il lit et l'état « actif »
+  - chacun des 17 scripts (la fiche en annonçait 18 par erreur : 5 + 5 + 7) de Kubernetes/Installation, Configuration et Maintenance a un contrat avec options et défauts, codes de retour, ce qu'il modifie, ce qu'il lit et l'état « actif »
   - chaque option, code de retour et variable SRV_K8S_* cité se retrouve par grep dans le script concerné
   - l'historique du cadrage porte une ligne datée « état initial » dont la colonne « Validé par user » reste vide jusqu'à sa validation
   - la tâche se clôt en BESOIN_USER : user relit et valide le cadrage avant tout autre cadrage

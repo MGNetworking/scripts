@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A130**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A131**.
 
 ## Registre
 
@@ -179,6 +179,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A127 | P3 | `Kubernetes/Installation/install-ingress.sh` l. 77 (TASK-064) : toute erreur `kubectl` non reconnue est annoncée « L'apiserver est injoignable » (fourre-tout), y compris une InternalError ou un ServiceUnavailable d'un apiserver qui répond. Corrigé dans `install-metrics.sh` (TASK-066) et présent correctement dans `configure-ingress.sh` l. 118-126 : réserver « injoignable » à `connection refused`, `was refused`, `Unable to connect`, `no such host`, `i/o timeout`, message neutre avec stderr sinon | TASK-066, relecture | corriger `install-ingress.sh` et son fichier de cas ; même fourre-tout constaté dans `install-cert-manager.sh` l. 114 et à vérifier dans `install-kubectl.sh` l. 72 |
 | [ ] | A128 | P2 | Les sondes en conteneur (faux binaires journalisants), les mutations d'une copie jetable et le contrôle de stabilité, pratiqués par les conducteurs sur K3s et Kubernetes et rejoués à la place d'une seconde relecture, ne sont prescrits nulle part : l'étape 5 de `.claude/commands/tache.md` ne les cite pas | relecture de `orchestration/architecture.md`, 2026-09-17 | décider avec `user` : les inscrire dans `/tache` (et le coût en jetons qu'ils représentent), ou les laisser au jugement du conducteur |
 | [ ] | A129 | P2 | Décision 49 (TASK-073) et décision 46 se recoupent sans être tranchées l'une par l'autre : la 46 fait d'un défaut découvert pendant une tâche une fiche directe ; la 49 autorise une correction de script « après validation » de `user` et interdit toute fiche hors de la boucle de réflexion. Pour les fiches d'orchestration (`orchestration/`, `.claude/`, `tests/`, `tasks/`), la décision 49 les laisse sous la 46 ; pour une correction d'un script des quatre grands dossiers née d'un défaut (type TASK-048), rien ne dit si la fiche s'écrit directement ou attend la validation de `user` | TASK-073, relecture | décider avec `user` : fiche de correction directe (contrat rétabli, sans changement du cadrage) ou validation préalable |
+| [ ] | A130 | P2 | Délai dépassé mal nommé dans quatre scripts de `Kubernetes/Maintenance/` : `cluster-status.sh` (l. 51, 79), `pods-status.sh` (l. 89, 102), `events.sh` (l. 106, 123) et `diagnostics.sh` (l. 96) rapportent le code 124 de `timeout` comme un apiserver muet ou injoignable, alors que les autres scripts du dossier disent « délai dépassé » ; `cluster-status.sh` appelle en outre `timeout` sans `require_cmd timeout` et sans marge au-delà de `--request-timeout`. Le contrat de `Kubernetes/CADRAGE.md` décrit cet état tel quel | TASK-074, relecture | proposer à `user` une correction (message seul, contrat inchangé sur les codes) selon la boucle de la décision 49 |
 
 ## Suivi, pas des défauts
 
