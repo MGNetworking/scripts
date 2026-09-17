@@ -1,7 +1,7 @@
 ---
 id: TASK-079
 title: "Consigner la décision 50 : Ansible pour installer et configurer, cadre de test"
-status: in_progress
+status: completed
 priority: high
 depends_on:
   - TASK-078

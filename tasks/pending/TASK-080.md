@@ -1,7 +1,7 @@
 ---
 id: TASK-080
 title: "Poser le poste de contrôle Ansible, le squelette Ansible/ et la CI"
-status: pending
+status: ready
 priority: high
 depends_on:
   - TASK-079
