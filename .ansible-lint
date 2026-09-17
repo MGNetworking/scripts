@@ -1,0 +1,25 @@
+---
+# .ansible-lint — règles de qualité des rôles et des playbooks.
+#
+# Profil « production » : le plus exigeant des profils d'ansible-lint. Il
+# impose notamment les noms complets de modules (ansible.builtin.copy plutôt
+# que copy), un nom sur chaque tâche, et un contrat de variables dans
+# meta/argument_specs.yml — ce que la décision 50 exige déjà d'un rôle.
+# Commencer au plus strict coûte moins cher que d'y venir après trois rôles.
+
+profile: production
+
+# Seul Ansible/ est analysé ; le reste du dépôt est du Bash, du Markdown ou de
+# la configuration d'outil, qu'ansible-lint interpréterait à tort comme des
+# playbooks.
+exclude_paths:
+  - .github/
+  - tests/
+  - docs/
+  - orchestration/
+  - tasks/
+
+# Les modèles versionnés ne sont pas des fichiers de variables actifs : ce sont
+# des exemples à copier, qu'ansible-lint n'a pas à valider comme tels.
+kinds:
+  - yaml: "**/*.example.yml"

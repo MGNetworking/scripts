@@ -1,0 +1,81 @@
+---
+# .github/workflows/ci.yml — intégration continue du dépôt.
+#
+# Obligatoire depuis la décision 50 : aucun push sur master dont la CI est
+# rouge. Deux travaux indépendants, en parallèle, sous la barre des 15 minutes.
+#
+# Le travail « bash » ne réinvente rien : il appelle le même point d'entrée que
+# sur le poste de travail, tests/env/run-in-container.sh, qui construit une
+# Debian 12 jetable et y exécute tests/run.sh. La CI valide donc exactement ce
+# qu'un humain valide à la main.
+#
+# Trois niveaux de tests sur cinq seulement, et c'est délibéré :
+#
+#   environment  exige le profil « systemd », dont le conteneur démarre sur
+#                /sbin/init avec --privileged — non garanti sur un runner
+#                GitHub. Il reste validé sur le poste de travail (registre A153).
+#   acceptance   valide les critères d'UNE tâche, pas l'état du dépôt : ses
+#                fichiers vont et viennent avec les tâches. Il se lance à la
+#                clôture d'une tâche, pas à chaque push.
+#
+# Molecule n'a pas encore de travail : aucun rôle n'existe (TASK-081, A154).
+#
+# Les versions d'ansible-lint et de yamllint sont épinglées : sans cela, une
+# publication amont pourrait faire rougir la CI sans qu'une ligne du dépôt
+# change. Elles suivent celles du poste de contrôle (Ansible/README.md).
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  bash-lint-unit:
+    name: Bash — lint et unit en conteneur
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Analyse statique et tests unitaires, conteneur Debian jetable
+        run: bash tests/env/run-in-container.sh -- bash tests/run.sh lint unit
+
+  bash-integration:
+    name: Bash — integration en conteneur
+    runs-on: ubuntu-latest
+    # Le niveau « integration » exécute réellement les scripts, installe des
+    # paquets et rejoue chaque cas deux fois pour l'idempotence : il a demandé
+    # une douzaine de minutes sur le poste de travail. Il tourne donc à part,
+    # en parallèle du reste, avec une borne plus large.
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Exécuter les scripts dans un conteneur Debian jetable
+        run: bash tests/env/run-in-container.sh -- bash tests/run.sh integration
+
+  ansible:
+    name: Ansible — yamllint et ansible-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer l'outillage par pipx
+        run: |
+          pipx install ansible-lint==26.8.0
+          pipx install yamllint==1.38.0
+
+      - name: Contrôler le style YAML de tout le dépôt
+        run: yamllint .
+
+      - name: Contrôler les rôles et playbooks
+        run: ansible-lint Ansible/

@@ -1,0 +1,18 @@
+---
+# Ansible/host_vars/vps1.example.yml — modèle de variables d'un hôte.
+#
+# Copier en « vps1.yml » (jamais versionné) pour chaque hôte de l'inventaire ;
+# le nom du fichier est celui de l'hôte, pas celui de son adresse.
+#
+# N'y mettre aucun secret en clair : mot de passe, jeton ou clé passent par
+# Ansible Vault (ansible-vault encrypt_string) ou par un fichier local ignoré
+# par Git.
+
+# Connexion — complètent ou remplacent ce que porte l'inventaire.
+ansible_user: exemple
+ansible_port: 22
+ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+
+# Les variables des rôles se déclarent sous cette ligne, une section par rôle,
+# avec le nom du rôle en préfixe. Aucun rôle n'existe encore : la première
+# section arrivera avec securite_base.
