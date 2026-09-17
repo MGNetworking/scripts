@@ -1,7 +1,7 @@
 ---
 id: TASK-073
 title: "Instituer le cadrage par grand dossier et la boucle de réflexion (décision 49)"
-status: ready
+status: in_progress
 priority: high
 depends_on: []
 environment: host
