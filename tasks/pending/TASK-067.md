@@ -1,7 +1,7 @@
 ---
 id: TASK-067
 title: "Écrire Kubernetes/Configuration/configure-namespaces.sh"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-062
