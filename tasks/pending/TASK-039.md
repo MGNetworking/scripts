@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A129**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A130**.
 
 ## Registre
 
@@ -178,6 +178,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A126 | P4 | `tests/integration/install-metrics.test.sh` (TASK-066) : 187 lignes pour une cible de ~150 (A43) ; allègement par une fonction `rate` jugé insuffisant par l'agent sans retirer d'assertion (70 lignes d'assertion) | TASK-066 | factoriser si une règle commune des faux `kubectl` du domaine est un jour écrite |
 | [ ] | A127 | P3 | `Kubernetes/Installation/install-ingress.sh` l. 77 (TASK-064) : toute erreur `kubectl` non reconnue est annoncée « L'apiserver est injoignable » (fourre-tout), y compris une InternalError ou un ServiceUnavailable d'un apiserver qui répond. Corrigé dans `install-metrics.sh` (TASK-066) et présent correctement dans `configure-ingress.sh` l. 118-126 : réserver « injoignable » à `connection refused`, `was refused`, `Unable to connect`, `no such host`, `i/o timeout`, message neutre avec stderr sinon | TASK-066, relecture | corriger `install-ingress.sh` et son fichier de cas ; même fourre-tout constaté dans `install-cert-manager.sh` l. 114 et à vérifier dans `install-kubectl.sh` l. 72 |
 | [ ] | A128 | P2 | Les sondes en conteneur (faux binaires journalisants), les mutations d'une copie jetable et le contrôle de stabilité, pratiqués par les conducteurs sur K3s et Kubernetes et rejoués à la place d'une seconde relecture, ne sont prescrits nulle part : l'étape 5 de `.claude/commands/tache.md` ne les cite pas | relecture de `orchestration/architecture.md`, 2026-09-17 | décider avec `user` : les inscrire dans `/tache` (et le coût en jetons qu'ils représentent), ou les laisser au jugement du conducteur |
+| [ ] | A129 | P2 | Décision 49 (TASK-073) et décision 46 se recoupent sans être tranchées l'une par l'autre : la 46 fait d'un défaut découvert pendant une tâche une fiche directe ; la 49 autorise une correction de script « après validation » de `user` et interdit toute fiche hors de la boucle de réflexion. Pour les fiches d'orchestration (`orchestration/`, `.claude/`, `tests/`, `tasks/`), la décision 49 les laisse sous la 46 ; pour une correction d'un script des quatre grands dossiers née d'un défaut (type TASK-048), rien ne dit si la fiche s'écrit directement ou attend la validation de `user` | TASK-073, relecture | décider avec `user` : fiche de correction directe (contrat rétabli, sans changement du cadrage) ou validation préalable |
 
 ## Suivi, pas des défauts
 

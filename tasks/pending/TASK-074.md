@@ -1,7 +1,7 @@
 ---
 id: TASK-074
 title: "Écrire le cadrage de Kubernetes/ à partir de l'état actuel des scripts"
-status: pending
+status: ready
 priority: high
 depends_on:
   - TASK-073
