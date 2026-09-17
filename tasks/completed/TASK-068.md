@@ -1,7 +1,7 @@
 ---
 id: TASK-068
 title: "Écrire Kubernetes/Configuration/configure-storage.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-062
