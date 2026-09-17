@@ -53,6 +53,7 @@ upgrade)
     exit 0 ;;
 list)
     [ -z "${HELM_LISTE_ERREUR:-}" ] || { echo "$HELM_LISTE_ERREUR" >&2; exit "${HELM_LISTE_CODE:-1}"; }
+    [ -z "${HELM_LISTE_BRUT:-}" ] || { printf '%s\n' "$HELM_LISTE_BRUT"; exit 0; }
     st=''; ver=''; rns=''
     if [ -f "$BAC/release-version" ]; then
         ver="$(cat "$BAC/release-version")"; st="$(cat "$BAC/release-status")"; rns="$(cat "$BAC/release-namespace")"
@@ -251,6 +252,10 @@ assert_code 1 "$CODE" "une release « pending-install » rend 1, même avec les 
 assert_contient "$sortie" "opération helm en cours ou interrompue" "le message nomme l'opération helm inachevée"
 assert_absent "$sortie" "sans release Helm" "sans la confondre avec des CRD orphelines"
 assert_absent "$(helm_appels)" "upgrade" "aucun helm upgrade n'est tenté"
+# Deux objets : les champs doivent venir de l'objet cert-manager, jamais du dernier lu.
+neuf; crds; EXTRA=(HELM_LISTE_BRUT='[{"name":"cert-manager","namespace":"cert-manager","revision":"2","updated":"x","status":"deployed","chart":"cert-manager-v1.21.2","app_version":"v1.21.2"},{"name":"autre","namespace":"cert-manager","revision":"1","updated":"x","status":"failed","chart":"autre-v9.9.9","app_version":"v9.9.9"}]'); lancer --yes; EXTRA=()
+assert_code 0 "$CODE" "deux releases listées : statut et version lus sur l'objet cert-manager"
+assert_absent "$sortie" "v9.9.9" "aucun champ de l'autre release n'est retenu"
 
 titre "Dépassement du délai de helm"
 neuf; EXTRA=(TIMEOUT_HELM=1 HELM_DORT=3); lancer --yes; EXTRA=()

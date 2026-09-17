@@ -123,9 +123,12 @@ crd_presente() {
     echec "« kubectl get crd $1 »"
 }
 
-# Extrait un champ de la réponse JSON de « helm list », sans jq : le filtre ne
-# laisse qu'un objet plat, dont chaque champ est une chaîne simple.
-champ() { printf '%s' "$REP" | sed -n 's/.*"'"$1"'":"\([^"]*\)".*/\1/p' | head -n 1; }
+# Extrait un champ de l'objet « cert-manager » du JSON de « helm list », sans jq :
+# un objet par ligne, pour ne jamais lire le champ d'une autre release.
+champ() {
+    printf '%s' "$REP" | tr -d '\n' | sed 's/}[[:space:]]*,[[:space:]]*{/}\n{/g' \
+        | sed -n '/"name":[[:space:]]*"cert-manager"/s/.*"'"$1"'":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
 
 # Renseigne STATUT et RELEASE, tous deux vides si la release est absente. « -a »
 # est indispensable : sans lui, une release pending-install reste invisible et
@@ -136,7 +139,7 @@ lire_release() {
     REP="$(timeout "$TIMEOUT_LISTE" helm list -a -o json --namespace "$NS" -f '^cert-manager$' 2>"$TEMPORAIRE/erreur")" || CODE=$?
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
     [ "$CODE" = 0 ] || echec "« helm list »"
-    case "$REP" in *'"name":"cert-manager"'*) ;; *) return 0 ;; esac
+    [ "$(champ name)" = "cert-manager" ] || return 0
     STATUT="$(champ status)"
     RELEASE="$(champ chart)"
     RELEASE="${RELEASE#cert-manager-}"
