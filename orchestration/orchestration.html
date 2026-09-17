@@ -1,0 +1,395 @@
+<!doctype html>
+<!-- Source de l'affiche orchestration.png. Export :
+     "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --hide-scrollbars \
+       --force-device-scale-factor=1.5 --window-size=1800,1240 \
+       --screenshot="$PWD/orchestration/orchestration.png" "file:///$PWD/orchestration/orchestration.html"
+     En cas d'écart, orchestration/architecture.md fait foi. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Orchestration des agents IA</title>
+<style>
+  :root {
+    --bleu: #1f5fa8; --bleu-f: #eaf2fb;
+    --vert: #1e7a3c; --vert-f: #eaf6ee;
+    --orange: #c8641a; --orange-f: #fdf1e6;
+    --violet: #5b3fa0; --violet-f: #f1edf9;
+    --rouge: #c0392b; --rouge-f: #fdecea;
+    --jaune-f: #fdf6e3; --jaune: #b8860b;
+    --gris: #5a6270; --gris-f: #f4f6f8; --texte: #1d2330;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1800px; height: 1240px; background: #fff; color: var(--texte);
+         font: 13px/1.32 "Segoe UI", Arial, sans-serif; padding: 14px 18px; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+  h1 { margin: 0; font-size: 28px; text-align: center; }
+  .sous-titre { text-align: center; font-size: 17px; color: var(--gris); margin: 2px 0 10px; }
+  .entete { position: relative; }
+  .mode { position: absolute; right: 0; top: 0; border: 2px solid var(--bleu); background: var(--bleu-f);
+          border-radius: 10px; padding: 6px 12px; font-size: 13px; }
+  .mode b { font-size: 14px; }
+
+  .colonnes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; height: 780px; }
+  .col { border: 2px solid; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .col > .titre { color: #fff; padding: 7px 12px; display: flex; align-items: center; gap: 10px; }
+  .num { background: #fff; border-radius: 50%; width: 32px; height: 32px; display: grid; place-items: center;
+         font-weight: 700; font-size: 19px; flex: none; }
+  .titre h2 { margin: 0; font-size: 19px; }
+  .titre small { display: block; font-size: 13px; opacity: .92; }
+  .corps { padding: 9px 10px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .c1 { border-color: var(--bleu); background: var(--bleu-f); } .c1 > .titre { background: var(--bleu); } .c1 .num { color: var(--bleu); }
+  .c2 { border-color: var(--vert); background: var(--vert-f); } .c2 > .titre { background: var(--vert); } .c2 .num { color: var(--vert); }
+  .c3 { border-color: var(--orange); background: var(--orange-f); } .c3 > .titre { background: var(--orange); } .c3 .num { color: var(--orange); }
+  .c4 { border-color: var(--violet); background: var(--violet-f); } .c4 > .titre { background: var(--violet); } .c4 .num { color: var(--violet); }
+
+  .boite { background: #fff; border: 1.5px solid #c9d1dc; border-radius: 8px; padding: 6px 9px; position: relative; }
+  .boite h3 { margin: 0 0 2px; font-size: 14px; display: flex; align-items: center; gap: 7px; }
+  .boite h3 .role { font-weight: 400; color: var(--gris); font-size: 12px; }
+  .boite ul, .boite ol { margin: 2px 0 0; padding-left: 18px; }
+  .boite li { margin: 0; }
+  .b-session { border-color: #8e7cc3; background: #f6f3fc; }
+  .b-cond { border-color: var(--rouge); background: var(--rouge-f); }
+  .b-agent { border-color: var(--jaune); background: var(--jaune-f); }
+  .b-juge { border-color: var(--bleu); background: #f2f7fd; }
+  .b-relec { border-color: var(--violet); background: #f4f0fb; }
+  .b-ok { border-color: var(--vert); background: #effaf2; }
+  .b-git { border-color: var(--bleu); background: #f2f7fd; }
+  .b-user { display: flex; align-items: center; gap: 10px; background: transparent; border: none; padding: 2px 0; }
+  .cmd { background: #fff; border: 1.5px solid #c9d1dc; border-radius: 6px; padding: 4px 10px; }
+  .code { background: #eef0f3; border: 1px solid #c9d1dc; border-radius: 6px; padding: 6px 9px; white-space: pre; }
+  .fleche { text-align: center; color: #444; font-size: 16px; line-height: 16px; margin: -1px 0; }
+  .fleche small { font-size: 12px; font-weight: 600; margin-left: 4px; }
+  .etiq { font-size: 12px; font-weight: 700; }
+  .rouge { color: var(--rouge); } .vert { color: var(--vert); } .gris { color: var(--gris); }
+  .boucle { border: 2px dashed var(--rouge); border-radius: 8px; padding: 4px 8px; background: #fff;
+            font-size: 12px; }
+  .ico { width: 22px; height: 22px; flex: none; }
+  .reprise { border: 2px dashed var(--violet); background: #fff; }
+  .pause { border-color: var(--gris); background: var(--gris-f); }
+  .besoin { border-color: var(--orange); background: #fff7ef; }
+
+  .bas { display: grid; grid-template-columns: 1.55fr 0.95fr 0.9fr 1.3fr; gap: 12px; margin-top: 12px; height: 318px; }
+  .panneau { border: 1.5px solid #c9d1dc; border-radius: 10px; padding: 8px 12px; background: #fbfcfd; }
+  .panneau h4 { margin: 0 0 6px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .arbre { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; font-size: 12px; line-height: 1.34; }
+  .arbre div { white-space: nowrap; }
+  .i1 { padding-left: 14px; } .i2 { padding-left: 28px; }
+  .modeles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .famille { border-radius: 8px; padding: 6px; text-align: center; }
+  .famille .pastille { display: block; margin: 5px auto; padding: 4px 6px; border-radius: 6px; font-weight: 600; width: 88%; }
+  .f-claude { background: #f1edf9; border: 1.5px solid #b9a9e0; } .f-claude .pastille { background: #ddd3f3; }
+  .f-ext { background: #eaf6ee; border: 1.5px solid #9fd0af; } .f-ext .pastille { background: #cdebd6; }
+  .barre { text-decoration: line-through; opacity: .7; }
+  .etats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; align-items: center; font-size: 12px; }
+  .etat { border-radius: 6px; padding: 3px 6px; text-align: center; font-weight: 600; }
+  .e-pend { background: #e7eaee; } .e-ready { background: #dcebfb; } .e-prog { background: #fdf0c8; }
+  .e-done { background: #d6efdd; } .e-block { background: #f8d7d3; } .e-cancel { background: #fff; border: 1.5px dashed #999; }
+  .e-valid { background: #fff; border: 1.5px dashed #b8860b; color: var(--gris); font-weight: 400; }
+  .regles { font-size: 12px; line-height: 1.4; margin: 0; padding-left: 16px; }
+  .pied { margin-top: 8px; display: flex; justify-content: space-between; border-top: 1.5px solid #dde3ea;
+          padding-top: 6px; font-size: 13px; color: var(--gris); background: #f4f7fb; padding: 5px 10px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4.5" fill="#1f5fa8"/><path d="M3 22c0-5 4-8.5 9-8.5s9 3.5 9 8.5z" fill="#1f5fa8"/></symbol>
+    <symbol id="i-ecran" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" fill="none" stroke="#3d2f7a" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="#3d2f7a" stroke-width="2"/></symbol>
+    <symbol id="i-roue" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="#c0392b" stroke-width="2.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4M4.6 4.6l2.8 2.8M16.6 16.6l2.8 2.8M4.6 19.4l2.8-2.8M16.6 7.4l2.8-2.8" stroke="#c0392b" stroke-width="2.5"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M5 2h10l4 4v16H5z" fill="none" stroke="#b8860b" stroke-width="2"/><path d="M8 10h8M8 14h8M8 18h5" stroke="#b8860b" stroke-width="2"/></symbol>
+    <symbol id="i-robot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="13" rx="3" fill="#c8641a"/><circle cx="9" cy="13" r="1.8" fill="#fff"/><circle cx="15" cy="13" r="1.8" fill="#fff"/><path d="M12 7V3" stroke="#c8641a" stroke-width="2"/><circle cx="12" cy="3" r="1.5" fill="#c8641a"/></symbol>
+    <symbol id="i-loupe" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#1f5fa8" stroke-width="2.5"/><path d="M15 15l6 6" stroke="#1f5fa8" stroke-width="3"/></symbol>
+    <symbol id="i-relec" viewBox="0 0 24 24"><path d="M5 2h14v20H5z" fill="none" stroke="#5b3fa0" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#5b3fa0" stroke-width="2"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1e7a3c"/><path d="M7 12.5l3.2 3.2L17.5 8.5" fill="none" stroke="#fff" stroke-width="2.6"/></symbol>
+    <symbol id="i-git" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2.5" fill="none" stroke="#1f5fa8" stroke-width="2"/><circle cx="6" cy="19" r="2.5" fill="none" stroke="#1f5fa8" stroke-width="2"/><circle cx="18" cy="8" r="2.5" fill="none" stroke="#1f5fa8" stroke-width="2"/><path d="M6 7.5v9M18 10.5c0 4-6 3-11 7" fill="none" stroke="#1f5fa8" stroke-width="2"/></symbol>
+    <symbol id="i-cycle" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7" fill="none" stroke="#5b3fa0" stroke-width="2.5"/><path d="M18 2v5h-5" fill="none" stroke="#5b3fa0" stroke-width="2.5"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#5a6270"/><path d="M9.5 7.5v9M14.5 7.5v9" stroke="#fff" stroke-width="2.6"/></symbol>
+    <symbol id="i-question" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#c8641a"/><path d="M9.3 9a2.8 2.8 0 1 1 3.8 2.6c-.8.4-1.1 1-1.1 1.9" fill="none" stroke="#fff" stroke-width="2.3"/><circle cx="12" cy="17.3" r="1.3" fill="#fff"/></symbol>
+    <symbol id="i-dossier" viewBox="0 0 24 24"><path d="M2 5h8l2 2.5h10V20H2z" fill="#1f5fa8"/></symbol>
+    <symbol id="i-puce" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="#5b3fa0" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="#5b3fa0"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4" stroke="#5b3fa0" stroke-width="2"/></symbol>
+    <symbol id="i-etats" viewBox="0 0 24 24"><path d="M4 2h12l4 4v16H4z" fill="none" stroke="#1f5fa8" stroke-width="2"/><path d="M8 11l2.5 2.5L16 8M8 18h8" fill="none" stroke="#1f5fa8" stroke-width="2"/></symbol>
+    <symbol id="i-bouclier" viewBox="0 0 24 24"><path d="M12 2l8 3v7c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V5z" fill="#1f5fa8"/><path d="M8 12l3 3 5-6" fill="none" stroke="#fff" stroke-width="2.3"/></symbol>
+  </defs>
+</svg>
+
+<div class="entete">
+  <h1>MGNetworking — Workflow et architecture de l'orchestration des agents IA</h1>
+  <div class="sous-titre">Du plan à la tâche terminée : création → lancement → exécution et validation → clôture</div>
+  <div class="mode"><b>Mode actuel : automatique</b><br>La session enchaîne seule la tâche suivante<br><span class="mono">orchestration/mode.json</span></div>
+</div>
+
+<div class="colonnes">
+  <!-- 1 -->
+  <section class="col c1">
+    <div class="titre"><span class="num">1</span><div><h2>Création des tâches</h2><small>Du plan au backlog</small></div></div>
+    <div class="corps">
+      <div class="boite b-user"><svg class="ico"><use href="#i-user"/></svg><span>L'utilisateur demande l'atomisation d'un domaine</span></div>
+      <div class="cmd mono">/atomiser Linux/Security</div>
+      <div class="fleche">↓</div>
+      <div class="boite b-session">
+        <h3><svg class="ico"><use href="#i-ecran"/></svg>Session Claude Code <span class="role">orchestrateur · Opus</span></h3>
+        <ul>
+          <li>Lit le plan et <span class="mono">decisions.md</span></li>
+          <li>Découpe en lots si plus de 7 scripts</li>
+          <li>Lance le sous-agent rédacteur, avec la section du plan et les identifiants libres</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-agent">
+        <h3><svg class="ico"><use href="#i-doc"/></svg>Rédacteur-tache <span class="role">sous-agent · modèle hérité</span></h3>
+        <ul>
+          <li>Une fiche par script, format de <span class="mono">tasks/README.md</span></li>
+          <li>Écrit <span class="mono">tasks/pending/TASK-XXX.md</span></li>
+          <li>Met à jour <span class="mono">tasks/backlog.md</span></li>
+          <li>N'invente aucune décision : il la signale</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite besoin">
+        <h3><svg class="ico"><use href="#i-question"/></svg>Choix non tranchés ?</h3>
+        <ul>
+          <li>La session pose les questions à l'utilisateur</li>
+          <li>Réponses → <b>décision numérotée</b> dans <span class="mono">decisions.md</span>, fiches alignées</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-ok">
+        <h3><svg class="ico"><use href="#i-ok"/></svg>Tâches créées</h3>
+        <ul>
+          <li>Statut <i>pending</i> (dépendance ou choix en attente) ou <i>ready</i></li>
+          <li>Ordre : lecture seule → modifie → destructif</li>
+          <li>Backlog et prochain identifiant libre à jour</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="col c2">
+    <div class="titre"><span class="num">2</span><div><h2>Lancement d'une tâche</h2><small>Préparation et activation</small></div></div>
+    <div class="corps">
+      <div class="boite b-user"><svg class="ico"><use href="#i-user"/></svg><span>L'utilisateur lance une tâche, ou la session enchaîne seule</span></div>
+      <div class="cmd mono">/tache TASK-XXX</div>
+      <div class="fleche">↓</div>
+      <div class="boite b-session">
+        <h3><svg class="ico"><use href="#i-ecran"/></svg>Session Claude Code <span class="role">orchestrateur · Opus, qui dure</span></h3>
+        <ul>
+          <li>Crée un conducteur-tache <b>neuf</b> : « préparer »</li>
+          <li>Ne garde que ses réponses courtes (30 lignes)</li>
+          <li>Reprend le même conducteur par SendMessage</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-cond">
+        <h3><svg class="ico"><use href="#i-roue"/></svg>Conducteur-tache <span class="role">sous-agent · Opus</span></h3>
+        <ol>
+          <li>Charge le contexte : fiche, <span class="mono">regles.md</span></li>
+          <li>Vérifie : <i>ready</i>, dépendances closes, Docker, arbre Git propre — sinon <b>REFUS</b></li>
+          <li>Active la tâche : <i>pending → active</i>, backlog, 1 commit</li>
+        </ol>
+        <div style="margin-top:3px">Rend <b>PRÊTE</b> + la commande de lancement</div>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-session">
+        <h3><svg class="ico"><use href="#i-ecran"/></svg>Étape 4 — la session lance l'agent</h3>
+        <div>En arrière-plan : l'agent peut tourner une heure, un sous-agent ne peut pas l'attendre.</div>
+      </div>
+      <div class="code mono"># lancé par la session, en arrière-plan
+bash orchestration/outils/lancer-agent.sh \
+     &lt;agent&gt; TASK-XXX [fichier de retours]</div>
+      <div class="boite" style="font-size:12px">
+        <b>Fiche <span class="mono">agent: orchestrateur</span></b> : pas d'agent ; le conducteur écrit lui-même sur <span class="mono">agent/TASK-XXX</span> et conduit les étapes 1 à 8 d'un trait.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="col c3">
+    <div class="titre"><span class="num">3</span><div><h2>Exécution et validation</h2><small>L'agent produit, le conducteur vérifie et fait relire</small></div></div>
+    <div class="corps">
+      <div class="boite b-agent">
+        <h3><svg class="ico"><use href="#i-robot"/></svg>Agent exécutant <span class="role">Claude Code CLI + modèle de la fiche</span></h3>
+        <ul>
+          <li>Copie isolée <span class="mono">../script-agents/TASK-XXX</span>, branche <span class="mono">agent/TASK-XXX</span></li>
+          <li>Écrit le script et son fichier de cas</li>
+          <li>Lance le juge, corrige (<b>3 passages au plus</b>), commite</li>
+          <li>Rend une ligne <span class="mono">VERDICT</span> à la session</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-juge">
+        <h3><svg class="ico"><use href="#i-loupe"/></svg>Juge <span class="role">juger.sh, sans modèle</span></h3>
+        <ul>
+          <li>shellcheck ; tests dans un conteneur Docker jetable</li>
+          <li>Règles transverses ; signal de longueur (150 lignes)</li>
+          <li>Refuse un faux binaire écrit à travers un lien</li>
+        </ul>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <div class="fleche" style="flex:1; text-align:left; padding-left:10px">↓ <small class="vert">Succès</small> <small>: VERDICT → session → conducteur</small></div>
+        <div class="boucle rouge etiq">↺ Échec : l'agent corrige (max 3 passages)</div>
+      </div>
+      <div class="boite b-cond">
+        <h3><svg class="ico"><use href="#i-roue"/></svg>Conducteur — 5. Vérifier</h3>
+        <ul>
+          <li>Juge relancé, périmètre, assertions jamais en baisse, longueur, validations</li>
+          <li>Sondes, mutations, stabilité (pratique non prescrite, A128)</li>
+          <li>Périmètre débordé ou tests affaiblis → <b>BLOQUÉE</b></li>
+        </ul>
+      </div>
+      <div class="fleche">↓ <small>le conducteur lance le relecteur</small></div>
+      <div class="boite b-relec">
+        <h3><svg class="ico"><use href="#i-relec"/></svg>Relecteur — 6. Relire <span class="role">Opus, lecture seule</span></h3>
+        <ul>
+          <li>Critères un par un ; périmètre et conventions</li>
+          <li>Défauts BLOQUANT / MAJEUR / MINEUR ; tests creux</li>
+          <li>Rend un verdict factuel au conducteur</li>
+        </ul>
+      </div>
+      <div style="display:flex; gap:8px">
+        <div class="fleche" style="flex:0 0 70px">↓ <small class="vert">OK</small></div>
+        <div class="boucle rouge" style="flex:1"><b>Défauts</b> : le conducteur écrit le fichier de retours → <b>RELANCER</b> → la session relance l'agent <b>une seule fois</b> → étape 5 refaite, sans seconde relecture</div>
+      </div>
+      <div class="boite b-ok">
+        <h3><svg class="ico"><use href="#i-ok"/></svg>Travail validé</h3>
+        <div>Script et tests conformes : prêt pour la clôture. Sinon, le conducteur termine lui-même ou bloque.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="col c4">
+    <div class="titre"><span class="num">4</span><div><h2>Clôture et intégration</h2><small>Retour dans le dépôt principal</small></div></div>
+    <div class="corps">
+      <div class="boite b-cond">
+        <h3><svg class="ico"><use href="#i-roue"/></svg>Conducteur — 7. Rendre compte</h3>
+        <ul>
+          <li>Rapport <span class="mono">tasks/reports/TASK-XXX-report.md</span>, compte rendu en tête</li>
+          <li>Chaque réserve → ligne <b>Axx</b> du registre unique <span class="mono">TASK-039</span></li>
+          <li>Écart d'agent ou d'architecture → nouvelle fiche TASK</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-cond">
+        <h3><svg class="ico"><use href="#i-roue"/></svg>Conducteur — 8. Clore</h3>
+        <ul>
+          <li>Fusion <span class="mono">--no-ff</span> de <span class="mono">agent/TASK-XXX</span>, copie et branche supprimées</li>
+          <li>Fiche vers <span class="mono">tasks/completed/</span>, README, backlog</li>
+          <li>Tâches débloquées → <i>ready</i></li>
+          <li>Journal, <span class="mono">agents.tsv</span>, <span class="mono">verifier-liens.sh</span>, commit</li>
+          <li>Rend <b>CLOSE</b> + la tâche suivante</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-session">
+        <h3><svg class="ico"><use href="#i-ecran"/></svg>Session — 9. Résumer et enchaîner</h3>
+        <ul>
+          <li>Mesure du conducteur, commit séparé</li>
+          <li><svg class="ico" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-git"/></svg> Push de <span class="mono">master</span> groupé en fin de domaine</li>
+          <li>Conducteur neuf pour la tâche suivante</li>
+        </ul>
+      </div>
+      <div class="fleche">↓</div>
+      <div class="boite b-ok">
+        <h3><svg class="ico"><use href="#i-ok"/></svg>Tâche terminée</h3>
+        <div>Fiche <i>completed</i>, rapport, mesures ; copie supprimée (gardée si <i>blocked</i>)</div>
+      </div>
+      <div class="boite reprise"><h3><svg class="ico"><use href="#i-cycle"/></svg>Mode automatique</h3>La session enchaîne la tâche <i>ready</i> suivante avec un nouveau conducteur, sans message de l'utilisateur.</div>
+      <div class="boite pause"><h3><svg class="ico"><use href="#i-pause"/></svg>Mode manuel</h3>La session attend une consigne de l'utilisateur.</div>
+      <div class="boite besoin"><h3><svg class="ico"><use href="#i-question"/></svg>BESOIN_USER</h3>Décision non tranchée : la session pose la question, la boucle s'arrête.</div>
+    </div>
+  </section>
+</div>
+
+<div class="bas">
+  <div class="panneau">
+    <h4><svg class="ico"><use href="#i-dossier"/></svg>Architecture du dépôt (extrait)</h4>
+    <div class="arbre mono">
+      <div>
+        <div>MGNetworking/</div>
+        <div class="i1">.claude/</div>
+        <div class="i2">agents/ conducteur-tache, relecteur, redacteur-tache</div>
+        <div class="i2">commands/ tache, atomiser, executer-tache, backlog</div>
+        <div class="i2">settings.json</div>
+        <div class="i1">orchestration/</div>
+        <div class="i2"><b>architecture.md</b> (référence, schémas Mermaid)</div>
+        <div class="i2">orchestration.png / .html (cette affiche)</div>
+        <div class="i2">modeles/ deepseek.env (sans clé)</div>
+        <div class="i2">outils/ lancer-agent.sh, juger.sh,</div>
+        <div class="i2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lien-ecrit.awk, verifier-liens.sh</div>
+        <div class="i2">mesures/ agents.tsv, journal.md</div>
+        <div class="i2">mode.json · limites.json</div>
+        <div class="i2">decisions.md · regles.md</div>
+      </div>
+      <div>
+        <div class="i1">tasks/</div>
+        <div class="i2">pending/ (dont TASK-039, registre)</div>
+        <div class="i2">active/ (une seule à la fois)</div>
+        <div class="i2">completed/ · blocked/ · cancelled/</div>
+        <div class="i2">reports/ (un rapport par tâche)</div>
+        <div class="i2">backlog.md (index global)</div>
+        <div class="i1">docs/ (plan, socle technique)</div>
+        <div class="i1">lib/ (common.sh)</div>
+        <div class="i1">Linux/ · Docker/ · Kubernetes/ · Synology/</div>
+        <div class="i1">tests/ (env/ conteneurs, integration/)</div>
+        <div class="i1">config/ (*.env.example versionnés)</div>
+        <div style="margin-top:4px">../script-agents/TASK-XXX</div>
+        <div class="i1">copies de travail des agents</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panneau">
+    <h4><svg class="ico"><use href="#i-puce"/></svg>Modèles des agents</h4>
+    <div class="modeles">
+      <div class="famille f-claude">
+        <b>Modèles Claude</b><br><span class="gris" style="font-size:12px">abonnement, sans fichier</span>
+        <span class="pastille"><span class="barre">sonnet</span><br><small class="rouge">indisponible sans interface — A41</small></span>
+        <span class="pastille">opus<br><small class="gris">session, conducteur, relecteur</small></span>
+        <span class="pastille">haiku</span>
+      </div>
+      <div class="famille f-ext">
+        <b>Modèles externes</b><br><span class="gris" style="font-size:12px">un fichier dans modeles/</span>
+        <span class="pastille">deepseek<br><small class="gris">toutes les tâches de scripts</small></span>
+        <span class="pastille" style="background:#fff;border:1.5px dashed #9fd0af;font-weight:400">autres…<br><small class="gris">API au format Anthropic</small></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panneau">
+    <h4><svg class="ico"><use href="#i-etats"/></svg>Cycle de vie d'une tâche</h4>
+    <div class="etats">
+      <div class="etat e-pend">pending</div><div class="gris">fiche écrite</div>
+      <div class="etat e-ready">ready</div><div class="gris">périmètre tenu, dépendances closes</div>
+      <div class="etat e-prog">in_progress</div><div class="gris">conducteur actif</div>
+      <div class="etat e-valid">validating</div><div class="gris">rare (TASK-049)</div>
+      <div class="etat e-done">completed</div><div class="gris">vérifiée, relue, fusionnée</div>
+      <div class="etat e-block">blocked</div><div class="gris">reprise sur décision de l'utilisateur, jamais automatique</div>
+      <div class="etat e-cancel">cancelled</div><div class="gris">abandonnée, conservée</div>
+    </div>
+  </div>
+
+  <div class="panneau">
+    <h4><svg class="ico"><use href="#i-bouclier"/></svg>Contraintes et règles</h4>
+    <ul class="regles">
+      <li><span class="mono">regles.md</span> — droits, commandes, périmètre, arrêt</li>
+      <li><span class="mono">decisions.md</span> — décisions en vigueur, numérotées</li>
+      <li><span class="mono">limites.json</span> — droits techniques de l'agent</li>
+      <li><span class="mono">.claude/settings.json</span> — permissions Claude Code</li>
+      <li>Aucun secret dans le dépôt, aucun <span class="mono">config/*.env</span> lu par l'agent</li>
+      <li>Aucune exécution sur l'hôte : tests en conteneur Docker</li>
+      <li>Agent : ni push, ni merge, ni web, ni sous-agents ; n'écrit pas <span class="mono">tasks/ docs/ lib/ orchestration/ .claude/</span> ni les README</li>
+      <li>Une seule relecture, une seule relance de l'agent</li>
+      <li>Registre unique des anomalies : <span class="mono">tasks/pending/TASK-039.md</span></li>
+      <li>Arrêt : aucune tâche <i>ready</i>, <i>blocked</i>, BESOIN_USER, mode manuel</li>
+    </ul>
+  </div>
+</div>
+
+<div class="pied">
+  <span>MGNetworking — Orchestration des agents IA</span>
+  <span><i>Des tâches claires. Des agents encadrés. Un dépôt qui progresse.</i></span>
+  <span>Référence : orchestration/architecture.md · Version du 17/09/2026</span>
+</div>
+</body>
+</html>

@@ -5,7 +5,7 @@ ce dépôt : qui intervient, où, avec quels artefacts, dans quel ordre, avec qu
 contrôles. **Ses schémas sont la représentation graphique de référence** : ils sont
 écrits ici en Mermaid et se modifient avec le texte, dans le même commit. Une évolution
 de l'orchestration qui ne met pas ce fichier à jour est incomplète. L'affiche
-[orchestration.png](orchestration.png) en est une présentation dessinée, datée : en cas
+[orchestration.png](orchestration.png), générée depuis [orchestration.html](orchestration.html), en est une présentation dessinée, datée : en cas
 d'écart, ce fichier fait foi.
 
 Pour les règles détaillées, ce fichier renvoie ; il ne les répète pas et ne les

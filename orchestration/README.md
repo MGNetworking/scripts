@@ -13,7 +13,7 @@ Mêmes outils, mêmes règles ; seul le modèle change.
 
 ![Workflow et architecture de l'orchestration des agents IA](orchestration.png)
 
-*Affiche d'exposition, état du 16/09/2026. En cas d'écart, [architecture.md](architecture.md)
+*Affiche d'exposition du 17/09/2026, source modifiable [orchestration.html](orchestration.html) (export PNG décrit en tête du fichier). En cas d'écart, [architecture.md](architecture.md)
 fait foi.*
 
 **L'architecture complète — acteurs, lieux, artefacts, cycle d'une tâche, états,
@@ -56,6 +56,8 @@ concurrentes du harnais maîtrisées (décision 40, registre A06).
 | [decisions.md](decisions.md) | les décisions en vigueur, numérotées |
 | [mode.json](mode.json) | `automatique` : enchaînement sans message de `user` ; `manuel` : attente d’une consigne |
 | [limites.json](limites.json) | les droits techniques d'un agent (écriture, commandes) |
+| [architecture.md](architecture.md) | architecture complète et schémas Mermaid : la référence |
+| `orchestration.html` / `.png` | affiche d'exposition : source HTML et export PNG |
 | `modeles/` | un fichier par modèle **externe** : adresse d'API, nom, variable de clé |
 | `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons dans le transcript de la session (« incomplet » s'il est introuvable) |
 | `outils/juger.sh` | shellcheck et fichier de cas d'une fiche, en conteneur |
