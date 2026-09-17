@@ -39,7 +39,9 @@ get)
         # l'annotation, comme si K3s avait réappliqué ses manifestes.
         if [ "${KUBECTL_DERIVE:-}" = "$n" ] && [ -f "$BAC/avant-$n" ]; then read -r ga beta < "$BAC/avant-$n"; fi
         [ "$ga" = "absent" ] && ga=""; [ "$beta" = "absent" ] && beta=""
-        printf '%s %s %s\n' "$n" "$ga" "$beta"
+        # « | » et non l'espace : une clé absente ne s'imprime pas, et la colonne
+        # vide décalerait la clé bêta en clé GA — c'est ce que fait le vrai.
+        printf '%s|%s|%s\n' "$n" "$ga" "$beta"
     done ;;
 annotate)
     [ "${2:-}" = "storageclass" ] || exit 1
@@ -231,30 +233,50 @@ assert_code 1 "$CODE" "une marque qui revient après coup fait rendre 1"; assert
 assert_contient "$sortie" "2 classe(s) par défaut (local-path longhorn " "la relecture nomme l'écart et les classes"
 assert_contient "$sortie" "K3s" "et dit d'où peut venir la dérive"
 
-titre "Mutations — la suite entière doit échouer contre chacune"
-# Ce qui est prouvé ici n'est pas qu'un mutant se comporte mal, mais que la SUITE
-# le voie : chaque mutant est donc jugé par une relance complète de ce fichier
-# contre lui. SUITE_SOUS_TEST désigne le script sous test, et empêche la relance
-# de rejouer cette section.
-MUT="$BAC/mutant-configure-storage.sh"
-juge_mutant() {   # <libellé> : MUT porte le script à juger
-    SUITE_SOUS_TEST="$MUT" timeout 300 bash "${BASH_SOURCE[0]}" >"$BAC/mutant-$1.log" 2>&1 && code=0 || code=$?
-    assert_code_non_nul "$code" "la suite échoue contre le mutant « $1 »"
-    assert_contient "$(cat "$BAC/mutant-$1.log")" "ÉCHEC" "et c'est une vérification qui l'a vu, pas un plantage"
-}
-cp "$CIBLE" "$MUT"; SUITE_SOUS_TEST="$MUT" timeout 300 bash "${BASH_SOURCE[0]}" >"$BAC/mutant-temoin.log" 2>&1 && code=0 || code=$?
-assert_code 0 "$code" "copie intacte : la relance passe — les échecs des mutants ne viennent pas d'elle"
-# Ordre inversé : la cible n'est plus marquée en tête du plan, elle l'est en queue.
-sed -e 's#^grep -qxF "\$CIBLE" "\$TEMPORAIRE/defaut".*$#:#' -e 's#^done < "\$TEMPORAIRE/etat"$#&\n    PLAN+=("$CIBLE|$CLE|true")#' "$CIBLE" > "$MUT"
-juge_mutant "ordre inversé"
-# Clé bêta ignorée : le démarquage écrit la clé GA là où la bêta marquait.
-sed -e 's#^CLE_B=.*$#CLE_B="$CLE"#' "$CIBLE" > "$MUT"
-juge_mutant "clé bêta ignorée"
-# Échec d'une annotation : la boucle doit s'arrêter là, sans rien démarquer.
-sed -e 's#^\( *\)exit 1$#\1:#' "$CIBLE" > "$MUT"
-juge_mutant "exit 1 de la boucle retiré"
-sed -e 's#^\[ -t 0 \].*$#:#' -e 's#^confirm "Appliquer.*$#:#' "$CIBLE" > "$MUT"
-juge_mutant "garde de confirmation retirée"
+# Une relance porte SUITE_SOUS_TEST : elle juge le script qu'on lui donne, elle
+# ne rejoue donc pas cette section — sans quoi elle se relancerait sans fin.
+if [ -z "${SUITE_SOUS_TEST:-}" ]; then
+    titre "Mutations — la suite entière doit échouer contre chacune"
+    # Ce qui est prouvé ici n'est pas qu'un mutant se comporte mal, mais que la
+    # SUITE le voie : chacun est jugé par une relance complète de ce fichier
+    # contre lui. Les cinq relances sont indépendantes — chacune son bac — et
+    # tournent de front ; le verdict n'est lu qu'après. La borne de temps ne
+    # protège que d'un blocage.
+    MUT="$BAC/mutant"; JUGES=(); PIDS=()
+    # Les copies vivent hors du dépôt : sans ce lien, aucune ne trouverait
+    # lib/common.sh, toutes échoueraient — témoin compris — et la section ne
+    # prouverait rien.
+    ln -s "$SCRIPTS_ROOT/lib" "$BAC/lib"
+    relancer() {   # <libellé> <script>
+        JUGES+=("$1")
+        SUITE_SOUS_TEST="$2" timeout 600 bash "${BASH_SOURCE[0]}" >"$BAC/juge-$1.log" 2>&1 &
+        PIDS+=("$!")
+    }
+    # Les programmes sed qui portent un « $ » littéral sont entre guillemets
+    # doubles, échappé : entre guillemets simples shellcheck les signalerait
+    # (SC2016), et ce sont bien des « $ » de sed, non des expansions du shell.
+    cp "$CIBLE" "$MUT-temoin.sh"; relancer "témoin" "$MUT-temoin.sh"
+    # Ordre inversé : la cible est marquée en queue de plan, non plus en tête.
+    sed -e '/^grep -qxF/{/defaut/d}' -e "s#^done <.*#&\n    PLAN+=(\"\$CIBLE|\$CLE|true\")#" "$CIBLE" > "$MUT-ordre.sh"
+    relancer "ordre inversé" "$MUT-ordre.sh"
+    # Clé bêta ignorée : le démarquage écrit la clé GA là où la bêta marquait.
+    sed -e "s#^CLE_B=.*#CLE_B=\"\$CLE\"#" "$CIBLE" > "$MUT-beta.sh"
+    relancer "clé bêta ignorée" "$MUT-beta.sh"
+    # Échec d'une annotation : la boucle doit s'arrêter là, sans rien démarquer.
+    sed -e 's#^\( *\)exit 1#\1:#' "$CIBLE" > "$MUT-exit.sh"
+    relancer "exit 1 de la boucle retiré" "$MUT-exit.sh"
+    sed -e 's#^\[ -t 0 \].*#:#' -e 's#^confirm "Appliquer.*#:#' "$CIBLE" > "$MUT-conf.sh"
+    relancer "garde de confirmation retirée" "$MUT-conf.sh"
+    for i in "${!JUGES[@]}"; do
+        wait "${PIDS[$i]}" && code=0 || code=$?
+        if [ "${JUGES[$i]}" = "témoin" ]; then
+            assert_code 0 "$code" "copie intacte : la relance passe — les échecs des mutants ne viennent pas d'elle"
+        else
+            assert_code_non_nul "$code" "la suite échoue contre le mutant « ${JUGES[$i]} »"
+            assert_contient "$(cat "$BAC/juge-${JUGES[$i]}.log")" "ÉCHEC" "et c'est une vérification qui l'a vu, pas un plantage"
+        fi
+    done
+fi
 
 titre "Ce que le script ne fait jamais"
 assert_egal "0" "$(grep -c require_root "$CIBLE" || true)" "aucun require_root"

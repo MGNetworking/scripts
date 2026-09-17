@@ -12,11 +12,15 @@ MARGE=2         # « timeout » qui l'entoure : le laisser écrire son message
 CLE="storageclass.kubernetes.io/is-default-class"        # clé GA, posée sur la cible
 CLE_B="storageclass.beta.kubernetes.io/is-default-class" # clé bêta, encore lue par l'admission
 # Les points d'une clé sont échappés : sans eux, kubectl les lit comme un chemin
-# d'objet. Les deux clés sont relevées, et non la seule GA.
-JP='{range .items[*]}{.metadata.name}{" "}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{" "}{.metadata.annotations.storageclass\.beta\.kubernetes\.io/is-default-class}{"\n"}{end}'
+# d'objet. Les deux clés sont relevées, et non la seule GA. Le séparateur est un
+# « | », jamais un espace : une annotation absente ne s'imprime pas, et une
+# colonne vide décalerait les suivantes — la clé bêta se lirait en clé GA. Un
+# nom de StorageClass étant un sous-domaine RFC 1123, il n'en porte aucun.
+JP='{range .items[*]}{.metadata.name}{"|"}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{"|"}{.metadata.annotations.storageclass\.beta\.kubernetes\.io/is-default-class}{"\n"}{end}'
 DRY_RUN="false"
 # Décision 45 : un parent qui exporte ASSUME_YES ne confirme pas à ma place.
-export ASSUME_YES="false"
+# OUI est le seul témoin lu par ce script ; ASSUME_YES n'est lu que par confirm.
+OUI="false"; export ASSUME_YES="false"
 # Surcharge de test, lue avant tout trap et toute écriture de fichier.
 if [ -e /.dockerenv ] && [ -n "${DELAI_TEST:-}" ]; then DELAI="$DELAI_TEST"; fi
 
@@ -57,7 +61,7 @@ EOF
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run) DRY_RUN="true"; shift ;;
-        -y|--yes)  export ASSUME_YES="true"; shift ;;
+        -y|--yes)  OUI="true"; export ASSUME_YES="true"; shift ;;
         --help|-h) usage; exit 0 ;;
         *) die "Option inconnue : $1" 2 ;;
     esac
@@ -109,8 +113,8 @@ relever() {
     [ "$CODE" = 0 ] || echec "« kubectl get storageclass »"
     printf '%s\n' "$REP" | grep . > "$TEMPORAIRE/etat" || true
     TOTAL="$(grep -c . "$TEMPORAIRE/etat" || true)"
-    awk '{print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/noms"
-    awk '$2 == "true" || $3 == "true" {print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/defaut"
+    awk -F'|' '{print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/noms"
+    awk -F'|' '$2 == "true" || $3 == "true" {print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/defaut"
 }
 
 relever
@@ -127,7 +131,7 @@ fi
 # jamais par suppression de l'annotation.
 PLAN=()
 grep -qxF "$CIBLE" "$TEMPORAIRE/defaut" || PLAN+=("$CIBLE|$CLE|true")
-while read -r n ga beta; do
+while IFS='|' read -r n ga beta; do
     [ "$n" != "$CIBLE" ] || continue
     if [ "$ga" = "true" ]; then PLAN+=("$n|$CLE|false"); fi
     if [ "$beta" = "true" ]; then PLAN+=("$n|$CLE_B|false"); fi
@@ -141,7 +145,7 @@ if [ "$DRY_RUN" = "true" ]; then
     info "[dry-run] kubectl annotate n'a pas été appelé : rien n'a été modifié."
     exit 0
 fi
-[ -t 0 ] || [ "${ASSUME_YES:-false}" = "true" ] || die "Annotations à confirmer, et aucun terminal n'est disponible. Relancer avec --yes." 1
+[ -t 0 ] || [ "$OUI" = "true" ] || die "Annotations à confirmer, et aucun terminal n'est disponible. Relancer avec --yes." 1
 confirm "Appliquer ces $VOULEES annotation(s) ? « $CIBLE » restera la seule StorageClass par défaut." || die "Configuration abandonnée : rien n'a été modifié." 1
 
 FAITES=0
