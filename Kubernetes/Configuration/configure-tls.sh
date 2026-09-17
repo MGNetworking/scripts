@@ -2,9 +2,8 @@
 set -Eeuo pipefail
 
 # Pose les deux ClusterIssuers Let's Encrypt du cluster — staging et production —
-# par kubectl apply. Chaque site demandera son certificat dans son propre Ingress.
-# Rien n'est jamais supprimé ; le Secret du compte ACME, qui appartient à
-# cert-manager, n'est ni lu ni affiché ici.
+# par kubectl apply. Rien n'est jamais supprimé ; le Secret du compte ACME, qui
+# appartient à cert-manager, n'est ni lu ni affiché ici.
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
@@ -20,8 +19,7 @@ DRY_RUN="false"; OUI="false"
 export ASSUME_YES="false"
 # Surcharges de test, lues avant tout trap et toute écriture de fichier.
 if [ -e /.dockerenv ]; then
-    [ -z "${DELAI_TEST:-}" ] || DELAI="$DELAI_TEST"
-    [ -z "${ATTENTE_TEST:-}" ] || ATTENTE="$ATTENTE_TEST"
+    [ -z "${DELAI_TEST:-}" ] || DELAI="$DELAI_TEST"; [ -z "${ATTENTE_TEST:-}" ] || ATTENTE="$ATTENTE_TEST"
 fi
 
 usage() {
@@ -36,15 +34,17 @@ Usage : configure-tls.sh [--dry-run] [-y|--yes] [--help]
 letsencrypt-staging et letsencrypt-production sont des ressources de CLUSTER,
 sans namespace, validées par HTTP-01 sur l'IngressClass traefik. L'adresse de
 contact vient de SRV_K8S_ACME_EMAIL (config/server.env) : sans elle, ou mal
-formée, le script rend 2 sans rien tenter. Chaque site demande ensuite son
-propre certificat dans son Ingress ; ce script n'en demande aucun, ne supprime
-jamais rien, et kubectl résout seul son kubeconfig (KUBECONFIG, puis ~/.kube/config).
+formée, le script rend 2 sans rien tenter. Le pod cert-manager doit pouvoir
+joindre Let's Encrypt en HTTPS ; un compte staging et un compte production sont
+créés dès cette étape, sans qu'aucun certificat soit demandé. Chaque site
+demande ensuite son certificat dans son propre Ingress : ce script n'en demande
+aucun, ne supprime jamais rien, et kubectl résout seul son kubeconfig.
 
 Codes de retour :
   0  les deux ClusterIssuers sont à l'état voulu, ou l'étaient déjà ; ou --dry-run
   1  kubectl absent, apiserver injoignable, CRD ClusterIssuer absente, webhook
-     cert-manager non prêt, droits insuffisants, kubeconfig invalide, délai
-     dépassé, confirmation refusée, application ou attente en échec
+     cert-manager non prêt, droits insuffisants, kubeconfig invalide, attente
+     Ready déçue, délai dépassé, confirmation refusée, application en échec
   2  option inconnue, ou SRV_K8S_ACME_EMAIL absente ou mal formée — seuls cas de 2
 EOF
 }
@@ -58,8 +58,7 @@ while [ "${1:-}" != "" ]; do
     esac
 done
 
-# Jugée ici, avant tout appel : cette valeur est injectée dans le YAML, où une
-# valeur libre ouvrirait une injection. Elle est posée entre guillemets.
+# Jugée avant tout appel : elle entre dans le YAML, où une valeur libre ouvrirait une injection. Posée entre guillemets.
 EMAIL="${SRV_K8S_ACME_EMAIL:-}"
 [ -n "$EMAIL" ] || die "Adresse ACME absente : renseigner SRV_K8S_ACME_EMAIL dans config/server.env (modèle : config/server.env.example). Rien n'a été tenté." 2
 [[ "$EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$ ]] \
@@ -96,8 +95,7 @@ EOF
   issuer letsencrypt-production "$PRODUCTION" letsencrypt-production-account-key
 } > "$TEMPORAIRE/clusterissuers.yaml"
 
-# REP — stdout — et ERREUR — stderr, tenus à part : un avertissement mêlé à une
-# lecture serait pris pour une donnée.
+# REP (stdout) et ERREUR (stderr) tenus à part : un avertissement mêlé à une lecture serait pris pour une donnée.
 REP=""; ERREUR=""; CODE=0
 appel() {   # <stdin> <verbe kubectl...>
     local entree="$1"; shift
@@ -107,12 +105,14 @@ appel() {   # <stdin> <verbe kubectl...>
 }
 
 # Traduit l'échec du dernier appel : le 124 vient de « timeout », pas du cluster.
+# Le second argument ne sert qu'à l'attente Ready : lui seul produit le motif.
 echec() {
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
     case "$CODE:$ERREUR" in
         124:*) die "L'appel $1 a été interrompu : délai dépassé (${DELAI} s)." ;;
-        # Avant la règle réseau : ce webhook joint un Service du cluster, et son
-        # « connection refused » ne dit rien de l'apiserver.
+        # Un wait expiré n'est pas un refus du cluster : nommé avant le cas neutre.
+        *"timed out waiting for the condition"*) die "ClusterIssuer ${2:-$1} non prêt après ${ATTENTE} s : compte ACME non enregistré (réseau sortant vers Let's Encrypt, e-mail refusé ?)" ;;
+        # Avant la règle réseau : ce webhook joint un Service du cluster, et son « connection refused » ne dit rien de l'apiserver.
         *"failed calling webhook"*|*"no endpoints available"*) die "Le webhook d'admission cert-manager (webhook.cert-manager.io) ne répond pas : cert-manager est installé, mais son webhook n'est pas prêt. $1 a échoué — voir Kubernetes/Installation/install-cert-manager.sh (TASK-065)." ;;
         *Forbidden*) die "Droits insuffisants : $1 a été refusé par le cluster." ;;
         *Unauthorized*|*x509*|*"error loading config file"*) die "Kubeconfig invalide ou périmé : $1 a été refusé." ;;
@@ -156,18 +156,17 @@ for i in letsencrypt-staging letsencrypt-production; do
 done
 [ "$NOMBRE" = 2 ] || die "Relecture : $NOMBRE ClusterIssuer(s) portant $LABEL — deux sont attendus."
 
-# Le compte ACME est enregistré par cert-manager au premier certificat demandé :
-# d'ici là, la condition Ready peut rester fausse. L'attente est bornée.
-printf '\nAttente de la condition Ready (délai %s s)\n' "$ATTENTE"
+# Ready suppose que cert-manager a enregistré le compte ACME auprès de
+# Let's Encrypt : deux attentes se suivent, et le total est borné.
+printf '\nAttente de la condition Ready (délai %s s par ClusterIssuer)\n' "$ATTENTE"
 for i in letsencrypt-staging letsencrypt-production; do
     CODE=0
-    # --request-timeout vaut ici l'attente entière : une valeur plus courte
-    # couperait le watch, et l'attente de 120 s n'irait jamais à son terme.
+    # --request-timeout vaut ici l'attente entière : plus court, il couperait le watch et l'attente n'irait pas à son terme.
     REP="$(timeout "$((ATTENTE + MARGE))" kubectl wait --for=condition=Ready "clusterissuer/$i" \
         --timeout="${ATTENTE}s" --request-timeout="${ATTENTE}s" 2>"$TEMPORAIRE/erreur")" || CODE=$?
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
     if [ "$CODE" = 124 ]; then die "L'attente de la condition Ready de $i a été interrompue : délai dépassé (${ATTENTE} s)."; fi
-    [ "$CODE" = 0 ] || echec "l'attente de la condition Ready de $i"
+    [ "$CODE" = 0 ] || echec "l'attente de la condition Ready de $i" "$i"
     printf '  %s : prêt\n' "$i"
 done
 success "ClusterIssuers letsencrypt-staging et letsencrypt-production prêts (HTTP-01, IngressClass traefik). Aucun certificat demandé, rien supprimé."

@@ -45,7 +45,7 @@ exemplaire() {   # <fichier> : un document, jugé clé parente par clé parente
         *) non 'nom attendu : letsencrypt-staging ou letsencrypt-production' ;;
     esac
     sous "$f" acme > "$BAC/acme-$n"
-    grep -qxE "    email: \"$ACME_EMAIL\"" "$BAC/acme-$n" || non "email ACME attendu, entre guillemets, sous acme de $n"
+    grep -qxF "    email: \"$ACME_EMAIL\"" "$BAC/acme-$n" || non "email ACME attendu, entre guillemets, sous acme de $n"
     grep -qxE "    server: $srv" "$BAC/acme-$n" || non "serveur $srv attendu sous acme de $n"
     sous "$BAC/acme-$n" privateKeySecretRef > "$BAC/cle-$n"
     grep -qxE "      name: $n-account-key" "$BAC/cle-$n" || non "privateKeySecretRef $n-account-key attendu"
@@ -88,7 +88,11 @@ esac
 SH
 
 CHEMIN="$BAC:$PATH"
-BASE=(DELAI_TEST=5 ATTENTE_TEST=20); EXTRA=(); CODE=0
+# LOG_DIR est fixé : sans lui, le journal tomberait dans /var/log ou dans le
+# dépôt, et le contrôle « aucune clé privée dans le journal » n'aurait pas de
+# fichier à lire — il passerait à vide.
+JOURNAL_LOG="$BAC/logs/configure-tls.log"
+BASE=(DELAI_TEST=5 ATTENTE_TEST=20 LOG_DIR="$BAC/logs"); EXTRA=(); CODE=0
 lancer() { sortie="$(env PATH="$CHEMIN" SRV_K8S_ACME_EMAIL="$MAIL" ACME_EMAIL="$MAIL" "${BASE[@]}" "${EXTRA[@]}" timeout 60 bash "$CIBLE" "$@" </dev/null 2>&1)" && CODE=0 || CODE=$?
            printf '%s\n' "$sortie" >> "$BAC/sorties"; }
 # Réponse tapée sous un pseudo-terminal : le terrain de la décision 45.
@@ -106,9 +110,13 @@ assert_code 2 "$code" "une option inconnue rend 2"
 
 titre "Adresse ACME absente ou mal formée — jugée avant tout appel kubectl"
 sain
-for m in "" "acme" "acme@exemple" "acme@exemple.fr x"; do
+# Les cinq derniers piègent l'injection YAML : guillemet suivi d'un retour ligne,
+# retour ligne final, espace, deux-points, dièse. Le libellé montre le retour
+# ligne sous la forme \n, faute de quoi il s'étalerait sur deux lignes.
+for m in "" "acme" "acme@exemple" "acme@exemple.fr x" \
+         $'a@b.cc"\nkind: X' $'acme@exemple.fr\n' "a b@c.fr" "a:b@c.fr" "a#b@c.fr"; do
     MAIL="$m"; lancer --yes
-    assert_code 2 "$CODE" "l'adresse « $m » est refusée en 2"
+    assert_code 2 "$CODE" "l'adresse « ${m//$'\n'/\\n} » est refusée en 2"
 done
 MAIL="acme@exemple.fr"
 assert_contient "$sortie" "SRV_K8S_ACME_EMAIL" "le refus nomme la variable à renseigner"
@@ -140,6 +148,12 @@ assert_code 1 "$CODE" "un webhook cert-manager non prêt rend 1"
 assert_contient "$sortie" "webhook.cert-manager.io" "le message nomme le webhook"
 assert_absent "$sortie" "injoignable" "et l'apiserver n'est pas mis en cause à tort"
 assert_absent "$(appels)" "apply" "rien n'est appliqué"
+# Le même webhook, découvert cette fois par apply : diff a répondu (différences),
+# et c'est l'écriture qui échoue.
+sain; EXTRA=(DIFF_CODE=1 APPLY_CODE=1 APPLY_ERREUR="$WEBHOOK"); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "un webhook non prêt découvert par apply rend 1"
+assert_contient "$sortie" "webhook.cert-manager.io" "le message nomme encore le webhook"
+assert_absent "$sortie" "injoignable" "et l'apiserver n'est toujours pas mis en cause"
 
 titre "CRD ClusterIssuer absente ou non servie"
 sain; rm -f "$BAC/crd"; lancer --yes
@@ -184,7 +198,8 @@ assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque la relecture inco
 sain; EXTRA=(WAIT_CODE=1 WAIT_ERREUR='error: timed out waiting for the condition on clusterissuers/letsencrypt-staging'); lancer --yes; EXTRA=()
 assert_code 1 "$CODE" "un issuer qui n'atteint pas Ready rend 1"
 assert_contient "$sortie" "timed out waiting for the condition on clusterissuers/letsencrypt-staging" "le message de kubectl est affiché"
-assert_contient "$sortie" "letsencrypt-staging" "et l'issuer fautif est nommé"
+assert_contient "$sortie" "ClusterIssuer letsencrypt-staging non prêt après 20 s" "le texte propre au script nomme l'issuer fautif et le délai, au lieu du message neutre"
+assert_absent "$sortie" "le cluster a répondu, et a refusé" "un wait expiré n'est pas présenté comme un refus du cluster"
 assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque l'attente déçue"
 
 titre "Délai dépassé — « timeout » enveloppe chaque appel"
@@ -193,6 +208,7 @@ faux timeout <<EOF
 #!/bin/sh
 case "\${TIMEOUT_SUR:-}:\$*" in
     "kubectl:7 kubectl "*) printf '%s\n' "\$*" >> "$BAC/timeout-appels"; exit 124 ;;
+    "wait:22 kubectl wait "*) printf '%s\n' "\$*" >> "$BAC/timeout-appels"; exit 124 ;;
     *) exec $REEL_TIMEOUT "\$@" ;;
 esac
 EOF
@@ -201,6 +217,13 @@ sain; EXTRA=(TIMEOUT_SUR=kubectl); lancer --yes; EXTRA=()
 assert_code 1 "$CODE" "un appel kubectl qui expire rend 1"; assert_contient "$sortie" "délai dépassé" "le délai est nommé pour ce qu'il est"
 assert_contient "$sortie" "« kubectl get crd clusterissuers.cert-manager.io »" "et l'appel qui a expiré est nommé"
 assert_egal "7 kubectl get crd clusterissuers.cert-manager.io --request-timeout=5s" "$(head -1 "$BAC/timeout-appels")" "le délai externe vaut 7 (5 + 2), et l'appel reste borné à 5 s"
+# L'attente Ready est enveloppée comme les autres appels : son délai externe
+# vaut ATTENTE + 2, et le 124 ne se confond pas avec un wait expiré côté cluster.
+: > "$BAC/timeout-appels"
+sain; EXTRA=(TIMEOUT_SUR=wait); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "une attente Ready interrompue de l'extérieur rend 1"
+assert_contient "$sortie" "interrompue : délai dépassé" "le délai externe est nommé pour ce qu'il est"
+assert_egal "22 kubectl wait --for=condition=Ready clusterissuer/letsencrypt-staging --timeout=20s --request-timeout=20s" "$(head -1 "$BAC/timeout-appels")" "le délai externe de l'attente vaut 22 (20 + 2)"
 rm -f "$BAC/timeout"
 
 titre "Mutations du manifeste — la suite doit les voir, sinon elle ne prouve rien"
@@ -221,6 +244,12 @@ for m in serveur ingress email certificat suppression; do
     esac
     lancer_mut --yes
     assert_code 1 "$CODE" "manifeste « $m » muté : la suite le voit et rend 1"
+    case "$m" in
+        # La suppression n'est pas vue par le juge du manifeste : le faux kubectl
+        # la refuse avant, sur le verbe.
+        suppression) assert_contient "$sortie" "verbe proscrit" "et le faux kubectl refuse le verbe delete" ;;
+        *)           assert_contient "$sortie" "manifeste :" "et le faux kubectl rejette le manifeste muté" ;;
+    esac
 done
 
 titre "Ce que le script ne fait jamais"
@@ -228,11 +257,14 @@ assert_egal "0" "$(grep -c require_root "$CIBLE" || true)" "aucun require_root"
 assert_egal "0" "$(grep -vE '^[[:space:]]*#' "$CIBLE" | grep -c 'k3s.yaml' || true)" "aucune référence à k3s.yaml hors commentaire"
 assert_egal "0" "$(grep -vc -- '--request-timeout=' "$BAC/kubectl-tous" || true)" "chaque appel kubectl de toute la suite porte --request-timeout"
 assert_egal "0" "$(grep -vcE '^kubectl (get crd|get clusterissuers|diff|apply|wait) ' "$BAC/kubectl-tous" || true)" "aucun appel kubectl ne sort de ces cinq verbes"
-assert_egal "0" "$(grep -cE -- ' delete|--prune| create|patch|replace|edit|scale' "$BAC/kubectl-tous" || true)" "aucune suppression ni écriture hors apply"
+assert_egal "0" "$(grep -cE -- ' delete|--prune| create| patch | replace | edit |scale' "$BAC/kubectl-tous" || true)" "aucune suppression ni écriture hors apply"
 assert_egal "0" "$(grep -c 'k3s.yaml' "$BAC/kubectl-tous" || true)" "aucune lecture du kubeconfig de K3s"
 assert_egal "0" "$(grep -vE '^[[:space:]]*#' "$CIBLE" | grep -cE 'curl|wget|openssl|nslookup' || true)" "aucun outil réseau : rien n'est appelé chez Let's Encrypt"
 assert_absent "$(cat "$BAC/sorties")" "PRIVATE KEY" "aucune clé privée dans ce que le script a affiché"
 assert_absent "$(cat "$BAC/sorties")" "kind: Secret" "aucun Secret dans ce qu'il a affiché"
-assert_absent "$(cat "${LOG_DIR:-/tmp}/configure-tls.log" 2>/dev/null)" "PRIVATE KEY" "aucune clé privée dans le journal"
+# Le journal est écrit à un chemin connu, fixé par LOG_DIR dans BASE : sans ce
+# contrôle d'existence, l'assertion suivante passerait sur un fichier absent.
+assert_egal "oui" "$([ -s "$JOURNAL_LOG" ] && echo oui || echo non)" "le journal du script est écrit, à $JOURNAL_LOG"
+assert_absent "$(cat "$JOURNAL_LOG")" "PRIVATE KEY" "aucune clé privée dans le journal"
 
 bilan "TASK-070 / configure-tls.sh"
