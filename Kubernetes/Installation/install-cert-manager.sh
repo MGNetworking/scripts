@@ -36,7 +36,8 @@ Usage : install-cert-manager.sh --version vX.Y.Z [--dry-run] [-y|--yes] [--help]
 
 Chart OCI officiel jetstack, oci://quay.io/jetstack/charts/cert-manager, épinglé à
 la version demandée et sans « helm repo add » ; CRD posées par le chart
-(crds.enabled=true), namespace cert-manager créé au besoin. Ni root ni k3s.yaml.
+(crds.enabled=true), namespace cert-manager créé au besoin. Ni root ni kubeconfig
+de K3s : helm et kubectl résolvent seuls le leur.
 Une version voulue inférieure à celle installée est refusée : ce script ne
 revient jamais en arrière, et une mise à jour demande confirmation.
 
