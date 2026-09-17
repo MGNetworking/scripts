@@ -172,6 +172,9 @@ etat local-path=absent longhorn=true; printf 'true true\n' > "$BAC/classes/longh
 assert_code 0 "$CODE" "une classe marquée par les deux clés rend 0"; assert_contient "$sortie" "[SUCCESS]" "et la relecture finale ne voit que la cible"
 assert_egal "3" "$(grep -c . <<<"$(annotes)")" "chaque clé qui valait true est ramenée à false, en plus de la cible"
 assert_egal "true absent|false false" "$(cat "$BAC/classes/local-path")|$(cat "$BAC/classes/longhorn")" "plus aucune clé par défaut hors la cible"
+etat local-path=true longhorn=beta:true; sain; lancer --yes
+assert_code 0 "$CODE" "cible déjà marquée, autre marquée par la seule bêta : 0"; assert_absent "$sortie" "déjà la seule" "la clé bêta compte au relevé : la cible n'est pas tenue pour seule"
+assert_egal "true absent|absent false" "$(cat "$BAC/classes/local-path")|$(cat "$BAC/classes/longhorn")" "la clé bêta de l'autre est ramenée à false"
 
 titre "Idempotence démontrée par deux exécutions enchaînées (regles.md §10)"
 etat local-path=absent longhorn=true; sain; lancer --yes
@@ -267,6 +270,9 @@ if [ -z "${SUITE_SOUS_TEST:-}" ]; then
     relancer "exit 1 de la boucle retiré" "$MUT-exit.sh"
     sed -e 's#^\[ -t 0 \].*#:#' -e 's#^confirm "Appliquer.*#:#' "$CIBLE" > "$MUT-conf.sh"
     relancer "garde de confirmation retirée" "$MUT-conf.sh"
+    # Relevé sans la clé bêta : une autre classe qu'elle seule marque passe inaperçue.
+    sed -e 's#\$2 == "true" || \$3 == "true"#$2 == "true"#' "$CIBLE" > "$MUT-releve.sh"
+    relancer "clé bêta ignorée au relevé" "$MUT-releve.sh"
     for i in "${!JUGES[@]}"; do
         wait "${PIDS[$i]}" && code=0 || code=$?
         if [ "${JUGES[$i]}" = "témoin" ]; then
