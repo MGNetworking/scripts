@@ -2,9 +2,11 @@
 
 **Vue d'ensemble de référence** de la façon dont les agents IA produisent les scripts de
 ce dépôt : qui intervient, où, avec quels artefacts, dans quel ordre, avec quels
-contrôles. **Ses schémas sont la seule représentation graphique de l'orchestration** :
-ils sont écrits ici en Mermaid et se modifient avec le texte, dans le même commit. Une
-évolution de l'orchestration qui ne met pas ce fichier à jour est incomplète.
+contrôles. **Ses schémas sont la représentation graphique de référence** : ils sont
+écrits ici en Mermaid et se modifient avec le texte, dans le même commit. Une évolution
+de l'orchestration qui ne met pas ce fichier à jour est incomplète. L'affiche
+[orchestration.png](orchestration.png) en est une présentation dessinée, datée : en cas
+d'écart, ce fichier fait foi.
 
 Pour les règles détaillées, ce fichier renvoie ; il ne les répète pas et ne les
 remplace pas :

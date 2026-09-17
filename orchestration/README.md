@@ -11,6 +11,11 @@ instance de Claude Code, lancée sans interface, qui travaille avec **le modèle
 choisi pour la tâche** : DeepSeek, Sonnet, ou tout autre modèle ajouté plus tard.
 Mêmes outils, mêmes règles ; seul le modèle change.
 
+![Workflow et architecture de l'orchestration des agents IA](orchestration.png)
+
+*Affiche d'exposition, état du 16/09/2026. En cas d'écart, [architecture.md](architecture.md)
+fait foi.*
+
 **L'architecture complète — acteurs, lieux, artefacts, cycle d'une tâche, états,
 contrôles, arrêts, écarts connus — et ses schémas sont dans
 [architecture.md](architecture.md).** Les schémas y sont écrits en Mermaid, rendus
