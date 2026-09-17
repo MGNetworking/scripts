@@ -1,7 +1,7 @@
 ---
 id: TASK-064
 title: "Écrire Kubernetes/Installation/install-ingress.sh"
-status: ready
+status: in_progress
 priority: medium
 depends_on:
   - TASK-062
@@ -34,6 +34,11 @@ implementation_notes:
   - faux kubectl et faux ss en tête de PATH, sorties et codes réalistes ; aucun cluster réel
   - sans root, ss ne nomme pas le processus — afficher le port seul dans ce cas
   - dépend de TASK-062 pour l'ordre et le motif de contrôle de kubectl, pas pour un appel
+  - "modèles voisins : Kubernetes/Installation/install-kubectl.sh (vérification seule), Kubernetes/Maintenance/diagnostics.sh (déploiements prêts lus par custom-columns)"
+  - "faits NON VÉRIFIÉS, à ne pas inventer au-delà : sur K3s, déploiement traefik dans kube-system, Service LoadBalancer traefik, IngressClass traefik ; servicelb (klipper-lb) publie 80/443 par des pods svclb-traefik-*, invisibles pour ss en conteneur de test. Ce que kubectl ne lit pas fiablement, le script le dit au lieu de conclure"
+  - "garde /.dockerenv avant tout trap ou écriture ; require_cmd timeout ; timeout externe = délai + 2, code 124 nommé ; --request-timeout sur chaque appel kubectl, prouvé par le journal du faux"
+  - "colonnes lues par -o custom-columns ou -o jsonpath, jamais par position ; stderr tenu à part ; NotFound, Forbidden, injoignable et kubeconfig invalide distingués"
+  - "faux kubectl aux vrais formats, codes et messages ; rubrique en échec jamais suivie de [SUCCESS] (A78) ; aucun test qui ne prouve que le faux ; journal d'appels sans apply, patch, delete ni create"
 ---
 
 # TASK-064 — Vérifier l'Ingress Controller
