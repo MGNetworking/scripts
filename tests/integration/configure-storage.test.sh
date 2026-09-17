@@ -271,7 +271,7 @@ if [ -z "${SUITE_SOUS_TEST:-}" ]; then
     sed -e 's#^\[ -t 0 \].*#:#' -e 's#^confirm "Appliquer.*#:#' "$CIBLE" > "$MUT-conf.sh"
     relancer "garde de confirmation retirée" "$MUT-conf.sh"
     # Relevé sans la clé bêta : une autre classe qu'elle seule marque passe inaperçue.
-    sed -e 's#\$2 == "true" || \$3 == "true"#$2 == "true"#' "$CIBLE" > "$MUT-releve.sh"
+    sed -e "s#[$]2 == \"true\" || [$]3 == \"true\"#\$2 == \"true\"#" "$CIBLE" > "$MUT-releve.sh"
     relancer "clé bêta ignorée au relevé" "$MUT-releve.sh"
     for i in "${!JUGES[@]}"; do
         wait "${PIDS[$i]}" && code=0 || code=$?
