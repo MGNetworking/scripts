@@ -61,7 +61,8 @@ lire() {
 }
 
 # Traduit l'échec du dernier appel : le 124 vient de « timeout », pas du cluster.
-# « cause » remplace le message des rubriques qui ont leur propre mot à dire.
+# « injoignable » n'est dit que sur un motif réseau — le reste a répondu, et a
+# refusé. « cause » ne remplace que le message neutre, jamais une branche nommée.
 echec() {
     local appel="$1" cause="${2:-}"
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
@@ -70,9 +71,10 @@ echec() {
         *Forbidden*) die "Droits insuffisants : $appel a été refusé par le cluster." ;;
         *Unauthorized*|*x509*|*"error loading config file"*) die "Kubeconfig invalide ou périmé : $appel a été refusé." ;;
         *"could not find the requested resource"*|*"doesn't have a resource type"*) die "Ressource inconnue de l'API : $appel a échoué — l'apiserver répond, mais ne connaît pas cette ressource." ;;
+        *"connection refused"*|*"was refused"*|*"Unable to connect"*|*"no such host"*|*"i/o timeout"*) die "L'apiserver est injoignable : $appel a échoué. Vérifier l'accès par install-kubectl.sh." ;;
     esac
     # Posé hors de l'expansion : une apostrophe dans ${cause:-…} vaut SC1011.
-    [ -n "$cause" ] || cause="L'apiserver est injoignable : $appel a échoué. Vérifier l'accès par install-kubectl.sh."
+    [ -n "$cause" ] || cause="Échec de $appel. La cause est dans le message ci-dessus : le cluster a répondu, et a refusé."
     die "$cause"
 }
 
@@ -108,7 +110,7 @@ if [ "$CODE" != 0 ]; then
     # cas normal juste après un démarrage, d'où le [WARN] plutôt qu'un silence.
     case "$ERREUR" in
         *"Metrics API not available"*)          warn "L'API metrics n'est pas enregistrée dans le cluster : metrics-server est absent ou désactivé." ;;
-        *ServiceUnavailable*|*"not available yet"*) warn "L'API metrics est enregistrée mais ne sert pas encore de métriques : c'est le cas ${ATTENTE} après un démarrage de metrics-server." ;;
+        *ServiceUnavailable*|*"not available yet"*) warn "L'API metrics est enregistrée mais ne sert pas de métriques : probablement le démarrage de metrics-server, qui prend ${ATTENTE}." ;;
     esac
     echec "« kubectl top nodes »" "Relevé impossible : ni CPU ni mémoire n'ont pu être lus. Rien n'a été modifié."
 fi

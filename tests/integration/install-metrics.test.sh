@@ -8,19 +8,16 @@ source "$SCRIPTS_ROOT/tests/lib/assert.sh"
 
 CIBLE="$SCRIPTS_ROOT/Kubernetes/Installation/install-metrics.sh"
 IMAGE="rancher/mirrored-metrics-server:v0.7.2"
-# Les expressions de lecture attendues, écrites une fois : le faux kubectl ne rend
-# la donnée que pour celles-là.
 export CC_DEPLOIEMENT='custom-columns=IMAGE:.spec.template.spec.containers[0].image,DISPONIBLES:.status.availableReplicas,DESIREES:.spec.replicas'
 export JP_APISERVICE='jsonpath={.status.conditions[?(@.type=="Available")].status}{"|"}{.status.conditions[?(@.type=="Available")].reason}{"|"}{.status.conditions[?(@.type=="Available")].message}'
 if [ ! -e /.dockerenv ]; then
     saute_indisponible "install-metrics.sh" "hors conteneur : un vrai kubectl fausserait les appels"
     bilan "TASK-066 / install-metrics.sh"
 fi
-BAC="$(mktemp -d)"; export BAC
-trap 'rm -rf "$BAC"' EXIT
+BAC="$(mktemp -d)"; export BAC; trap 'rm -rf "$BAC"' EXIT
 faux() { cat > "$BAC/$1"; chmod +x "$BAC/$1"; }
 
-# Faux kubectl : la sortie des expressions demandées telle que le vrai la rend, ses
+# Faux kubectl : sortie des expressions demandées telle que le vrai la rend, ses
 # messages d'erreur, codes compris. La donnée n'est rendue que pour l'expression -o
 # attendue, sans quoi un script qui demanderait n'importe quoi serait servi pareil.
 faux kubectl <<'EOF'
@@ -48,9 +45,9 @@ sain() {   # déploiement disponible, APIService Available, relevé rendu
     printf 'True||\n' > "$BAC/apiservice"
     printf 'NAME   CPU(cores)   CPU%%   MEMORY(bytes)   MEMORY%%\nnode1  120m         6%%     1500Mi          40%%\n' > "$BAC/topnodes"
     : > "$BAC/topnodes-erreur"; : > "$BAC/kubectl-appels"; }
-CHEMIN="$BAC:$PATH"
-EXTRA=(); CODE=0
+CHEMIN="$BAC:$PATH"; EXTRA=(); CODE=0
 lancer() { sortie="$(env PATH="$CHEMIN" "${EXTRA[@]}" timeout 60 bash "$CIBLE" </dev/null 2>&1)" && CODE=0 || CODE=$?; }
+rate() { sain; EXTRA=(KUBECTL_ERREUR="$1"); lancer; EXTRA=(); }   # erreur du faux, code 1
 
 titre "Codes d'usage"
 sortie="$(timeout 30 bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
@@ -60,8 +57,7 @@ timeout 30 bash "$CIBLE" --option-inexistante >/dev/null 2>&1 && code=0 || code=
 assert_code 2 "$code" "une option inconnue rend 2"
 
 titre "kubectl ou timeout absent"
-for b in sans-kubectl sans-timeout; do
-    mkdir -p "$BAC/$b"
+for b in sans-kubectl sans-timeout; do mkdir -p "$BAC/$b"
     for c in bash sh timeout id mkdir basename dirname date uname cat tee sed head rm mktemp; do
         ln -sf "$(command -v "$c")" "$BAC/$b/$c"; done; done
 ln -sf "$BAC/kubectl" "$BAC/sans-timeout/kubectl"
@@ -69,23 +65,32 @@ rm -f "$BAC/sans-timeout/timeout"
 sortie="$(PATH="$BAC/sans-kubectl" timeout 60 bash "$CIBLE" </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "sans kubectl, le script rend 1"
 assert_contient "$sortie" "introuvable(s) : kubectl" "le message nomme kubectl"
-# « timeout » est résolu avant l'assignation : sans ce chemin absolu, le harnais
-# lui-même ne le trouverait plus dans le PATH restreint, et le 127 ne prouverait rien.
+# « timeout » résolu avant l'assignation : sans ce chemin absolu, le harnais ne le retrouverait plus dans le PATH restreint, et le 127 ne prouverait rien.
 sortie="$("$(command -v timeout)" 60 env PATH="$BAC/sans-timeout" bash "$CIBLE" </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "sans timeout, le script rend 1"
 assert_contient "$sortie" "introuvable(s) : timeout" "le message nomme timeout"
 
-titre "Cluster injoignable, kubeconfig invalide, droits insuffisants"
-sain; EXTRA=(KUBECTL_ERREUR='The connection to the server 127.0.0.1:6443 was refused - did you specify the right host or port?'); lancer; EXTRA=()
+titre "Injoignable, kubeconfig invalide, droits insuffisants, erreur interne"
+rate 'The connection to the server 127.0.0.1:6443 was refused - did you specify the right host or port?'
 assert_code 1 "$CODE" "un apiserver injoignable rend 1"
 assert_contient "$sortie" "injoignable" "le message nomme l'apiserver"
-sain; EXTRA=(KUBECTL_ERREUR='error: error loading config file "/root/.kube/config": yaml: line 3: mapping values are not allowed in this context'); lancer; EXTRA=()
+rate 'Unable to connect to the server: dial tcp 127.0.0.1:6443: i/o timeout'
+assert_code 1 "$CODE" "une connexion qui n'aboutit pas rend 1"
+assert_contient "$sortie" "injoignable" "« i/o timeout » est un défaut de réseau, pas un refus"
+rate 'Error from server (InternalError): an error on the server ("") has prevented the request from succeeding'
+assert_code 1 "$CODE" "une erreur interne du serveur rend 1"
+assert_contient "$sortie" "Échec de" "le message reste neutre : le cluster a répondu"
+assert_absent "$sortie" "injoignable" "une InternalError n'est pas attribuée au réseau"
+rate 'error: error loading config file "/root/.kube/config": yaml: line 3: mapping values are not allowed in this context'
 assert_code 1 "$CODE" "un kubeconfig mal formé rend 1"
 assert_contient "$sortie" "Kubeconfig invalide" "message distinct de l'apiserver injoignable"
-sain; EXTRA=(KUBECTL_ERREUR='Error from server (Forbidden): deployments.apps "metrics-server" is forbidden'); lancer; EXTRA=()
+rate 'error: You must be logged in to the server (Unauthorized)'
+assert_code 1 "$CODE" "des identifiants refusés rendent 1"
+assert_contient "$sortie" "Kubeconfig invalide" "Unauthorized est dit kubeconfig invalide, non injoignable"
+rate 'Error from server (Forbidden): deployments.apps "metrics-server" is forbidden'
 assert_code 1 "$CODE" "un refus de droits rend 1"
 assert_contient "$sortie" "Droits insuffisants" "troisième message, distinct des deux autres"
-sain; EXTRA=("KUBECTL_ERREUR=error: the server doesn't have a resource type \"apiservices\""); lancer; EXTRA=()
+rate "error: the server doesn't have a resource type \"apiservices\""
 assert_code 1 "$CODE" "une ressource inconnue de l'API rend 1"
 assert_contient "$sortie" "Ressource inconnue de l'API" "elle est nommée pour ce qu'elle est"
 assert_absent "$sortie" "injoignable" "et non prise pour un apiserver muet"
@@ -120,7 +125,7 @@ titre "Relevé « kubectl top nodes »"
 sain; rm -f "$BAC/topnodes"; lancer
 assert_code 1 "$CODE" "un relevé refusé rend 1"
 assert_contient "$sortie" "metrics not available yet" "l'erreur réelle de kubectl est montrée"
-assert_contient "$sortie" "[WARN] L'API metrics est enregistrée mais ne sert pas encore" "elle est signalée en [WARN], nommée"
+assert_contient "$sortie" "[WARN] L'API metrics est enregistrée mais ne sert pas de métriques" "elle est signalée en [WARN], nommée"
 assert_contient "$sortie" "~1 minute" "et rapportée au délai de démarrage de metrics-server"
 assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque le relevé manquant"
 sain; printf 'error: Metrics API not available\n' > "$BAC/topnodes-erreur"; lancer
@@ -156,16 +161,15 @@ assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque l'expiration"
 assert_egal "7 kubectl get deployment metrics-server -n kube-system --no-headers -o $CC_DEPLOIEMENT --request-timeout=5s" "$(head -1 "$BAC/timeout-appels")" "le délai externe vaut 7 (5 + 2), et l'appel reste borné à 5 s"
 rm -f "$BAC/timeout"
 
-# Mutation : la ligne de la vérification retirée, dans une copie jetable qui charge
-# son propre lib/common.sh. Si l'assertion du script était creuse, elle passerait.
+# Mutation : la ligne de vérification retirée, dans une copie jetable qui charge son
+# propre lib/common.sh. Si l'assertion du script était creuse, elle passerait.
 titre "Mutation — la vérification de l'APIService porte la preuve"
-mkdir -p "$BAC/mutant/lib"
-cp "$SCRIPTS_ROOT/lib/common.sh" "$BAC/mutant/lib/common.sh"
+mkdir -p "$BAC/mutant/lib"; cp "$SCRIPTS_ROOT/lib/common.sh" "$BAC/mutant/lib/common.sh"
 grep -v 'non Available (' "$CIBLE" > "$BAC/mutant/install-metrics.sh"
 assert_egal "non" "$(cmp -s "$CIBLE" "$BAC/mutant/install-metrics.sh" && echo oui || echo non)" "la copie jetable diffère bien de l'original : la mutation a mordu"
 sain; printf 'False|ServiceUnavailable|the server is currently unable to handle the request\n' > "$BAC/apiservice"
 sortie="$(env PATH="$CHEMIN" timeout 60 bash "$BAC/mutant/install-metrics.sh" </dev/null 2>&1)" && code=0 || code=$?
-assert_code 0 "$code" "condition inversée, l'APIService non Available passe : l'assertion du script n'est pas creuse"
+assert_code 0 "$code" "vérification retirée, l'APIService non Available passe : l'assertion du script n'est pas creuse"
 assert_contient "$sortie" "[SUCCESS]" "et c'est bien le [SUCCESS] interdit qui apparaît"
 
 titre "Ce que le script ne fait jamais"
