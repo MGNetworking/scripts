@@ -288,3 +288,98 @@ de `Kubernetes/` (TASK-055 à TASK-071).
   Git, modèle `.example` versionné, droits 0600 exigés) ; Secret docker-registry dans
   chaque namespace de `SRV_K8S_NAMESPACES` ; jamais affichés, journalisés ni passés
   en argument.
+
+---
+
+## F. Cadrage des scripts
+
+### Décision 49 — Un cadrage par grand dossier, une boucle de réflexion avant toute tâche (2026-09-17)
+
+Validé par `user` le 2026-09-17. **Pourquoi** : un script peut déjà tourner sur
+plusieurs serveurs, dans des crons ou d'autres processus, et il se déploie par
+`git clone` : un changement sur `master` atteint tous les serveurs au prochain
+`git pull`. Rien ne disait non plus comment naît une tâche (plan initial, demande dans
+la conversation, défaut découvert). L'évolution des scripts est donc cadrée et assumée.
+
+**Cinq choix de `user`** :
+
+1. **Un `CADRAGE.md` par grand dossier** : `Linux/`, `Docker/`, `Kubernetes/`,
+   `Synology/`. Deux sortes de scripts : ceux d'un **ensemble** (fonction globale, ex.
+   la gestion de Kubernetes) et les **scripts individuels** (autonomes, ex. Synology).
+2. **Aucune information serveur dans le dépôt**, qui est public. **Tout ce qui figure au
+   contrat est réputé utilisé** ; le modifier est une rupture. Aucun inventaire des usages.
+3. **Rupture de contrat** : correction et **ajout compatible** (option désactivée par
+   défaut) autorisés après validation. **Changement incompatible : jamais sur le script
+   existant** ; nouveau script, l'ancien marqué « déprécié » avec une date, supprimé
+   seulement par décision de `user` après migration.
+4. **Scripts déjà écrits** : l'état actuel est la base de départ. Ils appartiennent tous
+   à un ensemble, sauf les scripts individuels ; leur comportement actuel devient leur
+   contrat initial.
+5. **Autorité** : **seul `user` valide** une modification du cadrage. L'IA propose.
+
+Écartés : inventaire privé des usages ; versions Git épinglées par serveur ; option qui
+garde l'ancien comportement à vie.
+
+**Modèle de `CADRAGE.md`** :
+
+```markdown
+# Cadrage — Kubernetes/
+
+## Besoin
+Pourquoi ce dossier existe : le problème réglé, pour qui, dans quel contexte
+(VPS mono-nœud K3s…). Ce qui est hors besoin.
+
+## Ensembles
+### Gestion de Kubernetes
+- Fonction globale : ce que l'ensemble garantit une fois ses scripts appliqués.
+- Scripts membres et ordre : install-* → configure-* ; Maintenance/ à tout moment.
+- Conventions communes : accès au cluster (décision 48), codes de retour,
+  variables SRV_K8S_* de config/server.env.
+
+## Scripts individuels
+(aucun dans Kubernetes/ ; dans Synology/, un bloc par script autonome)
+
+## Contrats
+### configure-namespaces.sh — ensemble « Gestion de Kubernetes »
+- Besoin : créer les namespaces déclarés.
+- Fait : … Ne fait pas : …
+- Options et défauts : --dry-run, --yes, --config…
+- Codes de retour : 0 … 1 … 2 …
+- Modifie sur la machine ou le cluster : …
+- Lit : SRV_K8S_NAMESPACES
+- État : actif | déprécié le AAAA-MM-JJ, remplacé par …
+
+## Historique du cadrage
+| Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
+```
+
+Le **README** du dossier **explique** (usage, exemples, risques) ; le **cadrage**
+**engage** (besoin, contrat, décisions du dossier) ; `decisions.md` garde les décisions
+transverses. `docs/refactorisation-plan.md` reste la trace du chantier initial.
+
+**Boucle de réflexion, avant toute tâche** :
+
+```text
+1. Besoin          user l'exprime dans la conversation, en langage normal
+2. Lecture         l'IA lit le CADRAGE.md du dossier, le README, les décisions,
+                   les scripts voisins (plans fonctionnel et technique)
+3. Confrontation   déjà couvert ? dans quel ensemble ? touche-t-il un contrat ?
+4. Proposition     une issue et ses conséquences :
+                   a. déjà couvert → rien à faire, montrer comment
+                   b. correction (rétablit le contrat)
+                   c. ajout compatible (option désactivée par défaut)
+                   d. nouveau script (dans un ensemble, ou individuel)
+                   e. changement incompatible → nouveau script + ancien déprécié
+5. Questions       les choix ouverts, posés en une seule série
+6. Validation      user seul ; le cadrage est mis à jour et daté
+7. Tâches          seulement alors, fiches écrites (/atomiser) et mises au backlog
+```
+
+Aucune fiche avant l'étape 6. Aucune tâche hors du cadrage validé : le rédacteur refuse
+de l'écrire, le conducteur la refuse à l'étape 2 de `/tache`, le relecteur classe
+BLOQUANT un travail qui sort du contrat.
+
+**Transition** : un dossier dont le `CADRAGE.md` n'est pas encore écrit n'empêche pas
+une tâche de correction déjà au backlog ; le contrat de référence est alors le
+comportement actuel du script (choix 4). Toute nouvelle demande sur ce dossier attend
+son cadrage.

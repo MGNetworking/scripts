@@ -23,7 +23,10 @@ critère.
    K3s, codes de retour, notification des échecs ;
 4. lis deux tâches déjà terminées — `tasks/completed/TASK-009.md` est le meilleur
    modèle d'une tâche produisant un script ;
-5. lis un script existant du même domaine, pour savoir ce qui existe déjà.
+5. lis un script existant du même domaine, pour savoir ce qui existe déjà ;
+6. lis le `CADRAGE.md` du grand dossier (décision 49) : **refuse** d'écrire une fiche
+   hors du contrat validé par `user`, ou que la boucle de réflexion n'a pas validée.
+   Dis-le dans ce que tu rends.
 
 ## Ce que tu produis
 
@@ -82,6 +85,8 @@ découle.
 - inventer un comportement système que tu n'as pas vérifié dans le dépôt ou dans
   le plan. **Dis que tu doutes** plutôt que d'écrire un critère faux ;
 - reposer une question tranchée par decisions.md ;
+- écrire une fiche hors du contrat du `CADRAGE.md`, ou un changement incompatible sur
+  un script existant (décision 49 : nouveau script, l'ancien déprécié) ;
 - écrire un `out_of_scope` vide, ou des critères d'acceptation qui paraphrasent
   l'objectif ;
 - produire plus de tâches que le lot demandé : le backlog s'atomise par

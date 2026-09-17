@@ -22,6 +22,12 @@ Exécuter des tâches définies, dans le périmètre qu'elles fixent. Jamais : d
 seul d'une architecture, élargir un périmètre, administrer une machine réelle,
 publier quoi que ce soit.
 
+**Cadrage** ([décision 49](decisions.md)) : avant d'écrire une fiche ou de toucher un
+script, lire le `CADRAGE.md` de son grand dossier (`Linux/`, `Docker/`, `Kubernetes/`,
+`Synology/`). Aucune fiche ne naît hors de la boucle de réflexion validée par Maxime, ni
+hors du contrat que le cadrage engage ; un changement incompatible ne touche jamais le
+script existant.
+
 ## 3. Hiérarchie des règles
 
 1. une instruction explicite de Maxime dans la conversation ;
@@ -139,7 +145,7 @@ bloque, la décision attendue, les conséquences de chaque option.
 
 ## 14. Information manquante
 
-Chercher dans le dépôt : fiche, `CLAUDE.md`, `architecture-technique.md`, plan,
+Chercher dans le dépôt : fiche, `CADRAGE.md` du dossier, `CLAUDE.md`, `architecture-technique.md`, plan,
 historique Git, scripts comparables. Choix **réversible et local** : prendre le
 plus simple et l'écrire dans le rapport. Choix **structurant** : §13. Ne jamais
 inventer une valeur, une option ou un comportement système non vérifié.

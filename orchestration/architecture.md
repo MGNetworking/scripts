@@ -29,8 +29,8 @@ fichier est à corriger.
 
 | Acteur | Nature | Modèle | Consigne | Peut | Ne peut pas |
 |---|---|---|---|---|---|
-| **user** | humain | — | — | décider, reconnecter Claude Code, basculer `mode.json` | — |
-| **Session orchestratrice** | session Claude Code interactive, qui dure | Opus | `/tache` étapes 0 et 9 ; `/atomiser` (commande, qui délègue au rédacteur) | lancer conducteurs, rédacteurs et `lancer-agent.sh` en arrière-plan ; écrire décisions, `mode.json`, ce fichier ; commiter la mesure du conducteur ; pousser en fin de domaine | écrire un script ; vider son contexte (décision 46 amendée) |
+| **user** | humain | — | — | exprimer un besoin (jamais une commande), valider seul le cadrage, décider, reconnecter Claude Code, basculer `mode.json` | — |
+| **Session orchestratrice** | session Claude Code interactive, qui dure | Opus | boucle de réflexion ([décision 49](decisions.md)) ; `/tache` étapes 0 et 9 ; `/atomiser`, appliqué après validation du cadrage, qui délègue au rédacteur | proposer un cadrage ; lancer conducteurs, rédacteurs et `lancer-agent.sh` en arrière-plan ; écrire décisions, `mode.json`, ce fichier ; commiter la mesure du conducteur ; pousser en fin de domaine | écrire un script ; vider son contexte (décision 46 amendée) |
 | **Conducteur** | sous-agent Claude Code, neuf par tâche | Opus | [conducteur-tache.md](../.claude/agents/conducteur-tache.md), `/tache` étapes 1 à 8 | activer, vérifier, faire relire, écrire le fichier de retours, fusionner, clore ; terminer lui-même ou bloquer ; écrire lui-même une tâche `agent: orchestrateur` | lancer `lancer-agent.sh` ; pousser, rebaser, `reset --hard` ; appeler Python (absent de l'hôte, A87) |
 | **Agent exécutant** | Claude Code sans interface (`claude -p`) | celui de la fiche : `deepseek` (modèle externe, [modeles/](modeles/)) ou `sonnet`/`opus`/`haiku` | [executer-tache.md](../.claude/commands/executer-tache.md) | écrire le script, son fichier de cas et un éventuel `config/*.env.example` ; lancer `juger.sh` ; `git add`/`commit` dans sa copie | tout ce que refuse [limites.json](limites.json) : `CLAUDE.md`, README, `tasks/`, `docs/`, `lib/`, `orchestration/`, `.claude/` ; `push`, `merge`, `rebase`, `reset`, `checkout`, `switch`, `worktree` ; web, sous-agents, MCP (décision 39) ; lecture des `config/*.env` |
 | **Relecteur** | sous-agent, lecture seule | Opus | [relecteur.md](../.claude/agents/relecteur.md) | lire, rendre un verdict de 40 lignes au plus | écrire, lancer une commande |
@@ -59,7 +59,8 @@ NAS ([regles.md](regles.md) §7).
 
 | Artefact | Rôle | Écrit par | Lu par |
 |---|---|---|---|
-| `docs/refactorisation-plan.md` | scripts à produire, par domaine | user, session | rédacteur |
+| `<dossier>/CADRAGE.md` | besoin, ensembles et contrat de chaque script d'un grand dossier ; il engage (décision 49) | session, validé par user seul | session, rédacteur, conducteur, relecteur |
+| `docs/refactorisation-plan.md` | scripts du chantier initial, par domaine | user, session | rédacteur |
 | `tasks/pending/`, `active/`, `completed/`, `blocked/`, `cancelled/` | une fiche par tâche ; le répertoire suit le statut | rédacteur, conducteur | tous |
 | `tasks/backlog.md` | tableau des tâches, index du plan, identifiant libre | rédacteur, session, conducteur | session, conducteur |
 | `tasks/pending/TASK-039.md` | **registre unique** des anomalies `Axx` | conducteur, session | tous |
@@ -97,9 +98,10 @@ flowchart TB
     end
     G[("GitHub origin")]
 
-    U -- "consigne, décisions" --> S
-    S -- "question fermée" --> U
-    S -- "atomiser un lot" --> R
+    U -- "besoin, validation du cadrage,<br/>décisions" --> S
+    S -- "cadrage proposé, questions<br/>en une série, question fermée" --> U
+    S -- "cadrage validé" --> CA["CADRAGE.md<br/>par grand dossier"]
+    S -- "/atomiser après<br/>validation" --> R
     R -- "fiches, backlog" --> F
     S -- "préparer, reprendre<br/>SendMessage" --> C
     C -- "PRÊTE, REFUS, RELANCER,<br/>CLOSE, BLOQUÉE, BESOIN_USER" --> S
@@ -210,14 +212,27 @@ passe en `ready` les tâches qu'elle débloque. Le statut `validating`
 ([tasks/README.md](../tasks/README.md) §3) n'a servi qu'à une tâche d'orchestration qui se
 prouvait à l'usage (TASK-049).
 
-## 7. Du plan au push
+## 7. Du besoin au push
+
+Aucune fiche ne naît hors de la boucle de réflexion de la [décision 49](decisions.md) :
+user exprime un besoin en langage normal, la session lit le `CADRAGE.md` du dossier et
+propose, user seul valide. Le plan initial n'alimente plus que le chantier en cours.
 
 ```mermaid
 flowchart TD
-    P["Plan : un domaine,<br/>docs/refactorisation-plan.md"] --> Q{"plus de 7 scripts ?"}
+    B(["user exprime un besoin"]) --> Lec["Lecture : CADRAGE.md, README,<br/>décisions, scripts voisins"]
+    Lec --> Conf["Confrontation au contrat"]
+    Conf --> Prop{"Proposition"}
+    Prop -- "déjà couvert" --> Rien(["Rien à faire, montré à user"])
+    Prop -- "correction, ajout compatible,<br/>nouveau script, incompatible<br/>= nouveau + ancien déprécié" --> Qs["Questions en une seule série"]
+    Qs --> Val{"user valide ?"}
+    Val -- "non" --> Prop
+    Val -- "oui" --> Cad["CADRAGE.md mis à jour et daté"]
+    Cad --> P
+    P["Domaine à atomiser<br/>(ou plan initial)"] --> Q{"plus de 7 scripts ?"}
     Q -- "oui" --> Lots["Découper en lots"]
     Q -- "non" --> At
-    Lots --> At["/atomiser : rédacteurs,<br/>une fiche par script"]
+    Lots --> At["/atomiser appliqué par la session :<br/>rédacteurs, une fiche par script"]
     At --> Dec{"choix non tranchés<br/>par decisions.md ?"}
     Dec -- "oui" --> Qu["Questions à user"]
     Qu --> DN["Décision numérotée<br/>+ fiches alignées"]

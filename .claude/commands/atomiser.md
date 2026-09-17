@@ -10,7 +10,12 @@ fichiers de tâche exécutables.
 
 ## 1. Cadrer le lot
 
-- lis `docs/refactorisation-plan.md` pour la section visée ;
+**Préalable** (décision 49) : cette commande est l'étape 7 de la boucle de réflexion.
+`user` exprime un besoin, jamais cette commande ; la session ne l'applique qu'une fois
+le `CADRAGE.md` du grand dossier mis à jour et validé par `user`. Sans cela, arrête-toi.
+
+- lis le `CADRAGE.md` du grand dossier : chaque fiche reste dans son contrat ;
+- lis `docs/refactorisation-plan.md` pour la section visée (chantier initial) ;
 - lis `tasks/backlog.md` §2 pour les entrées d'index correspondantes ;
 - lis `orchestration/decisions.md` : il a
   tranché les cibles, la politique de sécurité, les codes de retour et la
@@ -49,6 +54,7 @@ Pour chaque tâche produite, contrôle toi-même :
   porte `tests/run.sh lint` si la tâche touche un `.sh` ;
 - `acceptance_criteria` énonce des faits observables, pas des intentions ;
 - `depends_on` ne cite que des identifiants réels ;
+- la fiche ne sort pas du contrat du `CADRAGE.md` validé ;
 - `environment` est `container-systemd` dès qu'il est question de `systemctl`,
   `timedatectl` ou `hostnamectl`.
 

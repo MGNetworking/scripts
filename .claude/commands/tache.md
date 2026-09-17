@@ -40,7 +40,11 @@ Refuse et explique pourquoi si :
 - l'environnement réclamé est indisponible — pour `container-debian`, le démon
   Docker doit répondre. Ne remplace jamais une validation comportementale par
   une analyse statique ;
-- l'arbre Git de `master` n'est pas propre. Ne remise rien : signale.
+- l'arbre Git de `master` n'est pas propre. Ne remise rien : signale ;
+- elle sort du contrat du `CADRAGE.md` de son grand dossier (décision 49) : un
+  changement incompatible sur un script existant, ou une fiche née hors de la boucle
+  de réflexion validée par `user`. Dossier encore sans cadrage : seule une correction
+  déjà au backlog passe.
 
 **Le champ `agent`** désigne un modèle externe de `orchestration/modeles/` (`deepseek`), un modèle
 Claude (`sonnet`, `opus`, `haiku`) ou `orchestrateur`. Fiche sans ce champ : choisis, écris-le dans la

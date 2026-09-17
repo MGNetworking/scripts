@@ -5,6 +5,9 @@
 > critères et ses preuves, vit désormais dans [tasks/backlog.md](../tasks/backlog.md).
 >
 > Les deux se complètent : le plan explique, le backlog engage.
+>
+> Il reste la trace du chantier initial : pour les évolutions, le `CADRAGE.md` de
+> chaque grand dossier prend le relais ([décision 49](../orchestration/decisions.md)).
 
 ## Objectif
 
