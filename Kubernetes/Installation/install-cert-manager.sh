@@ -4,6 +4,8 @@ set -Eeuo pipefail
 # Installe cert-manager par le chart OCI officiel jetstack, ou le met à jour vers
 # la version voulue. Rien n'est jamais désinstallé, ni aucune CRD supprimée :
 # les supprimer effacerait tous les Issuers, ClusterIssuers et Certificates.
+# TIMEOUT_HELM, borne externe du « helm upgrade », est surchargeable depuis
+# l'environnement : les tests s'en servent pour éprouver le dépassement.
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
@@ -17,10 +19,12 @@ unset HELM_NAMESPACE HELM_KUBECONTEXT HELM_KUBETOKEN HELM_KUBEAPISERVER HELM_KUB
       HELM_KUBEASGROUPS HELM_KUBECAFILE HELM_KUBEINSECURE_SKIP_TLS_VERIFY HELM_DRIVER
 
 NS="cert-manager"; CHART="oci://quay.io/jetstack/charts/cert-manager"
-DELAI=5        # --request-timeout de chaque appel kubectl, en secondes
-MARGE=2        # « timeout » entoure l'appel et laisse l'outil écrire son message
-ATTENTE=180    # délai d'attente des trois déploiements, en secondes
-DELAI_HELM=60
+DELAI=5                  # --request-timeout des appels kubectl, sauf « rollout status »
+MARGE=2                  # « timeout » entoure l'appel et laisse l'outil écrire son message
+ATTENTE=180              # attente des trois déploiements, en secondes
+DELAI_HELM="5m"          # --timeout de helm : le chart attend son hook startupapicheck
+TIMEOUT_HELM="${TIMEOUT_HELM:-330}"   # « timeout » externe du upgrade, plus long que lui
+TIMEOUT_LISTE=30         # « timeout » externe de « helm list »
 VERSION_ARG=""; DRY_RUN="false"; OUI="false"
 
 usage() {
@@ -39,13 +43,15 @@ la version demandée et sans « helm repo add » ; CRD posées par le chart
 (crds.enabled=true), namespace cert-manager créé au besoin. Ni root ni kubeconfig
 de K3s : helm et kubectl résolvent seuls le leur.
 Une version voulue inférieure à celle installée est refusée : ce script ne
-revient jamais en arrière, et une mise à jour demande confirmation.
+revient jamais en arrière, et une mise à jour demande confirmation — pas plus
+qu'une release laissée en échec ou en cours d'opération.
 
 Codes de retour :
   0  cert-manager est à la version voulue, ou l'était déjà
   1  helm ou kubectl absent, cluster injoignable, version absente ou invalide,
-     version voulue inférieure à l'installée, confirmation refusée, échec de
-     helm, déploiement non prêt, CRD manquante
+     version voulue inférieure à l'installée, release en échec ou en cours
+     d'opération, confirmation refusée, échec ou dépassement de helm,
+     déploiement non prêt, CRD manquante
   2  option inconnue
 EOF
 }
@@ -76,8 +82,8 @@ resume() {
     printf '  Version      %s\n' "$1"
     printf "  Namespace    %s, créé s'il manque\n" "$NS"
     printf '  CRD          posées par le chart (crds.enabled=true)\n'
-    printf '  Commande     helm upgrade --install cert-manager %s --version %s --namespace %s --create-namespace --set crds.enabled=true\n\n' \
-        "$CHART" "$VERSION" "$NS"
+    printf '  Commande     helm upgrade --install cert-manager %s --version %s --namespace %s --create-namespace --set crds.enabled=true --timeout %s\n\n' \
+        "$CHART" "$VERSION" "$NS" "$DELAI_HELM"
 }
 
 if [ "$DRY_RUN" = "true" ]; then
@@ -96,11 +102,12 @@ lire_kubectl() {
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
 }
 
-# Traduit l'échec d'un appel kubectl ; le 124 vient de « timeout », pas du cluster.
+# Traduit l'échec du dernier appel, kubectl comme « helm list » : le 124 vient de
+# « timeout », pas du cluster.
 echec() {
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
     case "$CODE:$ERREUR" in
-        124:*) die "L'appel $1 a été interrompu : délai dépassé (${DELAI} s)." ;;
+        124:*) die "L'appel $1 a été interrompu : délai dépassé." ;;
         *NotFound*) die "L'objet demandé est introuvable dans le cluster : $1." ;;
         *Forbidden*) die "Droits insuffisants : $1 a été refusé par le cluster." ;;
         *"error loading config file"*|*Unauthorized*|*x509*) die "Kubeconfig invalide ou périmé : $1 a été refusé." ;;
@@ -116,13 +123,33 @@ crd_presente() {
     echec "« kubectl get crd $1 »"
 }
 
-# Renseigne RELEASE, vide si la release est absente ; « helm list » en échec arrête.
+# Extrait un champ de la réponse JSON de « helm list », sans jq : le filtre ne
+# laisse qu'un objet plat, dont chaque champ est une chaîne simple.
+champ() { printf '%s' "$REP" | sed -n 's/.*"'"$1"'":"\([^"]*\)".*/\1/p' | head -n 1; }
+
+# Renseigne STATUT et RELEASE, tous deux vides si la release est absente. « -a »
+# est indispensable : sans lui, une release pending-install reste invisible et
+# des CRD orphelines feraient conclure à tort qu'aucune release n'existe.
 lire_release() {
+    STATUT=""; RELEASE=""
     CODE=0
-    REP="$(timeout "$DELAI_HELM" helm list --namespace "$NS" -f '^cert-manager$' 2>"$TEMPORAIRE/erreur")" || CODE=$?
-    [ "$CODE" = 0 ] || { sed 's/^/  /' "$TEMPORAIRE/erreur" >&2; die "« helm list » a échoué : le cluster n'a pas répondu. Vérifier l'accès par install-kubectl.sh (TASK-062)."; }
-    RELEASE="$(printf '%s\n' "$REP" | sed -n 's/^cert-manager[[:space:]].*[[:space:]]\(cert-manager-v[0-9][0-9.]*\).*/\1/p' | head -n 1)"
+    REP="$(timeout "$TIMEOUT_LISTE" helm list -a -o json --namespace "$NS" -f '^cert-manager$' 2>"$TEMPORAIRE/erreur")" || CODE=$?
+    ERREUR="$(cat "$TEMPORAIRE/erreur")"
+    [ "$CODE" = 0 ] || echec "« helm list »"
+    case "$REP" in *'"name":"cert-manager"'*) ;; *) return 0 ;; esac
+    STATUT="$(champ status)"
+    RELEASE="$(champ chart)"
     RELEASE="${RELEASE#cert-manager-}"
+}
+
+# Une release qui n'est pas « deployed » n'est jamais touchée : la mettre à jour
+# par-dessus laisserait un état intermédiaire derrière elle.
+statut_release() {
+    case "$1" in
+        failed) die "Release cert-manager : installation précédente en échec, à examiner (helm history cert-manager -n $NS). Rien n'a été modifié." ;;
+        pending-*) die "Release cert-manager « $1 » : opération helm en cours ou interrompue. Rien n'a été modifié." ;;
+        *) die "Release cert-manager au statut « $1 » : refus, rien n'a été modifié." ;;
+    esac
 }
 
 # Rend « > », « = » ou « < » : comparaison champ par champ, jamais lexicale.
@@ -140,12 +167,14 @@ comparer() {
 lire_kubectl version
 [ "$CODE" = 0 ] || echec "« kubectl version »"
 lire_release
-DETAIL="$VERSION (première installation)"
+[ -z "$STATUT" ] || [ "$STATUT" = "deployed" ] || statut_release "$STATUT"
+
+DETAIL="$VERSION (première installation)"; ACTION="Installer"; FIN="Installation"
 if [ -n "$RELEASE" ]; then
     ORDRE="$(comparer "$RELEASE" "$VERSION")"
     [ "$ORDRE" != "=" ] || { success "cert-manager $RELEASE est déjà à la version voulue : rien n'a été refait."; exit 0; }
     [ "$ORDRE" != ">" ] || die "Version voulue $VERSION inférieure à celle installée ($RELEASE) : refus, rien n'a été modifié."
-    DETAIL="$RELEASE → $VERSION"
+    DETAIL="$RELEASE → $VERSION"; ACTION="Mettre à jour"; FIN="Mise à jour"
 elif crd_presente certificates.cert-manager.io; then
     die "Des CRD cert-manager.io existent sans release Helm cert-manager : refus, rien n'a été modifié."
 fi
@@ -153,13 +182,19 @@ fi
 resume "$DETAIL"
 [ -z "$RELEASE" ] || warn "Mise à jour : lire les notes de version de cert-manager avant de poursuivre."
 [ -t 0 ] || [ "$OUI" = "true" ] \
-    || die "Installation à confirmer, et aucun terminal n'est disponible. Relancer avec --yes."
-confirm "Installer cert-manager ($DETAIL) dans le namespace $NS ?" || die "Installation abandonnée."
+    || die "$FIN à confirmer, et aucun terminal n'est disponible. Relancer avec --yes."
+confirm "$ACTION cert-manager ($DETAIL) dans le namespace $NS ?" || die "$FIN abandonnée."
 
+# helm porte son propre --timeout, plus court que la borne externe : c'est lui qui
+# doit rendre la main le premier, et le 124 rester reconnaissable.
 ECHEC=""
-run_logged timeout "$DELAI_HELM" helm upgrade --install cert-manager "$CHART" --version "$VERSION" \
-    --namespace "$NS" --create-namespace --set crds.enabled=true || ECHEC="oui"
-[ -z "$ECHEC" ] || die "helm upgrade --install a échoué : l'état de la release est incertain. La relire par « helm -n $NS status cert-manager »."
+run_logged timeout "$TIMEOUT_HELM" helm upgrade --install cert-manager "$CHART" --version "$VERSION" \
+    --namespace "$NS" --create-namespace --set crds.enabled=true --timeout "$DELAI_HELM" || ECHEC=$?
+case "$ECHEC" in
+    "") ;;
+    124) die "helm upgrade a dépassé son délai (124) : la release peut être à moitié posée. La relire par « helm -n $NS status cert-manager » avant de relancer." ;;
+    *) die "helm upgrade --install a échoué (code $ECHEC) : l'état de la release est incertain. La relire par « helm -n $NS status cert-manager »." ;;
+esac
 
 lire_release
 [ "$RELEASE" = "$VERSION" ] || die "Version relue « $RELEASE », différente de la voulue ($VERSION)."
@@ -168,8 +203,10 @@ printf '\nAttente des déploiements (délai %s s)\n' "$ATTENTE"
 NON_PRETS=""
 for d in cert-manager cert-manager-cainjector cert-manager-webhook; do
     CODE=0
+    # Sans --request-timeout : il bornerait aussi la requête watch, et l'attente
+    # de 180 s serait coupée à 5 s. La borne externe et --timeout suffisent.
     timeout "$((ATTENTE + MARGE))" kubectl rollout status "deployment/$d" --namespace "$NS" \
-        --timeout="${ATTENTE}s" --request-timeout="${DELAI}s" >/dev/null 2>"$TEMPORAIRE/erreur" || CODE=$?
+        --timeout="${ATTENTE}s" >/dev/null 2>"$TEMPORAIRE/erreur" || CODE=$?
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
     if [ "$CODE" = 0 ]; then printf '  %s : prêt\n' "$d"; continue; fi
     NON_PRETS="$NON_PRETS $d"

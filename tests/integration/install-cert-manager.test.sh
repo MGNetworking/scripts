@@ -16,27 +16,67 @@ BAC="$(mktemp -d)"; export BAC
 trap 'rm -rf "$BAC"' EXIT
 export SRV_CERT_MANAGER_VERSION="v1.21.2"
 faux() { cat > "$BAC/$1"; chmod +x "$BAC/$1"; }
-: > "$BAC/kubectl-tous"
+: > "$BAC/kubectl-tous"; : > "$BAC/helm-tous"
 
 # Faux helm : « list » ne rend que ce qui est posé, « upgrade » pose la release
-# et les CRD du chart — ce que fait le vrai, crds.enabled=true.
+# et les CRD du chart — ce que fait le vrai, crds.enabled=true. Le tableau et le
+# JSON sont rendus comme le vrai helm ; les variables HELM_* héritées sont
+# journalisées pour prouver qu'elles arrivent vides.
 faux helm <<'EOF'
 #!/bin/sh
 printf 'helm %s\n' "$*" >> "$BAC/helm-appels"
-case "$1" in
-    list)
-        printf 'NAME \tNAMESPACE \tREVISION \tUPDATED \tSTATUS \tCHART \tAPP VERSION\n'
-        [ -f "$BAC/release" ] && cat "$BAC/release"
-        exit 0 ;;
-    upgrade)
-        v=""; prec=""
-        for a in "$@"; do [ "$prec" = "--version" ] && v="$a"; prec="$a"; done
-        v="${HELM_POSE:-$v}"
-        printf 'cert-manager \tcert-manager \t1 \t2026-09-17 10:00:00 +0000 UTC \tdeployed \tcert-manager-%s \t%s\n' "$v" "$v" > "$BAC/release"
-        for c in certificates issuers clusterissuers; do
-            [ "$c" = "${HELM_CRD_MANQUANTE:-}" ] || : > "$BAC/crd-$c.cert-manager.io"
-        done
-        exit 0 ;;
+printf 'helm %s\n' "$*" >> "$BAC/helm-tous"
+printf 'HELM_NAMESPACE=[%s] HELM_KUBECONTEXT=[%s]\n' "${HELM_NAMESPACE:-}" "${HELM_KUBECONTEXT:-}" >> "$BAC/helm-vars"
+tous="$*"; cmd="$1"; shift
+tout=non; json=non; ns=default; filtre=''
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -a|--all) tout=oui ;;
+        -o|--output) shift; [ "${1:-}" = json ] && json=oui ;;
+        --namespace|-n) shift; ns="${1:-}" ;;
+        -f|--filter) shift; filtre="${1:-}" ;;
+    esac
+    shift
+done
+case "$cmd" in
+upgrade)
+    [ -z "${HELM_DORT:-}" ] || sleep "$HELM_DORT"
+    v=""; prec=""
+    for a in $tous; do [ "$prec" = "--version" ] && v="$a"; prec="$a"; done
+    v="${HELM_POSE:-$v}"
+    printf '%s' "$v" > "$BAC/release-version"
+    printf 'deployed' > "$BAC/release-status"
+    printf '%s' "$ns" > "$BAC/release-namespace"
+    for c in certificates issuers clusterissuers; do
+        [ "$c" = "${HELM_CRD_MANQUANTE:-}" ] || : > "$BAC/crd-$c.cert-manager.io"
+    done
+    exit 0 ;;
+list)
+    [ -z "${HELM_LISTE_ERREUR:-}" ] || { echo "$HELM_LISTE_ERREUR" >&2; exit "${HELM_LISTE_CODE:-1}"; }
+    st=''; ver=''; rns=''
+    if [ -f "$BAC/release-version" ]; then
+        ver="$(cat "$BAC/release-version")"; st="$(cat "$BAC/release-status")"; rns="$(cat "$BAC/release-namespace")"
+    fi
+    # Sans « -a », helm ne rend que deployed et failed : une release
+    # pending-install reste invisible. « -f » ne retient que le nom demandé, et
+    # le namespace demandé doit être celui de la release.
+    vu=non
+    if [ -n "$ver" ] && [ "$filtre" = '^cert-manager$' ] && [ "$ns" = "$rns" ]; then
+        case "$st" in
+            deployed|failed) vu=oui ;;
+            *) if [ "$tout" = oui ]; then vu=oui; fi ;;
+        esac
+    fi
+    if [ "$vu" = non ]; then
+        if [ "$json" = oui ]; then printf '[]\n'; else printf 'NAME \tNAMESPACE \tREVISION \tUPDATED \tSTATUS \tCHART \tAPP VERSION\n'; fi
+        exit 0
+    fi
+    if [ "$json" = oui ]; then
+        printf '[{"name":"cert-manager","namespace":"%s","revision":"1","updated":"2026-09-17 10:00:00.00000000 +0000 UTC","status":"%s","chart":"cert-manager-%s","app_version":"%s"}]\n' "$rns" "$st" "$ver" "$ver"
+    else
+        printf 'cert-manager \t%s \t1 \t2026-09-17 10:00:00 +0000 UTC \t%s \tcert-manager-%s \t%s\n' "$rns" "$st" "$ver" "$ver"
+    fi
+    exit 0 ;;
 esac
 exit 1
 EOF
@@ -62,10 +102,11 @@ EOF
 
 CHEMIN="$BAC:$PATH"
 neuf() {   # machine d'essai à zéro : pas de release, pas de CRD, déploiements prêts
-    rm -f "$BAC/release" "$BAC"/crd-*
+    rm -f "$BAC"/release-* "$BAC"/crd-*
     for d in cert-manager cert-manager-cainjector cert-manager-webhook; do : > "$BAC/pret-$d"; done
-    : > "$BAC/helm-appels"; : > "$BAC/kubectl-appels"; }
-poser() { printf 'cert-manager \tcert-manager \t1 \t2026-09-17 10:00:00 +0000 UTC \tdeployed \tcert-manager-%s \t%s\n' "$1" "$1" > "$BAC/release"; }
+    : > "$BAC/helm-appels"; : > "$BAC/kubectl-appels"; : > "$BAC/helm-vars"; }
+poser() { printf '%s' "$1" > "$BAC/release-version"; printf '%s' "${2:-deployed}" > "$BAC/release-status";
+          printf '%s' "${3:-cert-manager}" > "$BAC/release-namespace"; }
 crds() { for c in certificates issuers clusterissuers; do : > "$BAC/crd-$c.cert-manager.io"; done; }
 helm_appels() { cat "$BAC/helm-appels"; }
 kubectl_appels() { cat "$BAC/kubectl-appels"; }
@@ -127,6 +168,14 @@ neuf; EXTRA=(KUBECTL_ERREUR='Error from server (Forbidden): namespaces is forbid
 assert_code 1 "$CODE" "un refus de droits rend 1"
 assert_contient "$sortie" "Droits insuffisants" "troisième message, distinct des deux autres"
 
+titre "« helm list » en échec"
+neuf; EXTRA=(HELM_LISTE_ERREUR='Error from server (Forbidden): releases is forbidden'); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "un « helm list » refusé rend 1"
+assert_contient "$sortie" "Droits insuffisants" "le message nomme le refus de droits, comme pour kubectl"
+assert_contient "$sortie" "helm list" "et l'appel fautif"
+assert_absent "$(helm_appels)" "upgrade" "aucun helm upgrade n'est tenté"
+assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque l'échec"
+
 titre "--dry-run : version et commande, sans rien exécuter"
 neuf; lancer --dry-run
 assert_code 0 "$CODE" "--dry-run rend 0"
@@ -158,7 +207,7 @@ neuf; poser v1.21.2; lancer --yes
 assert_code 0 "$CODE" "une release à la version voulue rend 0"
 assert_contient "$sortie" "déjà à la version voulue" "le script constate au lieu de refaire"
 assert_contient "$sortie" "v1.21.2" "et affiche la version en place"
-assert_contient "$(helm_appels)" "helm list --namespace cert-manager -f ^cert-manager" "seule « helm list » a servi"
+assert_contient "$(helm_appels)" "helm list -a -o json --namespace cert-manager -f ^cert-manager" "seule « helm list » a servi, avec -a et -o json"
 assert_absent "$(helm_appels)" "upgrade" "aucun helm upgrade n'est tenté"
 assert_egal "kubectl version --request-timeout=5s" "$(kubectl_appels)" "et aucun déploiement n'est attendu"
 
@@ -166,6 +215,7 @@ titre "Release plus ancienne — mise à jour confirmée"
 neuf; poser v1.20.0; lancer --yes
 assert_code 0 "$CODE" "une release plus ancienne est mise à jour, en 0"
 assert_contient "$sortie" "v1.20.0 → v1.21.2" "le résumé montre installée → voulue"
+assert_contient "$sortie" "Mettre à jour cert-manager" "et la confirmation parle de mise à jour"
 assert_contient "$sortie" "notes de version" "et rappelle de lire les notes de version"
 assert_contient "$(helm_appels)" "--version v1.21.2" "la mise à jour vise la version voulue"
 assert_contient "$(helm_appels)" "--set crds.enabled=true" "avec les CRD du chart"
@@ -178,6 +228,43 @@ assert_contient "$sortie" "inférieure à celle installée" "le message dit laqu
 assert_contient "$sortie" "rien n'a été modifié" "et que rien n'a été modifié"
 assert_absent "$(helm_appels)" "upgrade" "aucun retour en arrière n'est tenté"
 assert_absent "$sortie" "[SUCCESS]" "et rien n'est annoncé comme réussi"
+
+titre "Comparaison numérique des versions"
+neuf; poser v1.9.0; lancer --yes --version v1.10.0
+assert_code 0 "$CODE" "v1.9.0 → v1.10.0 est une mise à jour, en 0"
+assert_contient "$(helm_appels)" "--version v1.10.0" "la mise à jour vise v1.10.0"
+assert_contient "$sortie" "v1.9.0 → v1.10.0" "le résumé montre installée → voulue"
+neuf; poser v1.10.0; lancer --yes --version v1.9.0
+assert_code 1 "$CODE" "v1.10.0 → v1.9.0 est refusé en 1, la comparaison n'étant pas lexicale"
+assert_contient "$sortie" "inférieure à celle installée" "le refus nomme la version inférieure"
+assert_absent "$(helm_appels)" "upgrade" "aucun retour en arrière n'est tenté"
+
+titre "Release en échec ou opération en cours"
+neuf; poser v1.21.2 failed; lancer --yes
+assert_code 1 "$CODE" "une release en échec rend 1, même à la version voulue"
+assert_contient "$sortie" "installation précédente en échec, à examiner" "le message dit ce que la release a de particulier"
+assert_contient "$sortie" "helm history cert-manager -n cert-manager" "et renvoie vers helm history"
+assert_absent "$(helm_appels)" "upgrade" "aucun helm upgrade n'est tenté par-dessus"
+assert_absent "$sortie" "[SUCCESS]" "et rien n'est annoncé comme réussi"
+neuf; poser v1.21.2 pending-install; crds; lancer --yes
+assert_code 1 "$CODE" "une release « pending-install » rend 1, même avec les CRD présentes"
+assert_contient "$sortie" "opération helm en cours ou interrompue" "le message nomme l'opération helm inachevée"
+assert_absent "$sortie" "sans release Helm" "sans la confondre avec des CRD orphelines"
+assert_absent "$(helm_appels)" "upgrade" "aucun helm upgrade n'est tenté"
+
+titre "Dépassement du délai de helm"
+neuf; EXTRA=(TIMEOUT_HELM=1 HELM_DORT=3); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "un helm upgrade qui dépasse son délai rend 1"
+assert_contient "$sortie" "124" "le message nomme le dépassement"
+assert_contient "$sortie" "à moitié posée" "et prévient de l'état incertain de la release"
+assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque le dépassement"
+
+titre "Variables HELM_* héritées"
+neuf; EXTRA=(HELM_NAMESPACE=kube-system HELM_KUBECONTEXT=autre); lancer --yes; EXTRA=()
+assert_code 0 "$CODE" "l'installation aboutit malgré les variables héritées"
+assert_contient "$(helm_appels)" "upgrade --install" "et helm est bien appelé"
+heritees="$(grep -vcE '^HELM_NAMESPACE=\[\] HELM_KUBECONTEXT=\[\]$' "$BAC/helm-vars" || true)"
+assert_egal "0" "$heritees" "HELM_NAMESPACE et HELM_KUBECONTEXT hérités arrivent vides à helm"
 
 titre "CRD cert-manager.io sans release Helm"
 neuf; crds; lancer --yes
@@ -229,11 +316,13 @@ assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque la CRD manquante"
 titre "Ce que le script ne fait jamais"
 assert_egal "0" "$(grep -c require_root "$CIBLE" || true)" "aucun require_root"
 assert_egal "0" "$(grep -vE '^[[:space:]]*#' "$CIBLE" | grep -c 'k3s\.yaml' || true)" "aucune référence à k3s.yaml hors commentaire"
-sans_delai="$(grep -vc -- '--request-timeout=5s' "$BAC/kubectl-tous" || true)"
-assert_egal "0" "$sans_delai" "chaque appel kubectl de la suite porte --request-timeout"
+sans_delai="$(grep -v '^kubectl rollout status ' "$BAC/kubectl-tous" | grep -vc -- '--request-timeout=5s' || true)"
+assert_egal "0" "$sans_delai" "chaque appel kubectl hors « rollout status » porte --request-timeout"
+avec_delai="$(grep -c -- '^kubectl rollout status .*--request-timeout' "$BAC/kubectl-tous" || true)"
+assert_egal "0" "$avec_delai" "« rollout status » ne le porte pas : il bornerait l'attente de 180 s à 5 s"
 hors_forme="$(grep -vcE '^kubectl (version|get crd|rollout status) ' "$BAC/kubectl-tous" || true)"
 assert_egal "0" "$hors_forme" "aucun appel kubectl ne sort de « version », « get crd » et « rollout status »"
-assert_egal "0" "$(grep -c uninstall "$BAC/helm-appels" || true)" "aucun helm uninstall sur le dernier chemin éprouvé"
+assert_egal "0" "$(grep -cE 'uninstall|rollback|delete' "$BAC/helm-tous" || true)" "aucun helm uninstall, rollback ni delete de toute la suite"
 
 cas2="non"; case "$codes" in *" 2"*) cas2="oui" ;; esac
 assert_egal "non" "$cas2" "aucun chemin éprouvé ne rend 2 : le 2 reste réservé à l'usage"
