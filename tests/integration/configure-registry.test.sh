@@ -33,7 +33,7 @@ cp "$SCRIPTS_ROOT/lib/common.sh" "$BAC/src/lib/common.sh"
 cp "$CIBLE" "$BAC/src/Kubernetes/Configuration/configure-registry.sh"
 SRC="$BAC/src/Kubernetes/Configuration/configure-registry.sh"
 CONF="$BAC/src/config/registry.env"
-NOM="registry-credentials"
+NOM="registry-credentials"; export NOM   # lu par le faux kubectl
 SERVEUR="registry.exemple.test:5000"; IDENT="identifiant-sentinelle-9f3a"; JETON="jeton-sentinelle-7c1b"
 printf '%s\n%s\n' "$IDENT" "$JETON" > "$BAC/sentinelles"
 : > "$BAC/attendu"
@@ -195,11 +195,11 @@ config
 titre "Guillemets et barres obliques inverses — échappés, le JSON reste valide"
 PIEGE_ID='compte"a\b'; PIEGE_JET='jeton"c\d'
 printf 'REGISTRY_SERVEUR="%s"\nREGISTRY_IDENTIFIANT="compte\\"a\\\\b"\nREGISTRY_JETON="jeton\\"c\\\\d"\n' "$SERVEUR" > "$CONF"
-chmod 600 "$CONF"; rm -f "$BAC/attendu"; sain; EXTRA=(CLUSTER_NS="web"); lancer --yes; EXTRA=()
+chmod 600 "$CONF"; rm -f "$BAC/attendu"; sain; LISTE="web"; EXTRA=(CLUSTER_NS="web"); lancer --yes; EXTRA=()
 assert_code 0 "$CODE" "une valeur à guillemet et antislash est échappée, non refusée"
 assert_contient "$(cat "$BAC/recu/json")" '"username":"compte\"a\\b"' "le JSON décodé porte la valeur échappée"
 assert_contient "$(cat "$BAC/recu/json")" "\"auth\":\"$(printf '%s:%s' "$PIEGE_ID" "$PIEGE_JET" | base64 -w0)\"" "et l'empreinte auth les valeurs brutes"
-: > "$BAC/attendu"; config
+: > "$BAC/attendu"; config; LISTE="web,data,monitoring"
 
 titre "Liste des namespaces — refusée en 2, avant tout appel kubectl"
 sain
@@ -219,7 +219,7 @@ assert_absent "$(appels)" "apply" "rien n'est appliqué, pas même les namespace
 titre "kubectl absent"
 mkdir -p "$BAC/sans-kubectl"
 for c in bash sh timeout id mkdir basename dirname date uname cat tee sed head rm mktemp grep tr stat; do ln -sf "$(command -v "$c")" "$BAC/sans-kubectl/$c"; done
-sortie="$(env PATH="$BAC/sans-kubectl" SRV_K8S_NAMESPACES="$LISTE" timeout 60 bash "$SRC" --yes </dev/null 2>&1)" && code=0 || code=$?
+sortie="$(env PATH="$BAC/sans-kubectl" SRV_K8S_NAMESPACES="$LISTE" LOG_DIR="$BAC/logs" TMPDIR="$BAC/tmp" timeout 60 bash "$SRC" --yes </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "sans kubectl, le script rend 1"
 assert_contient "$sortie" "kubectl est introuvable" "le message nomme kubectl"
 assert_contient "$sortie" "install-kubectl.sh" "et renvoie vers TASK-062"
@@ -277,7 +277,7 @@ assert_contient "$(appels)" "get secret" "l'état est relu à chaque exécution"
 LISTE="web,data,monitoring"
 sain; pose "web=$(empreinte)" "data=empreinte-perimee"; LISTE="web,data"; lancer --yes
 assert_code 0 "$CODE" "un Secret à jour et un Secret périmé rendent 0"
-assert_contient "$sortie" "1 créé(s), 1 mis à jour" "le bilan distingue création et mise à jour"
+assert_contient "$sortie" "0 créé(s), 1 mis à jour" "le bilan compte séparément créations et mises à jour"
 assert_egal "1" "$(grep -c -- 'apply -f -' <<<"$(appels)")" "seul le Secret périmé est appliqué"
 assert_egal "data" "$(sed -n 's/^  namespace: //p' "$BAC/recu/manifeste")" "et c'est celui du namespace périmé"
 assert_egal "$(empreinte)" "$(cat "$BAC/etat/data")" "l'empreinte périmée a été remplacée"
@@ -294,6 +294,9 @@ assert_egal "2" "$(grep -c -- 'apply -f -' <<<"$(appels)")" "la boucle s'arrête
 
 titre "Délai dépassé — « timeout » enveloppe chaque appel"
 REEL_TIMEOUT="$(command -v timeout)"
+# Le lien symbolique est retiré AVANT d'écrire : « cat > » suivrait le lien et
+# écraserait le vrai timeout, dont le faux se sert comme repli.
+rm -f "$BAC/bin/timeout"
 faux timeout <<EOF
 #!/bin/sh
 case "\${TIMEOUT_SUR:-}:\$*" in
@@ -307,16 +310,16 @@ assert_code 1 "$CODE" "un appel kubectl qui expire rend 1"
 assert_contient "$sortie" "délai dépassé" "le délai est nommé pour ce qu'il est"
 assert_contient "$sortie" "kubectl get namespaces" "et l'appel qui a expiré est nommé"
 assert_egal "7 kubectl get namespaces -o name --request-timeout=5s" "$(head -1 "$BAC/timeout-appels")" "le délai externe vaut 7 (5 + 2), et l'appel reste borné à 5 s"
-sain; : > "$BAC/timeout-appels"; EXTRA=(CLUSTER_NS="web data" TIMEOUT_SUR=apply); lancer --yes; EXTRA=()
+sain; : > "$BAC/timeout-appels"; LISTE="web,data"; EXTRA=(CLUSTER_NS="web data" TIMEOUT_SUR=apply); lancer --yes; EXTRA=()
 assert_code 1 "$CODE" "un apply qui expire rend 1"
 assert_contient "$sortie" "délai dépassé" "le délai est nommé sur l'apply aussi"
 assert_contient "$sortie" "« web »" "et le namespace dont l'apply a expiré est nommé"
 assert_contient "$sortie" "0 appliqué(s), 1 échoué (web), 1 non tenté(s)" "le bilan compte appliqué, échoué et non tenté"
 assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque l'échec partiel"
-rm -f "$BAC/bin/timeout"
+rm -f "$BAC/bin/timeout"; ln -sf "$REEL_TIMEOUT" "$BAC/bin/timeout"; LISTE="web,data,monitoring"
 
 titre "Confirmation — décision 45"
-sain; EXTRA=(CLUSTER_NS="web"); lancer
+sain; LISTE="web"; EXTRA=(CLUSTER_NS="web"); lancer
 assert_code 1 "$CODE" "hors terminal et sans --yes, un changement rend 1"
 assert_contient "$sortie" "--yes" "le message nomme l'option qui débloque"
 assert_absent "$(appels)" "apply" "et rien n'est appliqué"
@@ -330,10 +333,10 @@ assert_absent "$(appels)" "apply" "et rien n'est appliqué"
 sain; lancer_pty o
 assert_code 0 "$CODE" "une réponse « o » sous terminal applique, en 0"
 assert_contient "$sortie" "[SUCCESS]" "et le verdict est déclaré"
-EXTRA=()
+EXTRA=(); LISTE="web,data,monitoring"
 
 titre "Aucun fichier temporaire ne survit à l'exécution"
-sain; EXTRA=(CLUSTER_NS="web data"); lancer --yes; EXTRA=()
+sain; LISTE="web,data"; EXTRA=(CLUSTER_NS="web data"); lancer --yes; EXTRA=(); LISTE="web,data,monitoring"
 assert_code 0 "$CODE" "l'exécution rend 0"
 assert_egal "" "$(find "$BAC/tmp" -mindepth 1 2>/dev/null | head -5)" "le répertoire temporaire est rendu vide"
 assert_egal "$AVANT_SRC" "$(cd "$BAC/src" && find . -type f | sort)" "aucun fichier n'est laissé dans l'arborescence du script"
@@ -363,20 +366,29 @@ if [ -z "${SUITE_SOUS_TEST:-}" ]; then
     # SUITE le voie : chacun est jugé par une relance complète de ce fichier
     # contre lui. Les relances sont indépendantes — chacune son bac — et
     # tournent de front ; le verdict n'est lu qu'après.
-    MUT="$BAC/mutant"; JUGES=(); PIDS=()
+    JUGES=(); PIDS=()
+    # Chaque mutant est posé dans sa propre arborescence, socle compris : la
+    # relance éprouve aussi « --help », qui doit résoudre lib/common.sh.
+    mutant() {   # <nom> — lit le script sur l'entrée standard, rend son chemin
+        local d="$BAC/mut/$1"
+        mkdir -p "$d/Kubernetes/Configuration" "$d/lib"
+        cp "$SCRIPTS_ROOT/lib/common.sh" "$d/lib/common.sh"
+        cat > "$d/Kubernetes/Configuration/configure-registry.sh"
+        printf '%s' "$d/Kubernetes/Configuration/configure-registry.sh"
+    }
     relancer() { JUGES+=("$1")
         SUITE_SOUS_TEST="$2" timeout 600 bash "${BASH_SOURCE[0]}" >"$BAC/juge-$1.log" 2>&1 &
         PIDS+=("$!"); }
     # Les programmes sed qui portent un « $ » littéral sont entre guillemets
     # doubles, échappé : entre guillemets simples shellcheck les signalerait
     # (SC2016), et ce sont bien des « $ » de sed, non des expansions du shell.
-    cp "$CIBLE" "$MUT-temoin.sh"; relancer "témoin" "$MUT-temoin.sh"
-    sed -e 's#< <(manifeste "\$n")#--docker-password="$JETON" < <(manifeste "$n")#' "$CIBLE" > "$MUT-jeton.sh"
-    relancer "jeton en argument" "$MUT-jeton.sh"
-    sed -e 's#^\[ "\$DROITS" = 600 \].*#:#' "$CIBLE" > "$MUT-droits.sh"
-    relancer "contrôle des droits retiré" "$MUT-droits.sh"
-    sed -e 's#\[ "\$REP" = "\$EMPREINTE" \]#false#' "$CIBLE" > "$MUT-empreinte.sh"
-    relancer "comparaison d'empreinte retirée" "$MUT-empreinte.sh"
+    relancer "témoin" "$(mutant temoin < "$CIBLE")"
+    relancer "jeton en argument" \
+        "$(sed -e "s#< <(manifeste \"\$n\")#--docker-password=\"\$JETON\" < <(manifeste \"\$n\")#" "$CIBLE" | mutant jeton)"
+    relancer "contrôle des droits retiré" \
+        "$(sed -e "s#^\[ \"\$DROITS\" = 600 \].*#:#" "$CIBLE" | mutant droits)"
+    relancer "comparaison d'empreinte retirée" \
+        "$(sed -e "s#\[ \"\$REP\" = \"\$EMPREINTE\" \]#false#" "$CIBLE" | mutant empreinte)"
     for i in "${!JUGES[@]}"; do
         wait "${PIDS[$i]}" && code=0 || code=$?
         if [ "${JUGES[$i]}" = "témoin" ]; then

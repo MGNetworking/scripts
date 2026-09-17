@@ -150,7 +150,7 @@ appel() {   # <verbe kubectl...>
 cause() {
     case "$CODE:$ERREUR" in
         124:*) printf 'délai dépassé (%s s), appel interrompu par timeout' "$DELAI" ;;
-        *Forbidden*) printf 'Droits insuffisants : le cluster a refusé' ;;
+        *Forbidden*) printf 'Droits insuffisants (Forbidden) : le cluster a refusé' ;;
         *Unauthorized*|*x509*|*"error loading config file"*) printf 'Kubeconfig invalide ou périmé' ;;
         *NotFound*) printf 'Ressource absente du cluster (NotFound)' ;;
         *"connection refused"*|*"was refused"*|*"Unable to connect"*|*"no such host"*|*"i/o timeout"*) printf "L'apiserver est injoignable — vérifier l'accès par install-kubectl.sh (TASK-062)" ;;
