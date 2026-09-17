@@ -85,25 +85,37 @@ rm -f "$copie/RETOURS-$tache.md"
 journal="$racine/orchestration/mesures/agents.tsv"
 [ -f "$journal" ] || printf 'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\tcout_usd\n' > "$journal"
 # Coût au tarif du profil (A09) ; vide pour un modèle Claude, facturé à l'abonnement.
+# Jetons lus dans le transcript de la session, pas dans la sortie JSON de claude -p
+# (A122) : celle-ci ne rend que la dernière boucle. Une notification de tâche de fond
+# (Monitor, commande passée en arrière-plan) arrivée après la réponse en relance une,
+# seule comptée : TASK-071, 1 tour et 243 jetons pour 81 appels au modèle en 2269 s.
+# Transcript introuvable (sortie vide d'un agent tué par DUREE_MAX, session inconnue) :
+# relevé « incomplet ». Tours : appels distincts au modèle.
 node -e '
-    const [sortie, ...champs] = process.argv.slice(1);
+    const fs = require("fs"), path = require("path"), os = require("os");
+    const [sortie, date, tache, profil, modele, duree, code, pe, pc, ps] = process.argv.slice(1);
     let j = {}; try { j = JSON.parse(sortie); } catch {}
-    const u = j.usage || {};
-    const cache = (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-    const [date, tache, profil, modele, duree, code, pe, pc, ps] = champs;
-    // Relevé incomplet (A122). claude -p ne rend que la dernière boucle de la
-    // session : une notification de tâche de fond (Monitor, commande passée en
-    // arrière-plan) arrivée après la réponse en relance une, à un tour, seule
-    // comptée (TASK-071 : 1 tour, 243 jetons, pour 81 appels au modèle en 2269 s).
-    // Une sortie vide ou illisible (agent tué par DUREE_MAX) ne se compte pas non plus.
-    if (!j.usage || !(j.num_turns > 1 || (j.num_turns === 1 && +duree <= 600))) {
+    const ids = [...sortie.matchAll(/"session_id"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
+    const projets = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"), "projects");
+    const appels = new Map();
+    for (const d of ids.length && fs.existsSync(projets) ? fs.readdirSync(projets) : []) {
+        const f = path.join(projets, d, ids[ids.length - 1] + ".jsonl");
+        if (!fs.existsSync(f)) continue;
+        for (const l of fs.readFileSync(f, "utf8").split("\n")) {
+            try { const m = JSON.parse(l).message; if (m.role === "assistant" && m.id && m.usage) appels.set(m.id, m.usage); } catch {}
+        }
+    }
+    let entree = 0, cache = 0, produits = 0;
+    for (const u of appels.values()) {
+        entree += u.input_tokens || 0; produits += u.output_tokens || 0;
+        cache += (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+    }
+    if (appels.size === 0) {
         console.log([date, tache, profil, modele, "incomplet", "?", "?", "?", duree, code, "?"].join("\t"));
-        console.error("RELEVÉ INCOMPLET : " + (j.num_turns ?? "?") + " tour(s) pour " + duree +
-            " s ; jetons réels dans ~/.claude/projects/<copie>/" + (j.session_id ?? "<session>") + ".jsonl");
+        console.error("RELEVÉ INCOMPLET : transcript de session introuvable (" + (ids.pop() || "aucune session") + ")");
     } else {
-        const cout = pe ? ((u.input_tokens * pe + cache * pc + u.output_tokens * ps) / 1e6).toFixed(3) : "";
-        console.log([date, tache, profil, modele, j.num_turns, u.input_tokens, cache,
-                     u.output_tokens, duree, code, cout].join("\t"));
+        const cout = pe ? ((entree * pe + cache * pc + produits * ps) / 1e6).toFixed(3) : "";
+        console.log([date, tache, profil, modele, appels.size, entree, cache, produits, duree, code, cout].join("\t"));
     }
     console.error(j.result || "(aucune réponse lisible de cet agent)");
 ' "$sortie" "$(date '+%F %T')" "$tache" "$profil" "$MODELE" "$(( $(date +%s) - debut ))" "$code" \

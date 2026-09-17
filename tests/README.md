@@ -448,7 +448,8 @@ par ce chemin absolu, ou le faux exécute directement la commande enveloppée.
 
 Fait observé : TASK-071, premier jet (6ad93f8), deux conteneurs bloqués plus de
 30 minutes. `orchestration/outils/juger.sh` refuse, avant de le lancer, un fichier
-de cas qui crée un lien puis écrit par `>` vers le même chemin.
+de cas qui crée un lien puis écrit par `>` vers le même chemin
+(`orchestration/outils/lien-ecrit.awk`, prouvé par `tests/acceptance/TASK-072-faux-binaires.sh`).
 
 ##### Deux défauts que ces groupes ont trouvés, et qui sont corrigés
 
