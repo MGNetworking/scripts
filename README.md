@@ -31,7 +31,7 @@ d'utilisation dans son propre README.
 |---|---|---|
 | [Linux/](Linux/README.md) | système de base, sécurité, distribution K3s | `System` : 13 scripts ; `Security` : 7 scripts ; `K3s` : 5 scripts |
 | [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 9 scripts |
-| [Kubernetes/](Kubernetes/README.md) | installation, configuration et maintenance d'un cluster | `Installation` : 1 script ; `Maintenance` : 7 scripts |
+| [Kubernetes/](Kubernetes/README.md) | installation, configuration et maintenance d'un cluster | `Installation` : 2 scripts ; `Maintenance` : 7 scripts |
 | [Synology/](Synology/README.md) | NAS Synology : Plex, administration DSM | 2 scripts hérités |
 
 Socle commun : [config/](config/README.md) pour les configurations,

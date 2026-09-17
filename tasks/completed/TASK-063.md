@@ -1,7 +1,7 @@
 ---
 id: TASK-063
 title: "Écrire Kubernetes/Installation/install-helm.sh"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: container-debian
