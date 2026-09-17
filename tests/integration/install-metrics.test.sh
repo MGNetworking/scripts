@@ -74,9 +74,9 @@ titre "Injoignable, kubeconfig invalide, droits insuffisants, erreur interne"
 rate 'The connection to the server 127.0.0.1:6443 was refused - did you specify the right host or port?'
 assert_code 1 "$CODE" "un apiserver injoignable rend 1"
 assert_contient "$sortie" "injoignable" "le message nomme l'apiserver"
-rate 'Unable to connect to the server: dial tcp 127.0.0.1:6443: i/o timeout'
+rate 'Unable to connect to the server: dial tcp 127.0.0.1:6443: connect: no route to host'
 assert_code 1 "$CODE" "une connexion qui n'aboutit pas rend 1"
-assert_contient "$sortie" "injoignable" "« i/o timeout » est un défaut de réseau, pas un refus"
+assert_contient "$sortie" "injoignable" "« Unable to connect » est un défaut de réseau, pas un refus"
 rate 'Error from server (InternalError): an error on the server ("") has prevented the request from succeeding'
 assert_code 1 "$CODE" "une erreur interne du serveur rend 1"
 assert_contient "$sortie" "Échec de" "le message reste neutre : le cluster a répondu"
