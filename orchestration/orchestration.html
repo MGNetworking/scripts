@@ -2,7 +2,7 @@
 <!-- Source de l'affiche orchestration.png. Export :
      "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --hide-scrollbars \
        --force-device-scale-factor=1.5 --window-size=1800,1240 \
-       --screenshot="$PWD/orchestration/orchestration.png" "file:///$PWD/orchestration/orchestration.html"
+       --screenshot="$(pwd -W)/orchestration/orchestration.png" "file:///$(pwd -W)/orchestration/orchestration.html"
      En cas d'écart, orchestration/architecture.md fait foi. -->
 <html lang="fr">
 <head>
@@ -114,42 +114,40 @@
 
 <div class="entete">
   <h1>MGNetworking — Workflow et architecture de l'orchestration des agents IA</h1>
-  <div class="sous-titre">Du plan à la tâche terminée : création → lancement → exécution et validation → clôture</div>
+  <div class="sous-titre">Du besoin à la tâche terminée : cadrage, création → lancement → exécution et validation → clôture</div>
   <div class="mode"><b>Mode actuel : automatique</b><br>La session enchaîne seule la tâche suivante<br><span class="mono">orchestration/mode.json</span></div>
 </div>
 
 <div class="colonnes">
   <!-- 1 -->
   <section class="col c1">
-    <div class="titre"><span class="num">1</span><div><h2>Création des tâches</h2><small>Du plan au backlog</small></div></div>
+    <div class="titre"><span class="num">1</span><div><h2>Création des tâches</h2><small>Du besoin au backlog (décision 49)</small></div></div>
     <div class="corps">
-      <div class="boite b-user"><svg class="ico"><use href="#i-user"/></svg><span>L'utilisateur demande l'atomisation d'un domaine</span></div>
-      <div class="cmd mono">/atomiser Linux/Security</div>
+      <div class="boite b-user"><svg class="ico"><use href="#i-user"/></svg><span>L'utilisateur <b>exprime un besoin</b>, en langage normal — pas une commande</span></div>
       <div class="fleche">↓</div>
-      <div class="boite b-session">
-        <h3><svg class="ico"><use href="#i-ecran"/></svg>Session Claude Code <span class="role">orchestrateur · Opus</span></h3>
+      <div class="boite besoin">
+        <h3><svg class="ico"><use href="#i-question"/></svg>Besoin et cadrage <span class="role">session · boucle de réflexion</span></h3>
         <ul>
-          <li>Lit le plan et <span class="mono">decisions.md</span></li>
+          <li>Lit le <span class="mono">CADRAGE.md</span> du grand dossier, le README, <span class="mono">decisions.md</span>, les scripts voisins</li>
+          <li>Confronte au contrat, propose : déjà couvert, correction, ajout compatible, nouveau script ; incompatible → nouveau script, ancien déprécié</li>
+          <li>Pose les choix ouverts <b>en une seule série</b></li>
+          <li><b>L'utilisateur seul valide</b> : cadrage mis à jour et daté</li>
+        </ul>
+      </div>
+      <div class="fleche">↓ <small>seulement alors</small></div>
+      <div class="boite b-session">
+        <h3><svg class="ico"><use href="#i-ecran"/></svg>La session applique <span class="mono">/atomiser</span> <span class="role">Opus</span></h3>
+        <ul>
           <li>Découpe en lots si plus de 7 scripts</li>
-          <li>Lance le sous-agent rédacteur, avec la section du plan et les identifiants libres</li>
+          <li>Lance le rédacteur, avec le cadrage et les identifiants libres</li>
         </ul>
       </div>
       <div class="fleche">↓</div>
       <div class="boite b-agent">
         <h3><svg class="ico"><use href="#i-doc"/></svg>Rédacteur-tache <span class="role">sous-agent · modèle hérité</span></h3>
         <ul>
-          <li>Une fiche par script, format de <span class="mono">tasks/README.md</span></li>
-          <li>Écrit <span class="mono">tasks/pending/TASK-XXX.md</span></li>
-          <li>Met à jour <span class="mono">tasks/backlog.md</span></li>
-          <li>N'invente aucune décision : il la signale</li>
-        </ul>
-      </div>
-      <div class="fleche">↓</div>
-      <div class="boite besoin">
-        <h3><svg class="ico"><use href="#i-question"/></svg>Choix non tranchés ?</h3>
-        <ul>
-          <li>La session pose les questions à l'utilisateur</li>
-          <li>Réponses → <b>décision numérotée</b> dans <span class="mono">decisions.md</span>, fiches alignées</li>
+          <li>Une fiche par script dans <span class="mono">tasks/pending/</span>, backlog à jour</li>
+          <li>Refuse une fiche hors du contrat validé ; n'invente aucune décision</li>
         </ul>
       </div>
       <div class="fleche">↓</div>
@@ -184,7 +182,7 @@
         <h3><svg class="ico"><use href="#i-roue"/></svg>Conducteur-tache <span class="role">sous-agent · Opus</span></h3>
         <ol>
           <li>Charge le contexte : fiche, <span class="mono">regles.md</span></li>
-          <li>Vérifie : <i>ready</i>, dépendances closes, Docker, arbre Git propre — sinon <b>REFUS</b></li>
+          <li>Vérifie : <i>ready</i>, dépendances closes, Docker, arbre Git propre, fiche dans le cadrage — sinon <b>REFUS</b></li>
           <li>Active la tâche : <i>pending → active</i>, backlog, 1 commit</li>
         </ol>
         <div style="margin-top:3px">Rend <b>PRÊTE</b> + la commande de lancement</div>
@@ -241,7 +239,7 @@ bash orchestration/outils/lancer-agent.sh \
       <div class="boite b-relec">
         <h3><svg class="ico"><use href="#i-relec"/></svg>Relecteur — 6. Relire <span class="role">Opus, lecture seule</span></h3>
         <ul>
-          <li>Critères un par un ; périmètre et conventions</li>
+          <li>Critères un par un ; périmètre, conventions ; hors cadrage = BLOQUANT</li>
           <li>Défauts BLOQUANT / MAJEUR / MINEUR ; tests creux</li>
           <li>Rend un verdict factuel au conducteur</li>
         </ul>
@@ -266,7 +264,7 @@ bash orchestration/outils/lancer-agent.sh \
         <ul>
           <li>Rapport <span class="mono">tasks/reports/TASK-XXX-report.md</span>, compte rendu en tête</li>
           <li>Chaque réserve → ligne <b>Axx</b> du registre unique <span class="mono">TASK-039</span></li>
-          <li>Écart d'agent ou d'architecture → nouvelle fiche TASK</li>
+          <li>Écart d'agent ou d'architecture → fiche TASK (décision 46)</li>
         </ul>
       </div>
       <div class="fleche">↓</div>
@@ -330,7 +328,7 @@ bash orchestration/outils/lancer-agent.sh \
         <div class="i2">backlog.md (index global)</div>
         <div class="i1">docs/ (plan, socle technique)</div>
         <div class="i1">lib/ (common.sh)</div>
-        <div class="i1">Linux/ · Docker/ · Kubernetes/ · Synology/</div>
+        <div class="i1">Linux/ · Docker/ · Kubernetes/ · Synology/ (CADRAGE.md)</div>
         <div class="i1">tests/ (env/ conteneurs, integration/)</div>
         <div class="i1">config/ (*.env.example versionnés)</div>
         <div style="margin-top:4px">../script-agents/TASK-XXX</div>
@@ -380,6 +378,7 @@ bash orchestration/outils/lancer-agent.sh \
       <li>Aucune exécution sur l'hôte : tests en conteneur Docker</li>
       <li>Agent : ni push, ni merge, ni web, ni sous-agents ; n'écrit pas <span class="mono">tasks/ docs/ lib/ orchestration/ .claude/</span> ni les README</li>
       <li>Une seule relecture, une seule relance de l'agent</li>
+      <li>Aucune fiche hors du <span class="mono">CADRAGE.md</span> validé par l'utilisateur</li>
       <li>Registre unique des anomalies : <span class="mono">tasks/pending/TASK-039.md</span></li>
       <li>Arrêt : aucune tâche <i>ready</i>, <i>blocked</i>, BESOIN_USER, mode manuel</li>
     </ul>
