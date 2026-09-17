@@ -25,7 +25,7 @@ Les niveaux de test, découverts par leur dispatcher en `maxdepth 1` :
 | `environment` | services, `systemctl`, init réel — `tests/environment/<sujet>.test.sh` | conteneur `systemd` |
 | `acceptance` | critères d'une tâche — `tests/acceptance/TASK-0xx-<sujet>.sh` | selon la tâche |
 
-Un niveau s'ajoute en déposant son dispatcher au chemin que donne `tests/run.sh --liste`.
+Les niveaux sont fixés dans `tests/run.sh` ; chacun s'active dès que son dispatcher existe.
 
 ## 2. Lancer
 
@@ -43,8 +43,8 @@ Sur l'hôte, seule l'analyse statique s'exécute ; dans le conteneur, lancer `te
 plutôt qu'un dispatcher de niveau, pour transmettre un verdict global.
 
 - `integration` et `environment` **modifient le système** : jamais hors conteneur.
-  Leurs fichiers de cas ne modifient rien tant qu'ils n'ont pas reconnu un système
-  jetable (`/.dockerenv`, cgroup de conteneur ou `MGNET_TEST_JETABLE=1`).
+  Leurs fichiers de cas ne modifient rien avant d'avoir reconnu un système jetable :
+  au moins `/.dockerenv`, parfois aussi un cgroup de conteneur ou `MGNET_TEST_JETABLE=1`.
 - **Jamais `integration` sous le profil `systemd`** : plusieurs de ses assertions
   supposent l'absence d'init et rougiraient sans défaut.
 - `shellcheck` est absent de l'hôte : `tests/run.sh lint` y annonce `NON EXÉCUTÉ` ;
@@ -125,9 +125,9 @@ par `tests/acceptance/TASK-072-faux-binaires.sh`).
   fichier en 3**, quel que soit le nombre de réussites.
 
 Règle de prudence : dans le doute, indisponibilité. Un rouge à tort se voit, un vert à
-tort non. Sous-affirmer ne produit jamais de faux vert : `assert.sh` décompte donc
+tort non. Sous-affirmer ne produit jamais de faux vert : `assert.sh` écrit donc
 « sans indisponibilité déclarée » ; seul un fichier dont tous les sauts sont qualifiés
-peut écrire « non applicable(s) par nature » dans son propre bilan.
+peut écrire, comme le modèle ci-dessous, « non applicable(s) par nature ».
 
 **Le bilan**, ordre fixe — échec, aucune réussite, indisponibilité, non exécutés ; `info` obligatoire :
 
@@ -186,9 +186,9 @@ en `[WARN]` sans changer le code.
   copié dans l'image ; listes `apt` vidées : un script qui installe fait son `apt-get update`.
 - Images et conteneurs sont préfixés `mgnet-test-` sans exception (regles.md §8) ;
   vérifier qu'il ne reste rien : `docker ps -a --filter 'name=mgnet-test-'`.
-- Profil `systemd` : aucune assertion sur `systemctl is-system-running` ni sur le
-  nombre d'unités en échec, l'état n'est pas déterministe ; un cas qui a besoin d'une
-  unité en échec la fabrique. Témoin modifiable : `systemd-logind.service`. La garde
+- Profil `systemd` : l'état n'est pas déterministe ; aucune assertion ne distingue
+  `running` de `degraded` ni ne compte les unités en échec de l'image ; un cas qui en veut une
+  la fabrique. Témoin modifiable : `systemd-logind.service`. La garde
   mesure systemd (`/proc/1/comm`), jamais le nom du profil, et chaque fichier garde des
   cas exécutables sans systemd pour ne pas sortir en 3 sous `debian`.
 - Jamais `reboot` ni `systemctl poweroff` dans le conteneur. Hors de portée, déclarés
