@@ -111,7 +111,7 @@ sain; EXTRA=(EXISTANTS="" ASSUME_YES=true); lancer; EXTRA=()
 assert_code 0 "$CODE" "un ASSUME_YES hérité confirme (décision 45 : script non destructif)"
 assert_contient "$(appels)" "apply" "et les namespaces sont créés sans --yes"
 titre "Création"
-sain; EXTRA=(EXISTANTS="default kube-system"); lancer --yes; EXTRA=()
+sain; LISTE="web,data,monitoring"; EXTRA=(EXISTANTS="default kube-system"); lancer --yes; EXTRA=()
 assert_code 0 "$CODE" "trois namespaces absents sont créés, en 0"
 assert_contient "$sortie" "[SUCCESS]" "et le verdict est déclaré"
 assert_contient "$sortie" "namespace/monitoring created" "ce que kubectl a créé est affiché"
