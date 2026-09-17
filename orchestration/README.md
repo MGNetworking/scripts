@@ -11,13 +11,10 @@ instance de Claude Code, lancée sans interface, qui travaille avec **le modèle
 choisi pour la tâche** : DeepSeek, Sonnet, ou tout autre modèle ajouté plus tard.
 Mêmes outils, mêmes règles ; seul le modèle change.
 
-![Schéma de l'orchestration des agents](schema/orchestration.png)
-
-Source modifiable : [schema/orchestration.svg](schema/orchestration.svg). Après modification, régénérer le PNG :
-
-```bash
-msedge --headless=new --hide-scrollbars --screenshot=orchestration/schema/orchestration.png --window-size=1400,960 orchestration/schema/orchestration.svg
-```
+**L'architecture complète — acteurs, lieux, artefacts, cycle d'une tâche, états,
+contrôles, arrêts, écarts connus — et ses schémas sont dans
+[architecture.md](architecture.md).** Les schémas y sont écrits en Mermaid, rendus
+directement par GitHub : ils se modifient avec le texte, dans le même commit.
 
 ## Qui fait quoi
 
@@ -27,7 +24,7 @@ msedge --headless=new --hide-scrollbars --screenshot=orchestration/schema/orches
 | Conducteur | sous-agent neuf par tâche : prépare, vérifie, fait relire, clôt ; ne rend que des résumés | [.claude/agents/conducteur-tache.md](../.claude/agents/conducteur-tache.md) |
 | Agent exécutant | Claude Code + le modèle de la fiche | [.claude/commands/executer-tache.md](../.claude/commands/executer-tache.md) |
 | Relecteur | sous-agent Opus, lecture seule | [.claude/agents/relecteur.md](../.claude/agents/relecteur.md) |
-| Atomiseur | sous-agent, découpe un domaine en fiches | [.claude/commands/atomiser.md](../.claude/commands/atomiser.md) |
+| Atomiseur | commande `/atomiser` de la session, qui découpe un domaine et délègue l'écriture des fiches au sous-agent `redacteur-tache` | [.claude/commands/atomiser.md](../.claude/commands/atomiser.md), [.claude/agents/redacteur-tache.md](../.claude/agents/redacteur-tache.md) |
 | Juge | `outils/juger.sh`, sans modèle : shellcheck + tests en conteneur | — |
 
 ## Le partage des tâches
@@ -38,12 +35,13 @@ réussir, choisi à l'atomisation :
 | Travail | Agent |
 |---|---|
 | script simple, lecture seule ou un seul effet | `deepseek` |
-| effets enchaînés, restauration, destructif | `sonnet` |
+| effets enchaînés, restauration, destructif | `sonnet` prévu — `deepseek` en pratique tant que l'agent Sonnet sans interface échoue à s'authentifier (registre A41) |
 | décision, frontière, ADR, `lib/common.sh` | `orchestrateur` |
 
 Le choix se révise sur les chiffres de `mesures/`, pas sur une impression. Chaque
 agent travaille dans sa copie (`../script-agents/<TASK>`) : plusieurs pourront
-tourner en parallèle, une fois trois tâches passées sans incident (décision 40).
+tourner en parallèle, une fois trois tâches passées sans incident **et** les exécutions
+concurrentes du harnais maîtrisées (décision 40, registre A06).
 
 ## Le contenu du dossier
 
