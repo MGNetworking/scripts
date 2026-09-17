@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A150**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A151**.
 
 ## Registre
 
@@ -198,7 +198,8 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A146 | P4 | Documentation de `Synology/` inexacte face au code (TASK-077) : `Plex/README.md` et l'aide d'`organize-series.sh` emploient l'ancien nom `plex_series_organizer.sh` ; le README annonce une « gestion des conflits » alors qu'un conflit fige la numérotation (A143) et ne décrit pas `update-plex.sh` ; `Synology/README.md` ne renvoie pas à `CADRAGE.md` | TASK-077 | proposer à `user` une correction de la documentation (contrat inchangé) |
 | [ ] | A147 | P4 | Renvois de section vers `tests/README.md` devenus faux après sa refonte (TASK-078) : le bilan et les natures de saut sont passés au §3, l'environnement au §5. Commentaires concernés : `tests/lib/assert.sh` l.44, 251, 258 (« §2 et §5 », « §5 ») ; `tests/acceptance/TASK-002-environnement-conteneurise.sh` l.59, `TASK-011-analyse-statique.sh` l.77, `TASK-012-semantique-codes.sh` l.31, 65, 162, 169, 263, `TASK-013-natures-de-saut.sh` l.198, 646 (dont un message `ko`) ; `tests/environment/check-services.test.sh` l.79, 598 et `systemd.test.sh` l.308, 661 (« §2 ») ; `tests/env/run-in-container.sh` l.443 | TASK-078, relecture | corriger les renvois (commentaires et libellé `ko`), sans changer d'assertion |
 | [ ] | A148 | P3 | `TASK-002`, `TASK-011` et `TASK-012` de `tests/acceptance/` définissent encore leurs assertions localement au lieu de charger `tests/lib/assert.sh` ; dette décrite dans l'ancien `tests/README.md` (« uniformiser est une tâche en soi »), sans fiche | TASK-078, relecture | fiche à proposer à `user` |
-| [ ] | A149 | P1 | `tests/acceptance/TASK-012-semantique-codes.sh` rouge sur l'hôte (3 échecs, code 1, constaté le 2026-09-17 pendant TASK-078) : trois cas attendent 0 de `tests/run.sh` avec le niveau `lint`, qui rend 3 sans `shellcheck` depuis A03 ; `tests/run.sh acceptance` sur l'hôte ne peut donc pas être vert | TASK-078 | [TASK-082](TASK-082.md) |
+| [x] | A149 | P1 | `tests/acceptance/TASK-012-semantique-codes.sh` rouge sur l'hôte (3 échecs, code 1, constaté le 2026-09-17 pendant TASK-078) : trois cas attendent 0 de `tests/run.sh` avec le niveau `lint`, qui rend 3 sans `shellcheck` depuis A03 ; `tests/run.sh acceptance` sur l'hôte ne peut donc pas être vert | TASK-078 | fait — [TASK-082](../completed/TASK-082.md) : les trois cas restent à 0 et se prouvent en conteneur ; sur l'hôte sans `shellcheck`, NON EXÉCUTÉS (code 3 au lieu de 1) |
+| [ ] | A150 | P3 | `tests/acceptance/TASK-012-semantique-codes.sh` §4 : sur l'hôte sans `shellcheck`, trois cas attendant 3 de `tests/run.sh` (« lint satisfait + acceptance stérile → 3 », « niveau non implémenté → 3 », « lint + unit → 3 ») passent même si `run.sh` se trompait, puisque le niveau `lint` rend déjà 3 seul (A03) ; seul le conteneur les prouve. Mineurs de la même garde : `lancer_run` tourne même quand l'assertion est sautée ; la garde lit `command -v shellcheck` et non le code de `lint.sh` | TASK-082, relecture | décider s'ils se gardent comme les cas 925/926 (NON EXÉCUTÉ sur l'hôte) |
 
 ## Suivi, pas des défauts
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-082
 title: "Remettre au vert tests/acceptance/TASK-012 sur l'hôte (A149)"
-status: in_progress
+status: completed
 priority: high
 depends_on: []
 environment: host
