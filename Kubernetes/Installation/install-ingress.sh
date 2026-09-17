@@ -73,11 +73,11 @@ echec() {
         124:*) die "L'appel $1 a été interrompu : délai dépassé (${DELAI} s)." ;;
         *Forbidden*) die "Droits insuffisants : $1 a été refusé par le cluster." ;;
         *Unauthorized*|*x509*|*"error loading config file"*) die "Kubeconfig invalide ou périmé : $1 a été refusé." ;;
+        *"could not find the requested resource"*|*"doesn't have a resource type"*) die "Ressource inconnue de l'API : $1 a échoué — l'apiserver répond, mais ne connaît pas cette ressource." ;;
         *) die "L'apiserver est injoignable : $1 a échoué. Vérifier l'accès par install-kubectl.sh." ;;
     esac
 }
-# Deux champs nommés, jamais une position : le nom, puis la marque de classe par
-# défaut — vide quand l'annotation est absente. Cette rubrique sert aussi de sonde.
+# Deux champs nommés, jamais une position : le nom, puis la marque de classe par défaut — la rubrique sert aussi de sonde.
 printf '\nIngressClass\n'
 lire get ingressclasses -o 'jsonpath={range .items[*]}{.metadata.name}{" "}{.metadata.annotations.ingressclass\.kubernetes\.io/is-default-class}{"\n"}{end}'
 [ "$CODE" = 0 ] || echec "« kubectl get ingressclasses »"
@@ -85,7 +85,7 @@ TRAEFIK=""; DEFAUT=""; AUTRES=""
 while read -r nom marque; do
     [ -n "$nom" ] || continue
     if [ "$nom" = "traefik" ]; then TRAEFIK="oui"; fi
-    [ "$marque" != "true" ] || DEFAUT="$nom"
+    [ "$marque" != "true" ] || DEFAUT="${DEFAUT:+$DEFAUT }$nom"
     [ "$nom" = "traefik" ] || AUTRES="$AUTRES $nom"
 done <<<"$REP"
 printf '  IngressClass traefik : %s\n  IngressClass par défaut : %s\n' "${TRAEFIK:+présente}${TRAEFIK:-ABSENTE}" "${DEFAUT:-aucune}"
@@ -144,7 +144,7 @@ else
     die "« ss ${OPTS[*]} » a échoué (code $CODE) : l'écoute des ports 80 et 443 n'a pas pu être vérifiée."
 fi
 # Ce que le relevé ne voit pas se dit ici, plutôt que de se conclure d'un silence.
-[ "$ECOUTES" -ne 0 ] || info "Aucune écoute visible par ss sur 80 ou 443 — sur K3s, servicelb (klipper-lb) les publie par des pods svclb-traefik-*, dont le hostPort n'ouvre aucune socket."
+[ "$ECOUTES" -ne 0 ] || info "Aucune écoute visible par ss sur 80 ou 443 — avec servicelb (klipper-lb), les ports sont publiés sans socket visible par ss : ce silence ne prouve pas que les ports sont libres."
 printf '\n'
 [ "$CONFLITS" -eq 0 ] || warn "$CONFLITS occupant(s) étranger(s) des ports 80 et 443 — aucun n'est arrêté par ce script."
 success "Traefik est prêt : IngressClass traefik (défaut : ${DEFAUT:-aucune}), déploiement $NS_TRAEFIK disponible ($IMAGE). Rien n'a été installé ni modifié."
