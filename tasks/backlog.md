@@ -87,7 +87,7 @@ de ce que cet ADR a tranché.
 | [TASK-065](completed/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | `completed` | haute | 062, 063 | conteneur `debian` | **oui** |
 | [TASK-066](pending/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | `ready` | basse | 062 | conteneur `debian` | non |
 | [TASK-067](completed/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | `completed` | moyenne | 062 | conteneur `debian` | non |
-| [TASK-068](pending/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `ready` | moyenne | 062 | conteneur `debian` | **oui** |
+| [TASK-068](active/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `in_progress` | moyenne | 062 | conteneur `debian` | **oui** |
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `completed` | moyenne | 062, 064 | conteneur `debian` | **oui** |
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `completed` | moyenne | 062, 065 | conteneur `debian` | **oui** |
 | [TASK-071](pending/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `ready` | moyenne | 062, 067 | conteneur `debian` | **oui** |
