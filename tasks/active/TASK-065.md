@@ -18,13 +18,15 @@ scope:
   - config/server.env.example — SRV_CERT_MANAGER_VERSION
 out_of_scope:
   - ClusterIssuer, Let's Encrypt, domaine, Certificate — c'est configure-tls.sh (Kubernetes/Configuration)
-  - mettre à niveau ou désinstaller un cert-manager présent ; supprimer des CRD ; CRD posées par kubectl apply
+  - désinstallation ; suppression de CRD ; retour arrière de version ; CRD posées par kubectl apply
   - installer Helm ou kubectl ; installer cmctl ; lire /etc/rancher/k3s/k3s.yaml
 acceptance_criteria:
   - aucun require_root ; helm et kubectl trouvent seuls KUBECONFIG ou ~/.kube/config ; aucune référence à k3s.yaml
   - helm ou kubectl absent, cluster injoignable — rend 1 en le nommant, renvoi vers TASK-063 / TASK-062
   - version cible obligatoire (--version prioritaire, sinon SRV_CERT_MANAGER_VERSION, forme vX.Y.Z) ; absente ou invalide — 1
-  - release cert-manager présente à la version cible — version affichée, rien modifié, 0 ; à une autre version — [WARN] nommant installée et cible, mise à niveau hors périmètre, rien modifié, 1 ; CRD cert-manager.io sans release Helm — refus en 1, rien modifié
+  - release cert-manager présente à la version voulue — version affichée, rien refait, 0 ; CRD cert-manager.io sans release Helm — refus en 1, rien modifié
+  - release à une version inférieure à la voulue — résumé « installée → voulue », rappel de lire les notes de version de cert-manager, confirmation (décision 45, --yes seul ; sans terminal ni --yes, 1), puis helm upgrade --install à la version voulue avec crds.enabled=true, attente des trois déploiements, version relue égale à la voulue, sinon 1
+  - version voulue inférieure à l'installée — refus en 1, rien modifié (pas de retour arrière)
   - résumé confirmé ; --yes seul le confirme (ASSUME_YES remise à false, décision 45) ; sans terminal ni --yes, 1
   - --dry-run affiche version et commande helm prévues, sans aucun helm install ni upgrade, rend 0
   - chart OCI officiel jetstack oci://quay.io/jetstack/charts/cert-manager, version épinglée, CRD installées par le chart (crds.enabled=true), namespace cert-manager créé
@@ -37,7 +39,7 @@ validation:
 implementation_notes:
   - vérifié par l'orchestrateur sur https://cert-manager.io/docs/installation/helm/ le 2026-09-17 (l'agent n'a pas d'accès web, ne rien inventer au-delà)
   - source de référence (« source of truth ») — chart OCI oci://quay.io/jetstack/charts/cert-manager, sans helm repo add ; le dépôt HTTP https://charts.jetstack.io est dit legacy et mis à jour plus tard — ne pas l'utiliser
-  - commande officielle — helm install cert-manager oci://quay.io/jetstack/charts/cert-manager --version vX.Y.Z --namespace cert-manager --create-namespace --set crds.enabled=true ; le script emploie helm upgrade --install avec les mêmes options, seulement après avoir constaté la release absente
+  - commande officielle — helm install cert-manager oci://quay.io/jetstack/charts/cert-manager --version vX.Y.Z --namespace cert-manager --create-namespace --set crds.enabled=true ; le script emploie helm upgrade --install avec les mêmes options, pour la première installation comme pour la mise à jour confirmée ; comparaison de versions numérique champ par champ (X, Y, Z), jamais lexicale
   - CRD par crds.enabled=true (pas installCRDs) ; conservées à la désinstallation depuis v1.15.0 ; les supprimer efface tous Issuers, ClusterIssuers, Certificates — le script ne désinstalle rien et ne supprime aucune CRD
   - déploiements du namespace cert-manager — cert-manager, cert-manager-cainjector, cert-manager-webhook ; attente par kubectl rollout status --timeout=<délai>s, le tout sous timeout <délai + 2> ; code 124 nommé comme dépassement
   - version validée strictement ^v[0-9]+\.[0-9]+\.[0-9]+$ (ex. v1.21.2) ; release lue par helm list -n cert-manager -f '^cert-manager$' (colonne CHART cert-manager-vX.Y.Z)
