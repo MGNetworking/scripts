@@ -136,4 +136,4 @@ Aucun dans `Synology/`.
 
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
-| 2026-09-17 | État initial : besoin, `Administration/` décrit par son seul besoin, contrats des 2 scripts individuels tels qu'écrits (TASK-077) | état initial | |
+| 2026-09-17 | État initial : besoin, `Administration/` décrit par son seul besoin, contrats des 2 scripts individuels tels qu'écrits (TASK-077) | état initial | oui, 2026-09-17 |

@@ -652,4 +652,4 @@ Aucun dans `Linux/`.
 
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
-| 2026-09-17 | État initial : besoin, ensembles « Socle du serveur », « Sécurité du serveur » et « Gestion de K3s », contrats des 25 scripts tels qu'écrits (TASK-075) | état initial | |
+| 2026-09-17 | État initial : besoin, ensembles « Socle du serveur », « Sécurité du serveur » et « Gestion de K3s », contrats des 25 scripts tels qu'écrits (TASK-075) | état initial | oui, 2026-09-17 |

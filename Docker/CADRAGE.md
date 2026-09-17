@@ -339,4 +339,4 @@ Aucun dans `Docker/`.
 
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
-| 2026-09-17 | État initial : besoin, ensemble « Moteur Docker », contrats des 9 scripts tels qu'écrits (TASK-076) | état initial | |
+| 2026-09-17 | État initial : besoin, ensemble « Moteur Docker », contrats des 9 scripts tels qu'écrits (TASK-076) | état initial | oui, 2026-09-17 |
