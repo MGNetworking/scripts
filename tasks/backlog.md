@@ -86,11 +86,11 @@ de ce que cet ADR a tranché.
 | [TASK-064](completed/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | `completed` | moyenne | 062 | conteneur `debian` | non |
 | [TASK-065](completed/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | `completed` | haute | 062, 063 | conteneur `debian` | **oui** |
 | [TASK-066](pending/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | `ready` | basse | 062 | conteneur `debian` | non |
-| [TASK-067](active/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | `in_progress` | moyenne | 062 | conteneur `debian` | non |
+| [TASK-067](completed/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | `completed` | moyenne | 062 | conteneur `debian` | non |
 | [TASK-068](pending/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `ready` | moyenne | 062 | conteneur `debian` | **oui** |
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `completed` | moyenne | 062, 064 | conteneur `debian` | **oui** |
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `completed` | moyenne | 062, 065 | conteneur `debian` | **oui** |
-| [TASK-071](pending/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `pending` | moyenne | 062, 067 | conteneur `debian` | **oui** |
+| [TASK-071](pending/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `ready` | moyenne | 062, 067 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -294,7 +294,7 @@ Découpé en trois lots (plus de sept scripts), tous atomisés le 2026-09-16.
 |---|---|---|
 | Maintenance — plan §7 | [TASK-055](completed/TASK-055.md) à [TASK-061](completed/TASK-061.md) | lecture seule d'abord ; `cleanup-resources.sh` **destructif** ; décision 48 |
 | Installation — plan §5 | [TASK-062](completed/TASK-062.md) à [TASK-066](pending/TASK-066.md) | vérification seule de kubectl, Traefik et metrics-server ; décision 48 |
-| Configuration — plan §6 | [TASK-067](active/TASK-067.md) à [TASK-071](pending/TASK-071.md) | secrets du registry hors dépôt ; décision 48 |
+| Configuration — plan §6 | [TASK-067](completed/TASK-067.md) à [TASK-071](pending/TASK-071.md) | secrets du registry hors dépôt ; décision 48 |
 
 ### Docker — plan §8 à §10
 
@@ -420,6 +420,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-064](completed/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | [rapport](reports/TASK-064-report.md) |
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | [rapport](reports/TASK-069-report.md) |
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | [rapport](reports/TASK-070-report.md) |
+| [TASK-067](completed/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | [rapport](reports/TASK-067-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
