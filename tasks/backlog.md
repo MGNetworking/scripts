@@ -98,7 +98,7 @@ de ce que cet ADR a tranché.
 | [TASK-076](completed/TASK-076.md) | Écrire le cadrage de `Docker/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-078](completed/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes au plus | `completed` | haute | — | hôte | non |
-| [TASK-079](pending/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | `ready` | haute | 078 | hôte | non |
+| [TASK-079](active/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | `in_progress` | haute | 078 | hôte | non |
 | [TASK-080](pending/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | `pending` | haute | 079 | hôte | **oui** |
 | [TASK-081](pending/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `pending` | haute | 080 | hôte | **oui** |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
