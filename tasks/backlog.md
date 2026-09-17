@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-073**.
+Prochain identifiant libre : **TASK-078**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -92,6 +92,11 @@ de ce que cet ADR a tranché.
 | [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `completed` | moyenne | 062, 065 | conteneur `debian` | **oui** |
 | [TASK-071](completed/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `completed` | moyenne | 062, 067 | conteneur `debian` | **oui** |
 | [TASK-072](completed/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | `completed` | moyenne | — | conteneur `debian` | non |
+| [TASK-073](pending/TASK-073.md) | Instituer le cadrage par grand dossier et la boucle de réflexion (décision 49) | `ready` | haute | — | hôte | non |
+| [TASK-074](pending/TASK-074.md) | Écrire le cadrage de `Kubernetes/` | `pending` | haute | 073 | hôte | **oui** |
+| [TASK-075](pending/TASK-075.md) | Écrire le cadrage de `Linux/` | `pending` | moyenne | 074 | hôte | **oui** |
+| [TASK-076](pending/TASK-076.md) | Écrire le cadrage de `Docker/` | `pending` | moyenne | 074 | hôte | **oui** |
+| [TASK-077](pending/TASK-077.md) | Écrire le cadrage de `Synology/` | `pending` | moyenne | 074 | hôte | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)

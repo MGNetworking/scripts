@@ -19,7 +19,7 @@ out_of_scope:
   - écrire un script Synology
   - décrire un usage ou un serveur réel
 acceptance_criteria:
-  - Synology/CADRAGE.md expose le besoin du dossier et la place des scripts individuels ; aucun script n'existant encore, la section Contrats le dit
+  - Synology/Plex/organize-series.sh et Synology/Plex/update-plex.sh ont chacun un contrat de script individuel avec options et défauts, codes de retour, ce qu'il modifie, ce qu'il lit et son état ; Synology/Administration/, sans script, est décrit par son seul besoin
   - chaque option, code de retour et variable cité se retrouve par grep dans le script concerné
   - l'historique du cadrage porte une ligne datée « état initial » dont la colonne « Validé par user » reste vide jusqu'à sa validation
 validation:
