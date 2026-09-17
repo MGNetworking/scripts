@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A151**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A157**.
 
 ## Registre
 
@@ -201,7 +201,11 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [x] | A149 | P1 | `tests/acceptance/TASK-012-semantique-codes.sh` rouge sur l'hôte (3 échecs, code 1, constaté le 2026-09-17 pendant TASK-078) : trois cas attendent 0 de `tests/run.sh` avec le niveau `lint`, qui rend 3 sans `shellcheck` depuis A03 ; `tests/run.sh acceptance` sur l'hôte ne peut donc pas être vert | TASK-078 | fait — [TASK-082](../completed/TASK-082.md) : les trois cas restent à 0 et se prouvent en conteneur ; sur l'hôte sans `shellcheck`, NON EXÉCUTÉS (code 3 au lieu de 1) |
 | [ ] | A150 | P3 | `tests/acceptance/TASK-012-semantique-codes.sh` §4 : sur l'hôte sans `shellcheck`, trois cas attendant 3 de `tests/run.sh` (« lint satisfait + acceptance stérile → 3 », « niveau non implémenté → 3 », « lint + unit → 3 ») passent même si `run.sh` se trompait, puisque le niveau `lint` rend déjà 3 seul (A03) ; seul le conteneur les prouve. Mineurs de la même garde : `lancer_run` tourne même quand l'assertion est sautée ; la garde lit `command -v shellcheck` et non le code de `lint.sh` | TASK-082, relecture | décider s'ils se gardent comme les cas 925/926 (NON EXÉCUTÉ sur l'hôte) |
 | [ ] | A151 | P3 | `tasks/pending/TASK-039.md`, ligne A18 : sa justification cite la décision 43 (« pas de CI pendant le chantier »), retirée par la décision 50 qui rend la CI obligatoire | TASK-079, relecture | réécrire la justification de A18 en renvoyant à la décision 50 et à TASK-080 |
-| [ ] | A152 | P2 | `orchestration/regles.md` §8 ne liste ni `pipx`, ni `ansible-lint`, `yamllint`, `molecule`, ni les conteneurs créés par Molecule (non préfixés `mgnet-test-`) : ces commandes, exigées par la décision 50 et TASK-080, restent « soumises à Maxime » | TASK-079 | trancher leur place dans §8 (autorisées, ou soumises) avant ou pendant TASK-080 |
+| [x] | A152 | P2 | `orchestration/regles.md` §8 ne liste ni `pipx`, ni `ansible-lint`, `yamllint`, `molecule`, ni les conteneurs créés par Molecule (non préfixés `mgnet-test-`) : ces commandes, exigées par la décision 50 et TASK-080, restent « soumises à Maxime » | TASK-079 | fait — accord de `user` du 2026-09-17, §8 autorise `pipx`, `ansible`, `ansible-playbook`, `ansible-lint`, `yamllint` et `molecule` ; les instances Molecule se nomment `mgnet-test-*` (commit `8fd9cd7`) |
+| [ ] | A153 | P2 | Le niveau `environment` (profil `systemd`, conteneur `--privileged` démarré sur `/sbin/init`) n'est pas lancé par la CI : un runner GitHub ne le garantit pas. Il reste prouvé sur le seul poste de travail, donc non rejoué à chaque push | TASK-080, relecture | essayer le profil `systemd` sur `ubuntu-latest` ; s'il tient, l'ajouter à `ci.yml`, sinon inscrire la limite dans `tests/README.md` |
+| [ ] | A154 | P2 | `ci.yml` ne lance pas Molecule, que la décision 50 exige « sur les rôles modifiés » : aucun rôle n'existe encore, le travail serait vide | TASK-080 | ajouter le job Molecule dans TASK-081, avec le premier rôle |
+| [ ] | A155 | P4 | `ansible-lint Ansible/` rend 0 sans rien éprouver : le dossier ne contient ni rôle ni playbook, et `.ansible-lint` classe les deux modèles en simple `yaml`. Le profil `production` n'est donc pas encore vérifié | TASK-080, relecture | constater à TASK-081 que le profil `production` tient sur un vrai rôle, ou l'assouplir en le justifiant |
+| [ ] | A156 | P4 | La CI annote chaque run : « Node.js 20 is deprecated » — `actions/checkout@v4` cible Node 20 et est forcé sur Node 24 par le runner. Avertissement seulement, run vert | TASK-080 | passer à `actions/checkout@v5` au prochain travail sur `ci.yml` |
 
 ## Suivi, pas des défauts
 

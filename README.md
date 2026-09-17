@@ -9,6 +9,7 @@ configuration et de maintenance d'infrastructure.
 ## Architecture
 
 ```text
+Ansible/     roles | playbooks | inventory.example.yml | CADRAGE.md
 Linux/       System | Security | K3s
 Kubernetes/  Installation | Configuration | Maintenance
 Docker/      Installation | Configuration | Maintenance | Cleanup | Diagnostics
@@ -29,13 +30,16 @@ d'utilisation dans son propre README.
 
 | Domaine | Contenu | État |
 |---|---|---|
+| [Ansible/](Ansible/README.md) | installation et configuration des machines, en pilote ([décision 50](orchestration/decisions.md)) | squelette, aucun rôle |
 | [Linux/](Linux/README.md) | système de base, sécurité, distribution K3s | `System` : 13 scripts ; `Security` : 7 scripts ; `K3s` : 5 scripts |
 | [Docker/](Docker/README.md) | moteur Docker : installation, configuration, maintenance, nettoyage, diagnostic | 9 scripts |
 | [Kubernetes/](Kubernetes/README.md) | installation, configuration et maintenance d'un cluster | `Installation` : 5 scripts ; `Configuration` : 5 scripts ; `Maintenance` : 7 scripts |
 | [Synology/](Synology/README.md) | NAS Synology : Plex, administration DSM | 2 scripts hérités |
 
 Socle commun : [config/](config/README.md) pour les configurations,
-[tests/](tests/README.md) pour les validations.
+[tests/](tests/README.md) pour les validations. Chaque push et chaque pull request
+passent par la CI GitHub Actions (`.github/workflows/ci.yml`) : analyse statique,
+tests Bash en conteneur Debian, `yamllint` et `ansible-lint`.
 
 ## Installation sur un serveur
 

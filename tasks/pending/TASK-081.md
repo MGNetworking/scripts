@@ -1,7 +1,7 @@
 ---
 id: TASK-081
 title: "Pilote : écrire le rôle securite_base (SSH, ufw, fail2ban) et le comparer aux scripts Bash"
-status: pending
+status: ready
 priority: high
 depends_on:
   - TASK-080

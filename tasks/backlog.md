@@ -99,8 +99,8 @@ de ce que cet ADR a tranché.
 | [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-078](completed/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes au plus | `completed` | haute | — | hôte | non |
 | [TASK-079](completed/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | `completed` | haute | 078 | hôte | non |
-| [TASK-080](pending/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | `ready` | haute | 079 | hôte | **oui** |
-| [TASK-081](pending/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `pending` | haute | 080 | hôte | **oui** |
+| [TASK-080](completed/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | `completed` | haute | 079 | hôte | **oui** |
+| [TASK-081](pending/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `ready` | haute | 080 | hôte | **oui** |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
@@ -444,6 +444,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-078](completed/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes | [rapport](reports/TASK-078-report.md) |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | [rapport](reports/TASK-082-report.md) |
 | [TASK-079](completed/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | [rapport](reports/TASK-079-report.md) |
+| [TASK-080](completed/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | [rapport](reports/TASK-080-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
