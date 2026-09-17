@@ -365,4 +365,4 @@ Aucun dans `Kubernetes/`.
 
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
-| 2026-09-17 | État initial : besoin, ensemble « Gestion de Kubernetes », contrats des 17 scripts tels qu'écrits (TASK-074) | état initial | |
+| 2026-09-17 | État initial : besoin, ensemble « Gestion de Kubernetes », contrats des 17 scripts tels qu'écrits (TASK-074) | état initial | oui, 2026-09-17 |

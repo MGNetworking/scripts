@@ -1,7 +1,7 @@
 ---
 id: TASK-077
 title: "Écrire le cadrage de Synology/ à partir de l'état actuel des scripts"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-074

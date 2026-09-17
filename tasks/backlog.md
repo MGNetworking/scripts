@@ -94,9 +94,9 @@ de ce que cet ADR a tranché.
 | [TASK-072](completed/TASK-072.md) | Faux binaires des fichiers de cas et relevé de jetons d'un agent bloqué (A122) | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-073](completed/TASK-073.md) | Instituer le cadrage par grand dossier et la boucle de réflexion (décision 49) | `completed` | haute | — | hôte | non |
 | [TASK-074](completed/TASK-074.md) | Écrire le cadrage de `Kubernetes/` | `completed` | haute | 073 | hôte | **oui** |
-| [TASK-075](pending/TASK-075.md) | Écrire le cadrage de `Linux/` | `pending` | moyenne | 074 | hôte | **oui** |
-| [TASK-076](pending/TASK-076.md) | Écrire le cadrage de `Docker/` | `pending` | moyenne | 074 | hôte | **oui** |
-| [TASK-077](pending/TASK-077.md) | Écrire le cadrage de `Synology/` | `pending` | moyenne | 074 | hôte | **oui** |
+| [TASK-075](pending/TASK-075.md) | Écrire le cadrage de `Linux/` | `ready` | moyenne | 074 | hôte | **oui** |
+| [TASK-076](pending/TASK-076.md) | Écrire le cadrage de `Docker/` | `ready` | moyenne | 074 | hôte | **oui** |
+| [TASK-077](pending/TASK-077.md) | Écrire le cadrage de `Synology/` | `ready` | moyenne | 074 | hôte | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
