@@ -1,7 +1,7 @@
 ---
 id: TASK-078
 title: "Refondre tests/README.md en guide de 200 lignes au plus"
-status: in_progress
+status: completed
 priority: high
 depends_on: []
 environment: host

@@ -97,10 +97,11 @@ de ce que cet ADR a tranché.
 | [TASK-075](completed/TASK-075.md) | Écrire le cadrage de `Linux/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-076](completed/TASK-076.md) | Écrire le cadrage de `Docker/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` | `completed` | moyenne | 074 | hôte | **oui** |
-| [TASK-078](pending/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes au plus | `ready` | haute | — | hôte | non |
+| [TASK-078](completed/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes au plus | `completed` | haute | — | hôte | non |
 | [TASK-079](pending/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | `ready` | haute | 078 | hôte | non |
 | [TASK-080](pending/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | `pending` | haute | 079 | hôte | **oui** |
 | [TASK-081](pending/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `pending` | haute | 080 | hôte | **oui** |
+| [TASK-082](pending/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `ready` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -440,6 +441,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-075](completed/TASK-075.md) | Écrire le cadrage de `Linux/` (état initial, validé par user le 2026-09-17) | [rapport](reports/TASK-075-report.md) |
 | [TASK-076](completed/TASK-076.md) | Écrire le cadrage de `Docker/` (état initial, validé par user le 2026-09-17) | [rapport](reports/TASK-076-report.md) |
 | [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` (état initial, validé par user le 2026-09-17) | [rapport](reports/TASK-077-report.md) |
+| [TASK-078](completed/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes | [rapport](reports/TASK-078-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
