@@ -28,6 +28,11 @@ done
 [ -n "$cas" ] || { echo "FAIL  aucun fichier de cas dans le périmètre de $fiche"; exit 1; }
 
 cd "$racine"
+# Faux binaire écrit à travers un lien (A122, tests/README.md) : refusé avant tout
+# lancement, il remplacerait le vrai binaire du conteneur.
+lien_ecrit="$(awk -f orchestration/outils/lien-ecrit.awk "$cas")"
+[ -z "$lien_ecrit" ] || { echo "$lien_ecrit"; echo "JUGE  fichier de cas refusé avant lancement : ÉCHEC"; exit 1; }
+
 # Le conteneur rend le code de sa propre enveloppe : les verdicts utiles sont
 # imprimés par la commande elle-même, puis relus.
 sortie="$(bash tests/env/run-in-container.sh -- bash -c \

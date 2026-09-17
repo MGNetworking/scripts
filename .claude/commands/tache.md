@@ -153,7 +153,8 @@ porte un `Axx`, et chaque `Axx` cité existe dans le registre.
 4. `tasks/backlog.md` : statut, section « Terminé », tâches débloquées en `ready` ;
 5. ligne au journal `orchestration/mesures/journal.md` : agent, modèle, passages,
    jetons et jetons de relecture, lus tous deux dans `orchestration/mesures/agents.tsv`
-   (lignes `relecteur`), défauts ;
+   (lignes `relecteur`), défauts ; une ligne d'agent `incomplet` (transcript de session
+   introuvable) s'écrit « non relevé », sauf si l'usage se lit dans le `.jsonl` de la session ;
 6. `bash orchestration/outils/verifier-liens.sh` : 0, sinon corrige les liens cassés
    par le déplacement de la fiche ;
 7. `git commit`, `agents.tsv` compris, avec la ligne `Tâche : $1`.

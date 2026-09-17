@@ -15,6 +15,9 @@ scope:
   - tests/README.md — règle d'écriture des faux binaires
   - orchestration/outils/juger.sh — signalement d'un « cat > » vers un chemin de PATH factice lié
   - orchestration/outils/lancer-agent.sh — relevé de tours et de jetons
+  - orchestration/outils/lien-ecrit.awk — détection lue par juger.sh (ajout de relecture)
+  - tests/acceptance/TASK-072-faux-binaires.sh — preuve de la détection (ajout de relecture)
+  - .claude/commands/tache.md — étape 8.5, relevé « incomplet » (ajout de relecture)
 out_of_scope:
   - réécrire les fichiers de cas existants (leur défaut éventuel devient une ligne du registre)
   - changer le plafond de durée DUREE_MAX

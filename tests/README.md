@@ -431,6 +431,26 @@ Chaque cas est encadré d'une **garde de contraste** : le même appel sans le st
 doit rendre une vraie valeur. Sans elle, un cas serait vert sur une machine où la
 valeur vaudrait déjà « non disponible » pour une tout autre raison.
 
+##### Écrire un faux binaire sans toucher au vrai
+
+Un faux binaire est un **fichier ordinaire**, créé par `cat >` dans un répertoire
+du bac (`$BAC/...`) où **aucun lien symbolique** ne porte déjà son nom. Écrire à
+travers un lien écrit dans sa cible : `ln -sf "$(command -v timeout)" "$BAC/bin/timeout"`
+suivi de `cat > "$BAC/bin/timeout"` remplace `/usr/bin/timeout` du conteneur, pour
+ce cas et pour tous ceux qui partagent le conteneur. Un bac à sable de liens et un
+répertoire de faux sont donc deux répertoires distincts, ou le nom du faux est
+retiré de la liste des liens.
+
+Le faux n'appelle **jamais le vrai par son nom** : dans un `PATH` factice, ce nom se
+résout vers le faux lui-même, et `exec timeout "$@"` boucle sans fin. Le vrai se
+relève avant toute retouche du `PATH` (`REEL="$(command -v timeout)"`) et s'appelle
+par ce chemin absolu, ou le faux exécute directement la commande enveloppée.
+
+Fait observé : TASK-071, premier jet (6ad93f8), deux conteneurs bloqués plus de
+30 minutes. `orchestration/outils/juger.sh` refuse, avant de le lancer, un fichier
+de cas qui crée un lien puis écrit par `>` vers le même chemin
+(`orchestration/outils/lien-ecrit.awk`, prouvé par `tests/acceptance/TASK-072-faux-binaires.sh`).
+
 ##### Deux défauts que ces groupes ont trouvés, et qui sont corrigés
 
 Ces assertions ont été laissées **rouges le temps d'un tour**, jamais
