@@ -84,12 +84,12 @@ de ce que cet ADR a tranché.
 | [TASK-062](completed/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | `completed` | moyenne | — | conteneur `debian` | non |
 | [TASK-063](completed/TASK-063.md) | Écrire `Kubernetes/Installation/install-helm.sh` | `completed` | moyenne | — | conteneur `debian` | **oui** |
 | [TASK-064](pending/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | `ready` | moyenne | 062 | conteneur `debian` | non |
-| [TASK-065](active/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | `in_progress` | haute | 062, 063 | conteneur `debian` | **oui** |
+| [TASK-065](completed/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | `completed` | haute | 062, 063 | conteneur `debian` | **oui** |
 | [TASK-066](pending/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | `ready` | basse | 062 | conteneur `debian` | non |
 | [TASK-067](pending/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | `pending` | moyenne | 062 | conteneur `debian` | non |
 | [TASK-068](pending/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `pending` | moyenne | 062 | conteneur `debian` | **oui** |
 | [TASK-069](pending/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `pending` | moyenne | 062, 064 | conteneur `debian` | **oui** |
-| [TASK-070](pending/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `pending` | moyenne | 062, 065 | conteneur `debian` | **oui** |
+| [TASK-070](pending/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `ready` | moyenne | 062, 065 | conteneur `debian` | **oui** |
 | [TASK-071](pending/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `pending` | moyenne | 062, 067 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
@@ -416,6 +416,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-061](completed/TASK-061.md) | Écrire `Kubernetes/Maintenance/cleanup-resources.sh` | [rapport](reports/TASK-061-report.md) |
 | [TASK-062](completed/TASK-062.md) | Écrire `Kubernetes/Installation/install-kubectl.sh` | [rapport](reports/TASK-062-report.md) |
 | [TASK-063](completed/TASK-063.md) | Écrire `Kubernetes/Installation/install-helm.sh` | [rapport](reports/TASK-063-report.md) |
+| [TASK-065](completed/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | [rapport](reports/TASK-065-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

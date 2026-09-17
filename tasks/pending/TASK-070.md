@@ -1,7 +1,7 @@
 ---
 id: TASK-070
 title: "Écrire Kubernetes/Configuration/configure-tls.sh"
-status: pending
+status: ready
 priority: medium
 depends_on:
   - TASK-062

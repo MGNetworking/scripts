@@ -1,7 +1,7 @@
 ---
 id: TASK-065
 title: "Écrire Kubernetes/Installation/install-cert-manager.sh"
-status: in_progress
+status: completed
 priority: high
 depends_on:
   - TASK-062
