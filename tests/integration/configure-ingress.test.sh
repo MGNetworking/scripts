@@ -15,26 +15,42 @@ fi
 BAC="$(mktemp -d)"; export BAC
 trap 'rm -rf "$BAC"' EXIT
 faux() { cat > "$BAC/$1"; chmod +x "$BAC/$1"; }
-: > "$BAC/kubectl-tous"
+: > "$BAC/kubectl-tous"; : > "$BAC/kubectl-appels"
 
 # Faux kubectl : les messages et codes du vrai, NotFound compris. Le manifeste
-# reçu sur stdin est jugé champ par champ — une valeur forcée, un autre groupe
-# d'API, un objet de plus ou de moins font échouer le faux, donc le cas.
+# reçu sur stdin est jugé document par document — le séparateur « --- » fait foi —
+# et chaque champ doit être sous sa clé parente : un « permanent: true » déplacé
+# hors de redirectScheme, un label retiré d'un seul document, ou une relecture
+# sans sélecteur font échouer le faux, donc le cas.
 faux kubectl <<'SH'
 #!/bin/sh
 printf 'kubectl %s\n' "$*" >> "$BAC/kubectl-appels"
 printf 'kubectl %s\n' "$*" >> "$BAC/kubectl-tous"
 [ -z "${KUBECTL_ERREUR:-}" ] || { printf '%s\n' "$KUBECTL_ERREUR" >&2; exit "${KUBECTL_CODE:-1}"; }
+non() { printf 'manifeste : %s\n' "$1" >&2; exit 1; }
+# Enfants directs d'une clé : les lignes indentées plus qu'elle, et elles seules.
+sous() { awk -v p="$2" 'BEGIN{d=-1} {match($0,/^ */); i=RLENGTH}
+        d>=0 { if (i>d) {print; next}; d=-1 }
+        $0 ~ ("^ *" p ":$") {d=i}' "$1"; }
 manifeste() {   # <diff|apply> <namespace attendu>
-    cat > "$BAC/manifeste-$1"; sed 's/^[[:space:]]*//' "$BAC/manifeste-$1" > "$BAC/manifeste-$1.nu"
-    for l in 'apiVersion: traefik.io/v1alpha1' 'kind: Middleware' 'name: redirect-https' 'name: security-headers' 'namespace: '"$2" \
-             'scheme: https' 'permanent: true' 'app.kubernetes.io/managed-by: mgnetworking' 'stsSeconds: 3600' 'stsPreload: false' \
-             'stsIncludeSubdomains: false' 'contentTypeNosniff: true' 'frameDeny: true' 'browserXssFilter: true' 'referrerPolicy: strict-origin-when-cross-origin'; do
-        grep -qxF "$l" "$BAC/manifeste-$1.nu" || { printf 'manifeste : « %s » attendu\n' "$l" >&2; exit 1; }
+    m="$BAC/manifeste-$1"; cat > "$m"
+    grep -q 'containo.us' "$m" && non 'groupe traefik.containo.us proscrit'
+    rm -f "$BAC"/doc[0-9]
+    awk -v b="$BAC" '/^---$/{n++; next} {print > (b "/doc" n+0)}
+        END {if (n != 1) {print "manifeste : deux documents attendus" > "/dev/stderr"; exit 1}}' "$m" || exit 1
+    for f in "$BAC/doc0" "$BAC/doc1"; do
+        grep -qE '^apiVersion: traefik\.io/v1alpha1$' "$f" || non 'apiVersion traefik.io/v1alpha1'
+        grep -qE '^kind: Middleware$' "$f" || non 'kind Middleware'
+        grep -qE "^  namespace: $2\$" "$f" || non "namespace $2 dans chacun des deux"
+        grep -qE '^    app\.kubernetes\.io/managed-by: mgnetworking$' "$f" || non 'label managed-by dans chacun des deux'
     done
-    [ "$(grep -c '^kind: Middleware$' "$BAC/manifeste-$1.nu")" = 2 ] || { echo 'manifeste : deux Middlewares attendus' >&2; exit 1; }
-    grep -q 'containo.us' "$BAC/manifeste-$1.nu" && { echo 'manifeste : groupe traefik.containo.us proscrit' >&2; exit 1; }
-    return 0
+    r="$(grep -lE '^  name: redirect-https$' "$BAC/doc0" "$BAC/doc1")" || non 'document redirect-https absent'
+    h="$(grep -lE '^  name: security-headers$' "$BAC/doc0" "$BAC/doc1")" || non 'document security-headers absent'
+    for c in 'scheme: https' 'permanent: true'; do
+        sous "$r" redirectScheme | grep -qxE "    $c" || non "redirectScheme $c attendu"; done
+    for c in 'stsSeconds: 3600' 'stsIncludeSubdomains: false' 'stsPreload: false' 'contentTypeNosniff: true' \
+             'frameDeny: true' 'browserXssFilter: true' 'referrerPolicy: strict-origin-when-cross-origin'; do
+        sous "$h" headers | grep -qxE "    $c" || non "headers $c attendu"; done
 }
 notfound() { printf 'Error from server (NotFound): %s not found\n' "$1" >&2; exit 1; }
 case "$1 $2" in
@@ -43,12 +59,17 @@ case "$1 $2" in
     "get namespace") [ -f "$BAC/ns-$3" ] || notfound "namespaces \"$3\""
                      printf 'NAME STATUS AGE\n%s Active 3d\n' "$3" ;;
     "diff -f")       manifeste diff "${NS_ATTENDU:-default}"
+                     [ -z "${DIFF_ERREUR:-}" ] || { printf '%s\n' "$DIFF_ERREUR" >&2; exit "${DIFF_CODE:-1}"; }
                      [ "${DIFF_CODE:-1}" = "0" ] && exit 0
                      printf '%s\n' "${DIFF_TEXTE:-+  name: redirect-https}"; exit "${DIFF_CODE:-1}" ;;
-    "apply -f")      manifeste apply "${NS_ATTENDU:-default}"; : > "$BAC/pose"
+    "apply -f")      manifeste apply "${NS_ATTENDU:-default}"
+                     [ -z "${APPLY_ERREUR:-}" ] || { printf '%s\n' "$APPLY_ERREUR" >&2; exit "${APPLY_CODE:-1}"; }
+                     : > "$BAC/pose"
                      printf 'middleware.traefik.io/redirect-https created\nmiddleware.traefik.io/security-headers created\n' ;;
     "get middlewares")
                      [ -f "$BAC/pose" ] || exit 0
+                     [ "${5:-} ${6:-}" = "-l app.kubernetes.io/managed-by=mgnetworking" ] || {
+                         printf 'middleware.traefik.io/redirect-https\nmiddleware.traefik.io/security-headers\nmiddleware.traefik.io/etranger\n'; exit 0; }
                      printf 'middleware.traefik.io/redirect-https\n'
                      [ -z "${POSE_UN_SEUL:-}" ] && printf 'middleware.traefik.io/security-headers\n'
                      exit 0 ;;
@@ -73,6 +94,10 @@ assert_contient "$sortie" "<ns>-redirect-https@kubernetescrd,<ns>-security-heade
 assert_contient "$sortie" "2  option" "--help documente les codes de retour"
 timeout 30 bash "$CIBLE" --option-inexistante >/dev/null 2>&1 && code=0 || code=$?
 assert_code 2 "$code" "une option inconnue rend 2"
+sortie="$(env PATH="$CHEMIN" timeout 60 bash "$CIBLE" --namespace </dev/null 2>&1)" && code=0 || code=$?
+assert_code 2 "$code" "« --namespace » en dernier, sans valeur, rend 2"
+assert_contient "$sortie" "--namespace sans valeur" "le message nomme l'option qui n'a pas de valeur"
+assert_egal "" "$(appels)" "et aucun appel kubectl n'a eu lieu"
 
 titre "Namespace mal formé — jugé avant tout appel kubectl"
 sain
@@ -116,6 +141,25 @@ sain; rm -f "$BAC/ns-site"; lancer --namespace site --yes
 assert_code 1 "$CODE" "un namespace absent du cluster rend 1"
 assert_contient "$sortie" "Namespace site absent du cluster" "le message nomme le namespace demandé"
 assert_absent "$(appels)" "apply" "et rien n'est appliqué"
+
+titre "CRD non servie et validation refusée — causes distinctes"
+# Message réel de kubectl quand la version servie n'existe pas (deux lignes).
+CRD_ERR='error: resource mapping not found for name: "redirect-https" namespace: "default" from "STDIN": no matches for kind "Middleware" in version "traefik.io/v1alpha1"
+ensure CRDs are installed first'
+sain; EXTRA=(DIFF_CODE=2 DIFF_ERREUR="$CRD_ERR"); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "un diff en erreur (code 2) rend 1"
+assert_contient "$sortie" "CRD Middleware traefik.io/v1alpha1 absente ou non servie" "le message nomme la CRD et Traefik"
+assert_contient "$sortie" "no matches for kind" "le message de kubectl est affiché"
+assert_absent "$sortie" "injoignable" "et l'apiserver n'est pas mis en cause à tort"
+assert_absent "$(appels)" "apply" "aucun apply n'est tenté après un diff en erreur"
+# Rejet de validation à l'apply : le cluster répond, il refuse.
+VAL_ERR='The Middleware "security-headers" is invalid: spec.headers.stsSeconds: Invalid value: "string": spec.headers.stsSeconds in body must be of type integer: "string"'
+sain; EXTRA=(APPLY_ERREUR="$VAL_ERR"); lancer --yes; EXTRA=()
+assert_code 1 "$CODE" "un apply refusé par la validation rend 1"
+assert_contient "$sortie" 'is invalid: spec.headers.stsSeconds' "le message de kubectl est affiché"
+assert_contient "$sortie" "Échec de « kubectl apply -f - »" "l'échec est annoncé sans cause inventée"
+assert_absent "$sortie" "injoignable" "l'apiserver n'est pas mis en cause à tort"
+assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque le refus"
 
 titre "Idempotence, --dry-run et confirmation"
 sain; EXTRA=(DIFF_CODE=0); lancer --yes; EXTRA=()

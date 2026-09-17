@@ -49,7 +49,9 @@ EOF
 
 while [ "${1:-}" != "" ]; do
     case "$1" in
-        --namespace) shift; NS="${1:-}"; shift ;;
+        --namespace) shift
+            [ "${1:-}" != "" ] || die "Option --namespace sans valeur : un nom de namespace est attendu." 2
+            NS="$1"; shift ;;
         --dry-run) DRY_RUN="true"; shift ;;
         -y|--yes)  export ASSUME_YES="true"; OUI="true"; shift ;;
         --help|-h) usage; exit 0 ;;
@@ -118,7 +120,9 @@ echec() {
         *Forbidden*) die "Droits insuffisants : $1 a été refusé par le cluster." ;;
         *Unauthorized*|*x509*|*"error loading config file"*) die "Kubeconfig invalide ou périmé : $1 a été refusé." ;;
         *"could not find the requested resource"*|*"doesn't have a resource type"*) die "Ressource inconnue de l'API : $1 a échoué — l'apiserver répond, mais ne connaît pas cette ressource." ;;
-        *) die "L'apiserver est injoignable : $1 a échoué. Vérifier l'accès par install-kubectl.sh (TASK-062)." ;;
+        *"no matches for kind"*|*"ensure CRDs are installed"*|*"unable to recognize"*) die "CRD Middleware traefik.io/v1alpha1 absente ou non servie : Traefik est-il installé ? ($1)" ;;
+        *"connection refused"*|*"was refused"*|*"Unable to connect"*|*"no such host"*|*"i/o timeout"*) die "L'apiserver est injoignable : $1 a échoué. Vérifier l'accès par install-kubectl.sh (TASK-062)." ;;
+        *) die "Échec de $1. La cause est dans le message ci-dessus : le cluster a répondu, et a refusé." ;;
     esac
 }
 
