@@ -103,8 +103,9 @@ Aucun dans `Docker/`.
   Buildx (second champ de `docker buildx version`) ; socket : présent et accessible en
   écriture, présent mais interdit, autre chose qu'un socket, ou absent ; `DOCKER_HOST`
   affiché s'il est défini ; service (`systemctl is-active docker`, `is-enabled`) ; démon
-  (`docker info` : version, pilote de stockage, répertoire de données). Chaque appel en
-  `LC_ALL=C`, borné à 5 s par `timeout`, appelé sans contrôle de présence (A141) ;
+  (`docker info` : version, pilote de stockage, répertoire de données). Chaque appel sauf
+  `systemctl` en `LC_ALL=C`, borné à 5 s par `timeout`, appelé sans contrôle de présence
+  (A141) ;
   information absente : « non disponible ». Démon qui répond, service non actif :
   `[WARN]` et 0. Ne fait pas : lancer un conteneur, tirer une image, installer.
 - Options et défauts : `-h`, `--help`.
@@ -120,7 +121,8 @@ Aucun dans `Docker/`.
 
 - Besoin : l'inventaire des conteneurs.
 - Fait : un seul `docker ps` (avec `--all` si l'option est donnée), en `LC_ALL=C`, borné à
-  5 s ; section « en cours d'exécution » (état commençant par `Up` ou `Restarting`) et,
+  5 s si `timeout` existe ; section « en cours d'exécution » (état commençant par `Up`
+  ou `Restarting`) et,
   avec `--all`, section « arrêtés » (tous les autres) ; colonnes nom, image, état,
   identifiant sur 12 caractères, ports, réseaux, sans troncature ; aucun conteneur : une
   phrase et 0. Échec : délai dépassé, accès refusé à la socket et démon injoignable
@@ -136,7 +138,8 @@ Aucun dans `Docker/`.
 ### docker-disk-usage.sh — ensemble « Moteur Docker »
 
 - Besoin : le stockage consommé par Docker.
-- Fait : sonde `docker version` bornée à 5 s ; `docker system df`, borné à 120 s : pour
+- Fait : sonde `docker version` bornée à 5 s et `docker system df` à 120 s si `timeout`
+  existe : pour
   images, conteneurs, volumes locaux et cache de build, objets, actifs, taille et
   récupérable (« non fourni » quand le démon ne le donne pas, jamais 0) ; répertoire de
   données (`docker info`) et occupation de son système de fichiers (`df -P -h`), « non
@@ -157,7 +160,8 @@ Aucun dans `Docker/`.
 - Fait : refus hors Debian 12/13 et Ubuntu 22.04/24.04, hors `x86_64` (amd64) et
   `aarch64` (arm64), sous un noyau 3.10, sans `VERSION_CODENAME` ; `docker` présent et
   paquet `docker-ce` installé (`dpkg-query`) : version, 0, rien réinstallé (`--dry-run`
-  compris) ; refus sous 2 048 Mo libres sur `/var` (illisible : `[WARN]`), mémoire sous
+  compris) ; refus sous 2 048 Mo libres sur `/var` (sortie de `df` vide : `[WARN]` ; `df`
+  en échec : sortie par `set -e`, A138), mémoire sous
   512 Mo : `[WARN]` ; paquets en conflit relevés : `docker.io`, `docker-doc`,
   `docker-compose`, `docker-compose-v2`, `podman-docker`, `containerd`, `runc` ; résumé ;
   `--dry-run` s'arrête là. Sinon : conflits présents, confirmation propre puis `apt-get
@@ -277,7 +281,8 @@ Aucun dans `Docker/`.
 - Besoin : récupérer les images d'un projet Compose désigné, sans redéployer.
 - Fait : `--project` : un fichier est pris tel quel ; dans un répertoire,
   `compose.yaml`, `compose.yml`, `docker-compose.yaml` puis `docker-compose.yml` ; chemin
-  rendu absolu ; sondes bornées à 5 s : `docker`, greffon Compose v2 (`docker compose
+  rendu absolu ; sondes, lecture des images et identifiants bornés à 5 s si `timeout`
+  existe ; sondes : `docker`, greffon Compose v2 (`docker compose
   version`), démon (`docker version`) ; images par `docker compose -f <fichier> config
   --images`, sans doublon ; blocage (sonde, `config` en échec, aucune image) : `[WARN]`,
   puis 0 sous `--dry-run`, 1 sinon ; `--dry-run` : projet, fichier, images et commande,
@@ -299,7 +304,8 @@ Aucun dans `Docker/`.
 ### docker-cleanup.sh — ensemble « Moteur Docker »
 
 - Besoin : récupérer l'espace des ressources Docker inutilisées sans toucher ce qui sert.
-- Fait : sonde `docker version` bornée à 5 s ; démon injoignable : sous `--dry-run`,
+- Fait : sonde `docker version` bornée à 5 s si `timeout` existe ; démon injoignable :
+  sous `--dry-run`,
   opérations annoncées et 0, sinon 1 ; relevé, non borné (A141) : `docker system df`,
   conteneurs à l'état `exited` ou `created`, images sans étiquette qu'aucun conteneur ne
   référence, volumes `dangling`, réseaux sans conteneur attaché hors `bridge`, `host`,
@@ -309,15 +315,19 @@ Aucun dans `Docker/`.
   sans question ; confirmation des totaux ; avec `--supprimer-volumes` et des volumes
   relevés, seconde confirmation qui les nomme (refus : volumes conservés, le reste
   poursuivi) ; dans l'ordre, `docker container prune -f`, `docker network rm <nom>` un
-  par un, `docker image prune -f`, `docker volume rm <nom>` un par un ; une suppression en
-  échec arrête la suite ; relevé refait, récapitulatif par catégorie. Ne fait pas :
+  par un, `docker image prune -f`, `docker volume rm <nom>` un par un ; les deux `prune`
+  suppriment ce que Docker juge inutilisé au moment de l'appel, qui peut dépasser le
+  relevé (conteneurs dans un autre état arrêté, images libérées par la purge des
+  conteneurs, A142) ; une suppression en échec arrête la suite ; relevé refait (en échec :
+  1, suppressions faites), récapitulatif par catégorie. Ne fait pas :
   `docker network prune`, `docker system prune`, supprimer un volume sans
   `--supprimer-volumes`, une image étiquetée ou un conteneur en cours.
 - Options et défauts : `--dry-run` ; `--supprimer-volumes` ; `-y`, `--yes` ; `-h`,
   `--help`.
 - Codes de retour : 0 nettoyage fait, rien à nettoyer, `--dry-run` (démon injoignable
   compris), ou confirmation refusée ; 1 `docker` absent ou démon muet hors `--dry-run`,
-  relevé en échec (`--dry-run` compris), suppression en échec ; 2 option inconnue.
+  relevé en échec (`--dry-run` compris, et après les suppressions), suppression en
+  échec ; 2 option inconnue.
 - Modifie sur la machine : **supprime** conteneurs arrêtés, réseaux inutilisés, images
   sans étiquette et, avec `--supprimer-volumes`, les volumes inutilisés et leurs données.
 - Lit : `SRV_DOCKER_RESEAUX_PROTEGES` (noms séparés par des espaces),
