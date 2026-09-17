@@ -53,9 +53,9 @@ sain() {   # cluster sain : Traefik prêt, aucun occupant des ports 80 et 443
     chmod 666 "$BAC/kubectl-appels" "$BAC/ss-appels"; }
 CHEMIN="$BAC:$PATH"
 EXTRA=(); codes=""; CODE=0
-lancer() { sortie="$(env PATH="$CHEMIN" "${EXTRA[@]}" timeout 60 bash "$CIBLE" "$@" </dev/null 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
+lancer() { sortie="$(env PATH="$CHEMIN" "${EXTRA[@]}" timeout 60 bash "$CIBLE" </dev/null 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
 # Sans root, sous l'identité nobody : ss -p ne nommerait pas le processus.
-lancer_nr() { sortie="$(env PATH="$CHEMIN" "${EXTRA[@]}" timeout 60 setpriv --reuid=65534 --regid=65534 --clear-groups bash "$CIBLE" "$@" </dev/null 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
+lancer_nr() { sortie="$(env PATH="$CHEMIN" "${EXTRA[@]}" timeout 60 setpriv --reuid=65534 --regid=65534 --clear-groups bash "$CIBLE" </dev/null 2>&1)" && CODE=0 || CODE=$?; codes="$codes $CODE"; }
 
 titre "Codes d'usage"
 sortie="$(timeout 30 bash "$CIBLE" --help 2>&1)" && code=0 || code=$?
