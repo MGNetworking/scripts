@@ -399,16 +399,32 @@ poser_cas "924-sterile" 0 0 3 >/dev/null
 lancer_run
 assert_code 3 "sans argument : lint satisfait + acceptance stérile → 3"
 
+# Les deux cas suivants supposent « lint satisfait ». Sans shellcheck, lint.sh
+# rend 3 (A03) : le 0 attendu ne peut pas venir, et un échec y accuserait le
+# dispatcher à tort (A149). L'attente reste 0 ; elle se prouve là où shellcheck
+# existe — en conteneur : bash tests/env/run-in-container.sh -- bash <ce fichier>.
+SHELLCHECK_PRESENT="false"
+command -v shellcheck >/dev/null 2>&1 && SHELLCHECK_PRESENT="true"
+RAISON_SC="shellcheck absent, lint rend 3 (A03) — se prouve en conteneur"
+
 vider_cas
 poser_cas "925-partiel" 4 0 2 >/dev/null
 lancer_run
-assert_code 0 "sans argument : lint satisfait + acceptance partielle → 0"
+if [ "$SHELLCHECK_PRESENT" = "true" ]; then
+    assert_code 0 "sans argument : lint satisfait + acceptance partielle → 0"
+else
+    saute_indisponible "sans argument : lint satisfait + acceptance partielle → 0" "$RAISON_SC"
+fi
 assert_contient "$F_ERR" "non implémenté, ignoré" "les niveaux absents sont signalés sans faire échouer"
 
 vider_cas
 poser_cas "926-reussi" 2 0 0 >/dev/null
 lancer_run lint acceptance
-assert_code 0 "deux niveaux demandés explicitement, tous deux satisfaits → 0"
+if [ "$SHELLCHECK_PRESENT" = "true" ]; then
+    assert_code 0 "deux niveaux demandés explicitement, tous deux satisfaits → 0"
+else
+    saute_indisponible "deux niveaux demandés explicitement, tous deux satisfaits → 0" "$RAISON_SC"
+fi
 
 lancer_run unit
 assert_code 3 "niveau demandé explicitement mais non implémenté → 3"
@@ -600,8 +616,13 @@ else
     assert_code 0 "tests/run.sh lint dans le conteneur (shellcheck présent)"
 fi
 
-lancer bash "$RUN" lint
-assert_code 0 "tests/run.sh lint sur l'hôte"
+# Même garde qu'en §4 : sans shellcheck, 0 est impossible ici (A03, A149).
+if [ "$SHELLCHECK_PRESENT" = "true" ]; then
+    lancer bash "$RUN" lint
+    assert_code 0 "tests/run.sh lint sur l'hôte"
+else
+    saute_indisponible "tests/run.sh lint sur l'hôte" "$RAISON_SC"
+fi
 
 # ===================================================================
 # 10. Hygiène — aucun fichier jetable dans le dépôt
