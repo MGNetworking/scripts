@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Ramène le cluster à une seule StorageClass par défaut : la cible. Seule
-# l'annotation par défaut est touchée ; aucune classe n'est créée ni supprimée.
+# Ramène le cluster à une seule StorageClass par défaut : la cible. Seules les
+# annotations par défaut sont touchées ; aucune classe n'est créée ni supprimée.
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 while [ ! -f "$_dir/lib/common.sh" ] && [ "$_dir" != "/" ]; do _dir="$(dirname "$_dir")"; done
 source "$_dir/lib/common.sh"
 
 DELAI=10        # --request-timeout de chaque appel kubectl, en secondes
 MARGE=2         # « timeout » qui l'entoure : le laisser écrire son message
-CLE="storageclass.kubernetes.io/is-default-class"
-# Le point de la clé est échappé : sans lui, kubectl le lit comme un chemin d'objet.
-JP='{range .items[*]}{.metadata.name}{" "}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{"\n"}{end}'
-DRY_RUN="false"; OUI="false"
+CLE="storageclass.kubernetes.io/is-default-class"        # clé GA, posée sur la cible
+CLE_B="storageclass.beta.kubernetes.io/is-default-class" # clé bêta, encore lue par l'admission
+# Les points d'une clé sont échappés : sans eux, kubectl les lit comme un chemin
+# d'objet. Les deux clés sont relevées, et non la seule GA.
+JP='{range .items[*]}{.metadata.name}{" "}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{" "}{.metadata.annotations.storageclass\.beta\.kubernetes\.io/is-default-class}{"\n"}{end}'
+DRY_RUN="false"
 # Décision 45 : un parent qui exporte ASSUME_YES ne confirme pas à ma place.
 export ASSUME_YES="false"
 # Surcharge de test, lue avant tout trap et toute écriture de fichier.
@@ -28,22 +30,26 @@ Usage : configure-storage.sh [--dry-run] [-y|--yes] [--help]
   -y, --yes    ne pose aucune question (obligatoire hors terminal)
 
 La classe cible est SRV_K8S_STORAGE_CLASS (config/server.env), local-path à
-défaut. Elle doit exister dans le cluster : le script n'en crée aucune. Les
-autres classes marquées par défaut voient leur annotation ramenée à « false » —
-elle n'est jamais supprimée, seule sa valeur change, et rien n'est créé,
-supprimé ni réappliqué. La cible est marquée AVANT que les autres soient
-démarquées : le cluster ne passe jamais par zéro classe par défaut.
+défaut ; elle doit exister dans le cluster, le script n'en crée aucune. Elle est
+marquée AVANT que les autres soient démarquées : jamais zéro classe par défaut.
+Les autres voient leur annotation ramenée à « false » — jamais supprimée — et
+rien n'est créé, supprimé ni réappliqué.
+
+Une classe est par défaut si l'une des deux clés vaut « true » : la clé GA
+storageclass.kubernetes.io/is-default-class, celle que reçoit la cible, ou la
+clé bêta storageclass.beta.kubernetes.io/is-default-class, que le script ramène
+aussi à « false » là où elle marque une autre classe.
 
 K3s réapplique ses manifestes intégrés au démarrage, dont local-path et sa
-marque par défaut : ce que ce script retire peut revenir au redémarrage de K3s.
-Il n'y remédie pas ; sa vérification finale signale l'écart si l'état a dérivé.
-kubectl résout seul son kubeconfig (KUBECONFIG, sinon ~/.kube/config).
+marque : ce que ce script retire peut revenir. Il n'y remédie pas ; sa
+vérification finale signale l'écart si l'état a dérivé. kubectl résout seul son
+kubeconfig (KUBECONFIG, sinon ~/.kube/config).
 
 Codes de retour :
   0  la cible est la seule classe par défaut, ou l'était déjà ; ou --dry-run
   1  kubectl absent, apiserver injoignable, droits insuffisants, kubeconfig
-     invalide, délai dépassé, cible absente du cluster, confirmation refusée,
-     annotation ou relecture en échec
+     invalide, délai dépassé, cible absente, confirmation refusée, annotation
+     ou relecture en échec
   2  option inconnue, ou nom de classe mal formé
 EOF
 }
@@ -51,7 +57,7 @@ EOF
 while [ "${1:-}" != "" ]; do
     case "$1" in
         --dry-run) DRY_RUN="true"; shift ;;
-        -y|--yes)  export ASSUME_YES="true"; OUI="true"; shift ;;
+        -y|--yes)  export ASSUME_YES="true"; shift ;;
         --help|-h) usage; exit 0 ;;
         *) die "Option inconnue : $1" 2 ;;
     esac
@@ -61,7 +67,7 @@ done
 CIBLE="${SRV_K8S_STORAGE_CLASS:-local-path}"
 case "$CIBLE" in
     ""|*[!a-z0-9.-]*) die "Nom de StorageClass mal formé : « $CIBLE » — minuscules, chiffres, « - » et « . » attendus." 2 ;;
-    [!a-z0-9]*|*[!a-z0-9]|*..*|*--*|*.-*|*-.*) die "Nom de StorageClass mal formé : « $CIBLE » — un label RFC 1123 commence et finit par un caractère alphanumérique, sans séparateur doublé." 2 ;;
+    [!a-z0-9]*|*[!a-z0-9]|*..*|*.-*|*-.*) die "Nom de StorageClass mal formé : « $CIBLE » — un sous-domaine RFC 1123 commence et finit par un caractère alphanumérique, et « . » ou « - » ne s'y suivent jamais." 2 ;;
 esac
 [ "${#CIBLE}" -le 253 ] || die "Nom de StorageClass trop long : « $CIBLE » — 253 caractères au plus." 2
 
@@ -79,17 +85,22 @@ appel() {   # <verbe kubectl...>
     ERREUR="$(cat "$TEMPORAIRE/erreur")"
 }
 
-# Traduit l'échec du dernier appel : le 124 vient de « timeout », pas du cluster.
+# Cause du dernier échec, sans sortir : echec() et la boucle d'annotation la
+# partagent. Le 124 vient de « timeout », pas du cluster.
+cause() {
+    case "$CODE:$ERREUR" in
+        124:*) printf 'délai dépassé (%s s), appel interrompu par timeout' "$DELAI" ;;
+        *Forbidden*) printf 'Droits insuffisants (Forbidden), refus du cluster' ;;
+        *Unauthorized*|*x509*|*"error loading config file"*) printf 'Kubeconfig invalide ou périmé' ;;
+        *NotFound*) printf 'Ressource absente du cluster (NotFound)' ;;
+        *"connection refused"*|*"was refused"*|*"Unable to connect"*|*"no such host"*|*"i/o timeout"*) printf "L'apiserver est injoignable — vérifier l'accès par install-kubectl.sh (TASK-062)" ;;
+        *) printf 'le cluster a répondu, et a refusé : la cause est dans le message ci-dessus' ;;
+    esac
+}
+
 echec() {   # <appel> : n'est appelée que pour une lecture, et sort en 1
     [ -z "$ERREUR" ] || printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
-    case "$CODE:$ERREUR" in
-        124:*) die "L'appel $1 a été interrompu : délai dépassé (${DELAI} s)." ;;
-        *Forbidden*) die "Droits insuffisants : $1 a été refusé par le cluster." ;;
-        *Unauthorized*|*x509*|*"error loading config file"*) die "Kubeconfig invalide ou périmé : $1 a été refusé." ;;
-        *NotFound*) die "Ressource absente du cluster : $1 a échoué." ;;
-        *"connection refused"*|*"was refused"*|*"Unable to connect"*|*"no such host"*|*"i/o timeout"*) die "L'apiserver est injoignable : $1 a échoué. Vérifier l'accès par install-kubectl.sh (TASK-062)." ;;
-        *) die "Échec de $1. La cause est dans le message ci-dessus : le cluster a répondu, et a refusé." ;;
-    esac
+    die "$1 : $(cause)."
 }
 
 # Un seul relevé sert au compte, à la présence de la cible et aux marques posées.
@@ -99,7 +110,7 @@ relever() {
     printf '%s\n' "$REP" | grep . > "$TEMPORAIRE/etat" || true
     TOTAL="$(grep -c . "$TEMPORAIRE/etat" || true)"
     awk '{print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/noms"
-    awk '$2 == "true" {print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/defaut"
+    awk '$2 == "true" || $3 == "true" {print $1}' "$TEMPORAIRE/etat" > "$TEMPORAIRE/defaut"
 }
 
 relever
@@ -111,30 +122,35 @@ if [ "$(grep -c . "$TEMPORAIRE/defaut" || true)" = 1 ] && grep -qxF "$CIBLE" "$T
     exit 0
 fi
 
-# Plan d'annotations, cible en tête : jamais zéro classe par défaut, même si un démarquage échoue.
+# Plan d'annotations, cible en tête : jamais zéro classe par défaut, même si un
+# démarquage échoue. Une autre classe est démarquée clé par clé, à « false »,
+# jamais par suppression de l'annotation.
 PLAN=()
-grep -qxF "$CIBLE" "$TEMPORAIRE/defaut" || PLAN+=("$CIBLE=true")
-mapfile -t DEMARQ < <(grep -vxF "$CIBLE" "$TEMPORAIRE/defaut")
-for d in "${DEMARQ[@]}"; do PLAN+=("$d=false"); done
+grep -qxF "$CIBLE" "$TEMPORAIRE/defaut" || PLAN+=("$CIBLE|$CLE|true")
+while read -r n ga beta; do
+    [ "$n" != "$CIBLE" ] || continue
+    if [ "$ga" = "true" ]; then PLAN+=("$n|$CLE|false"); fi
+    if [ "$beta" = "true" ]; then PLAN+=("$n|$CLE_B|false"); fi
+done < "$TEMPORAIRE/etat"
 VOULEES="${#PLAN[@]}"
 printf '\nAnnotations à changer (%s) :\n' "$VOULEES"
-for a in "${PLAN[@]}"; do printf '  %s  %s=%s\n' "${a%%=*}" "$CLE" "${a##*=}"; done
+for a in "${PLAN[@]}"; do IFS='|' read -r n cle v <<<"$a"; printf '  %s  %s=%s\n' "$n" "$cle" "$v"; done
 [ "$VOULEES" -le 1 ] || info "« $CIBLE » est annotée en premier : le cluster ne passe jamais par zéro classe par défaut."
 
 if [ "$DRY_RUN" = "true" ]; then
     info "[dry-run] kubectl annotate n'a pas été appelé : rien n'a été modifié."
     exit 0
 fi
-[ -t 0 ] || [ "$OUI" = "true" ] || die "Annotations à confirmer, et aucun terminal n'est disponible. Relancer avec --yes." 1
+[ -t 0 ] || [ "${ASSUME_YES:-false}" = "true" ] || die "Annotations à confirmer, et aucun terminal n'est disponible. Relancer avec --yes." 1
 confirm "Appliquer ces $VOULEES annotation(s) ? « $CIBLE » restera la seule StorageClass par défaut." || die "Configuration abandonnée : rien n'a été modifié." 1
 
 FAITES=0
 for a in "${PLAN[@]}"; do
-    n="${a%%=*}"; v="${a##*=}"
-    appel annotate storageclass "$n" "$CLE=$v" --overwrite
+    IFS='|' read -r n cle v <<<"$a"
+    appel annotate storageclass "$n" "$cle=$v" --overwrite
     if [ "$CODE" != 0 ]; then
         printf '%s\n' "$ERREUR" | sed 's/^/  /' >&2
-        [ "$CODE" != 124 ] || error "Annotation de « $n » interrompue : délai dépassé (${DELAI} s sur kubectl annotate)."
+        error "Annotation de « $n » ($cle=$v) non appliquée : $(cause)."
         error "Bilan : $FAITES annotation(s) appliquée(s), $((VOULEES - FAITES)) non appliquée(s). Restaient : ${PLAN[*]:FAITES}. « $CIBLE » n'est peut-être pas la seule classe par défaut."
         exit 1
     fi
