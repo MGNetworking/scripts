@@ -69,7 +69,9 @@ rm -f "$BAC/sans-timeout/timeout"
 sortie="$(PATH="$BAC/sans-kubectl" timeout 60 bash "$CIBLE" </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "sans kubectl, le script rend 1"
 assert_contient "$sortie" "introuvable(s) : kubectl" "le message nomme kubectl"
-sortie="$(PATH="$BAC/sans-timeout" timeout 60 bash "$CIBLE" </dev/null 2>&1)" && code=0 || code=$?
+# « timeout » est résolu avant l'assignation : sans ce chemin absolu, le harnais
+# lui-même ne le trouverait plus dans le PATH restreint, et le 127 ne prouverait rien.
+sortie="$("$(command -v timeout)" 60 env PATH="$BAC/sans-timeout" bash "$CIBLE" </dev/null 2>&1)" && code=0 || code=$?
 assert_code 1 "$code" "sans timeout, le script rend 1"
 assert_contient "$sortie" "introuvable(s) : timeout" "le message nomme timeout"
 
@@ -154,10 +156,12 @@ assert_absent "$sortie" "[SUCCESS]" "aucun [SUCCESS] ne masque l'expiration"
 assert_egal "7 kubectl get deployment metrics-server -n kube-system --no-headers -o $CC_DEPLOIEMENT --request-timeout=5s" "$(head -1 "$BAC/timeout-appels")" "le délai externe vaut 7 (5 + 2), et l'appel reste borné à 5 s"
 rm -f "$BAC/timeout"
 
+# Mutation : la ligne de la vérification retirée, dans une copie jetable qui charge
+# son propre lib/common.sh. Si l'assertion du script était creuse, elle passerait.
 titre "Mutation — la vérification de l'APIService porte la preuve"
 mkdir -p "$BAC/mutant/lib"
 cp "$SCRIPTS_ROOT/lib/common.sh" "$BAC/mutant/lib/common.sh"
-sed 's/\[ "\$STATUT" = "True" \]/[ "$STATUT" != "True" ]/' "$CIBLE" > "$BAC/mutant/install-metrics.sh"
+grep -v 'non Available (' "$CIBLE" > "$BAC/mutant/install-metrics.sh"
 assert_egal "non" "$(cmp -s "$CIBLE" "$BAC/mutant/install-metrics.sh" && echo oui || echo non)" "la copie jetable diffère bien de l'original : la mutation a mordu"
 sain; printf 'False|ServiceUnavailable|the server is currently unable to handle the request\n' > "$BAC/apiservice"
 sortie="$(env PATH="$CHEMIN" timeout 60 bash "$BAC/mutant/install-metrics.sh" </dev/null 2>&1)" && code=0 || code=$?
