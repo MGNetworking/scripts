@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-078**.
+Prochain identifiant libre : **TASK-082**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -97,6 +97,10 @@ de ce que cet ADR a tranché.
 | [TASK-075](completed/TASK-075.md) | Écrire le cadrage de `Linux/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-076](completed/TASK-076.md) | Écrire le cadrage de `Docker/` | `completed` | moyenne | 074 | hôte | **oui** |
 | [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` | `completed` | moyenne | 074 | hôte | **oui** |
+| [TASK-078](pending/TASK-078.md) | Refondre `tests/README.md` en guide de 200 lignes au plus | `ready` | haute | — | hôte | non |
+| [TASK-079](pending/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | `ready` | haute | 078 | hôte | non |
+| [TASK-080](pending/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | `pending` | haute | 079 | hôte | **oui** |
+| [TASK-081](pending/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `pending` | haute | 080 | hôte | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
@@ -433,9 +437,9 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-073](completed/TASK-073.md) | Instituer le cadrage par grand dossier et la boucle de réflexion (décision 49) | [rapport](reports/TASK-073-report.md) |
 | [TASK-066](completed/TASK-066.md) | Écrire `Kubernetes/Installation/install-metrics.sh` | [rapport](reports/TASK-066-report.md) |
 | [TASK-074](completed/TASK-074.md) | Écrire le cadrage de `Kubernetes/` (état initial, en attente de validation par user) | [rapport](reports/TASK-074-report.md) |
-| [TASK-075](completed/TASK-075.md) | Écrire le cadrage de `Linux/` (état initial, en attente de validation par user) | [rapport](reports/TASK-075-report.md) |
-| [TASK-076](completed/TASK-076.md) | Écrire le cadrage de `Docker/` (état initial, en attente de validation par user) | [rapport](reports/TASK-076-report.md) |
-| [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` (état initial, en attente de validation par user) | [rapport](reports/TASK-077-report.md) |
+| [TASK-075](completed/TASK-075.md) | Écrire le cadrage de `Linux/` (état initial, validé par user le 2026-09-17) | [rapport](reports/TASK-075-report.md) |
+| [TASK-076](completed/TASK-076.md) | Écrire le cadrage de `Docker/` (état initial, validé par user le 2026-09-17) | [rapport](reports/TASK-076-report.md) |
+| [TASK-077](completed/TASK-077.md) | Écrire le cadrage de `Synology/` (état initial, validé par user le 2026-09-17) | [rapport](reports/TASK-077-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
