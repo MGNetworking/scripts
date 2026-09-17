@@ -7,8 +7,7 @@ n'est démontré : ni par la lecture du code, ni par la conviction d'un modèle,
 « ça a marché sur le serveur ». Une validation non lancée vaut `NON EXÉCUTÉ`, jamais
 `PASS` ([regles.md](../orchestration/regles.md) §10).
 
-Trois niveaux de preuve, toujours nommés ; une preuve ne se présente jamais comme
-plus forte qu'elle n'est :
+Trois niveaux de preuve, toujours nommés ; aucune ne se présente plus forte qu'elle n'est :
 
 | Preuve | Ce qui tourne | Ce qu'elle établit |
 |---|---|---|
@@ -26,8 +25,7 @@ Les niveaux de test, découverts par leur dispatcher en `maxdepth 1` :
 | `environment` | services, `systemctl`, init réel — `tests/environment/<sujet>.test.sh` | conteneur `systemd` |
 | `acceptance` | critères d'une tâche — `tests/acceptance/TASK-0xx-<sujet>.sh` | selon la tâche |
 
-Un niveau s'ajoute en déposant son dispatcher au chemin annoncé par
-`tests/run.sh --liste` ; rien d'autre à modifier.
+Un niveau s'ajoute en déposant son dispatcher au chemin que donne `tests/run.sh --liste`.
 
 ## 2. Lancer
 
@@ -99,6 +97,8 @@ framework ; elle ne pose ni `set -Eeuo pipefail` ni `trap`.
    trouverait avant le socle, et tous les scripts de `tests/` le chargeraient.
 10. Un fichier de cas destiné à tourner **dans** le conteneur va dans
     `tests/acceptance/interne/` ; seul son pilote, au premier niveau, le lance.
+11. Une fonction qui appelle `exit` (`die`, `require_root`, `load_config`…) se teste dans
+    un processus `bash` neuf : un sous-shell hérite de la garde anti-double-chargement.
 
 **Faux binaires.** Un faux binaire est un **fichier ordinaire**, créé par `cat >` dans
 un répertoire du bac (`$BAC/...`) où **aucun lien symbolique** ne porte déjà son nom :
