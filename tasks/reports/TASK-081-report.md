@@ -43,6 +43,37 @@ n'a pas laissé le démon à terre.
    racine du dépôt, et `ansible.cfg`, qui porte `roles_path`, n'est lu que depuis `Ansible/`.
    La commande porte maintenant `ANSIBLE_ROLES_PATH`, dans la CI comme dans le README.
 
+**La relecture.** Opus a rendu « fusionnable après corrections », avec trois défauts majeurs,
+tous réels et tous corrigés :
+
+1. **Le `rescue` pouvait désarmer la machine.** Si le fragment durci était déjà en place et
+   que `sshd -t` échouait pour une cause étrangère — une directive fautive ailleurs —, le
+   rôle supprimait le fragment avant de s'arrêter : le mot de passe redevenait acceptable au
+   prochain rechargement. Le fragment n'est désormais retiré que si ce passage venait de le
+   créer.
+2. **Ubuntu 24.04 lance sshd par socket.** `ssh.service` y est inactif, et un
+   `systemctl reload ssh` aurait échoué juste après l'écriture du fragment, hors du `rescue`.
+   Le rechargement est conditionné à un service actif ; le scénario ne démarre plus `ssh` de
+   force, si bien que les deux modes sont éprouvés tels que les distributions les livrent.
+3. **Le travail Molecule de la CI n'avait jamais tourné** : le commentaire du workflow
+   l'affirmait tout de même. Reformulé, puis prouvé par le run cité plus bas.
+
+**Ce que la correction 2 a fait apparaître, et qui valait le détour.** Une fois le scénario
+privé de son démarrage forcé de `ssh`, Ubuntu 24.04 s'est comporté comme une machine neuve :
+la socket écoute, aucun démon n'a jamais tourné, et `/run/sshd` — le répertoire de séparation
+de privilèges, que le service crée à son démarrage — n'existe pas. `sshd -t` a donc refusé de
+lire la configuration : « Missing privilege separation directory: /run/sshd ». **Le `rescue` a
+joué exactement son rôle** : fragment retiré, aucun rechargement, play arrêté sur son message.
+La garde a donc été vue à l'œuvre, et pas seulement relue. Le scénario livré crée désormais ce
+répertoire à la préparation, comme un serveur l'aurait fait au premier démarrage de sshd — sur
+une machine réelle, sshd a forcément tourné, puisque c'est par lui qu'Ansible entre.
+
+Trois mineurs corrigés également : la garde « règle `deny` préexistante » ne s'appuyait pas
+sur le code de retour de `ufw show added` ; le cadrage annonçait des gardes « avant toute
+écriture », ce qui n'était vrai que pour deux d'entre elles ; la vérification codait 22 et
+443 en clair au lieu de les nommer. Reste au registre l'accumulation des sauvegardes du
+fragment sshd (A162).
+
 **Ce que cette tâche ne prouve pas.** Le niveau de preuve est **conteneur**. Les gardes
 anti-verrouillage — compte absent, sans clé, hors de sudo, `sshd -t` en échec, règle `deny`
 sur le port SSH — ne sont pas éprouvées par un scénario : seul le chemin nominal l'est (A157).
@@ -51,8 +82,10 @@ en fin de texte.
 
 ## Statut
 
-`completed`. Le rôle est livré ; la décision de poursuivre ou non la migration reste ouverte
-(voir « Bilan » et « Ce qui t'est demandé »).
+`completed` pour la livraison — le rôle existe, il est éprouvé, la CI le passe. Mais la
+tâche se termine en **BESOIN_USER** : deux décisions restent, que ce rapport ne peut pas
+prendre à ta place (voir « Ce qui t'est demandé ») — le `--check --diff` sur un VPS, qui
+seul donne le niveau **machine**, et la poursuite ou non de la migration.
 
 ## Fichiers
 
@@ -63,8 +96,15 @@ en fin de texte.
 - `Ansible/roles/securite_base/molecule/default/` : `molecule.yml`, `Dockerfile.j2`,
   `collections.yml`, `prepare.yml`, `converge.yml`, `verify.yml`
 - `Ansible/playbooks/securite.yml`, `Ansible/CADRAGE.md` (contrat du rôle),
-  `Ansible/README.md` (installation, commandes Molecule), `.github/workflows/ci.yml`
-  (travail `ansible-molecule`, `ANSIBLE_ROLES_PATH` sur `ansible-lint`)
+  `.github/workflows/ci.yml` (travail `ansible-molecule`, `ANSIBLE_ROLES_PATH` sur
+  `ansible-lint`)
+- **Hors du `scope` de la fiche, mais imposés par les règles** (§11 : la documentation va
+  dans le même commit que le code) : `Ansible/README.md` — installation complétée, commandes
+  Molecule, images de base à tirer — et `README.md` racine, qui compte désormais un rôle et
+  cite Molecule dans la CI. S'y ajoutent les fichiers de clôture habituels : rapport,
+  backlog, registre, journal, mesures.
+- Retirés : `Ansible/playbooks/.gitkeep` et `Ansible/roles/.gitkeep`, sans objet une fois
+  les deux dossiers peuplés.
 
 ## Correspondance clause par clause
 
@@ -79,9 +119,9 @@ qu'il l'écrit de la même façon.
 | Exige `Include sshd_config.d/*.conf` | reprise — `slurp` puis `assert` avec la même expression rationnelle, casse comprise |
 | Exige que le répertoire `sshd_config.d` existe | **écartée** — le dépôt du fragment échoue de lui-même en nommant le répertoire ; une garde de plus n'ajouterait qu'un message |
 | Dépose `10-mgnetworking.conf` : trois directives | reprise — `template`, 0644, root |
-| Identique : rien réécrit ni rechargé | reprise — `template` idempotent, le handler n'est notifié que sur changement |
-| `sshd -t -f` puis `systemctl reload ssh` | reprise — `command` puis handler `service: reloaded`, dans cet ordre (`flush_handlers` explicite) |
-| Échec : fichier précédent restauré (ou retiré) | reprise — `block`/`rescue`, `backup: true`, puis `fail` qui laisse les handlers en attente |
+| Identique : rien réécrit ni rechargé | reprise — `template` idempotent, handler notifié seulement sur changement ; nuance : `sshd -t` est rejoué à chaque passage, sans rien modifier |
+| `sshd -t -f` puis `systemctl reload ssh` | reprise — `command` puis handler `service: reloaded`, dans cet ordre (`flush_handlers` explicite). Le rechargement est conditionné à un `ssh.service` actif : sur Ubuntu 24.04, où sshd est lancé par `ssh.socket`, un `reload` échouerait — et serait inutile, le démon suivant relisant la configuration |
+| Échec : fichier précédent restauré (ou retiré) | reprise, avec une prudence de plus — `block`/`rescue`, `backup: true` : sauvegarde remise en place si elle existe, fragment retiré **seulement** si ce passage venait de le créer, sinon laissé intact ; puis `fail`, qui laisse les handlers en attente |
 | Ne relit pas `sshd -T` pour SSH | reprise — le rôle ne s'en sert que pour le port ; `sshd -T` complet est dans `verify` |
 | `--utilisateur <nom>` | reprise — `securite_base_compte_admin`, requise sans défaut |
 | `--dry-run` | reprise autrement — `--check --diff`, natif et plus riche (le diff montre le fichier) |
@@ -136,7 +176,7 @@ Toutes lancées depuis la WSL Ubuntu 24.04 du poste de contrôle, sauf mention c
 | Mutant : `molecule idempotence` | **1** — voir la sortie ci-dessous |
 | `bash orchestration/outils/verifier-liens.sh` | 0 — aucun lien mort |
 | `bash orchestration/outils/juger.sh tasks/active/TASK-081.md` | 1 — « aucun fichier de cas dans le périmètre » : sans objet, la tâche ne livre aucun script Bash (A158) |
-| CI GitHub Actions sur le push de `master` | (à compléter) |
+| CI GitHub Actions sur le push de `master` | non observée — le push sur `master` est groupé en fin de domaine (§17 des règles) ; il n'a pas encore eu lieu. Niveau conteneur seul acquis ici |
 
 Niveau de preuve : **conteneur**. Aucune machine réelle n'a été touchée ; aucun
 `ansible-playbook` n'a tourné hors conteneur, avec ou sans `--check`.
@@ -272,4 +312,13 @@ couvre bien plus que les trois scripts de sécurité.
 
 ## Git
 
-(à compléter)
+Écart signalé : la fiche porte `agent: orchestrateur`, donc pas de lancement d'agent —
+`lancer-agent.sh` ne crée la copie `../script-agents/TASK-081` qu'au lancement, qu'il n'y a
+pas eu ici. Le dépôt principal a donc travaillé directement sur `agent/TASK-081`, sans copie
+isolée : conforme au fonctionnement prévu pour ce profil (§4 de `/tache`), mais à distinguer
+des tâches déléguées à un agent, où le dépôt principal ne quitte jamais `master`.
+
+- `62b6500` chore: TASK-081 en cours
+- `c00358a` feat(ansible): rôle securite_base, scénario Molecule et travail CI
+- corrections de relecture (3 majeurs, 3 mineurs) commitées séparément, puis fusion
+  `--no-ff` sur `master`, suppression de `agent/TASK-081`
