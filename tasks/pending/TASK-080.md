@@ -33,6 +33,7 @@ validation:
   - "bash orchestration/outils/verifier-liens.sh"
   - "tests/env/run-in-container.sh -- tests/run.sh lint"
 implementation_notes:
+  - accords de user du 2026-09-17 - pipx est installé par user lui-même (sudo), le conducteur installe le reste par pipx sans sudo ; le push de master pendant la tâche est autorisé pour prouver la CI ; regles.md §8 autorise désormais pipx, ansible, ansible-playbook, ansible-lint, yamllint et molecule
   - installer un outil dans WSL et pousser sur GitHub modifient hors du dépôt - annoncer dans le rapport ce qui a été installé
   - si le profil systemd ne tourne pas sur les runners GitHub, le dire et restreindre la CI au profil debian (ligne au registre)
 ---

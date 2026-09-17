@@ -80,6 +80,14 @@ comme équivalente.
 fin de domaine (orchestrateur seulement), commandes Docker sur les conteneurs et
 images préfixés `mgnet-test-`, `docker info`, `wsl --status`.
 
+**Outillage Ansible** (décision 50, accord de user du 2026-09-17) : `pipx`,
+`ansible`, `ansible-playbook`, `ansible-lint`, `yamllint`, `molecule`, y compris
+dans WSL. Les instances Molecule se nomment `mgnet-test-*`, comme tout conteneur
+que les agents peuvent manipuler. `ansible-playbook` ne s'exécute jamais sans
+`--check` hors d'un conteneur de test : appliquer sur une machine réelle est un
+geste de user. L'installation de `pipx` elle-même reste à user, puisqu'elle
+demande `sudo`.
+
 **Docker Desktop** : constater son état, jamais le démarrer ni l'arrêter. Il est
 lancé au démarrage du système ; `tests/env/assurer-docker.sh` attend qu'il soit prêt.
 
