@@ -89,7 +89,7 @@ de ce que cet ADR a tranché.
 | [TASK-067](pending/TASK-067.md) | Écrire `Kubernetes/Configuration/configure-namespaces.sh` | `pending` | moyenne | 062 | conteneur `debian` | non |
 | [TASK-068](pending/TASK-068.md) | Écrire `Kubernetes/Configuration/configure-storage.sh` | `pending` | moyenne | 062 | conteneur `debian` | **oui** |
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | `completed` | moyenne | 062, 064 | conteneur `debian` | **oui** |
-| [TASK-070](active/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `in_progress` | moyenne | 062, 065 | conteneur `debian` | **oui** |
+| [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | `completed` | moyenne | 062, 065 | conteneur `debian` | **oui** |
 | [TASK-071](pending/TASK-071.md) | Écrire `Kubernetes/Configuration/configure-registry.sh` | `pending` | moyenne | 062, 067 | conteneur `debian` | **oui** |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
@@ -419,6 +419,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-065](completed/TASK-065.md) | Écrire `Kubernetes/Installation/install-cert-manager.sh` | [rapport](reports/TASK-065-report.md) |
 | [TASK-064](completed/TASK-064.md) | Écrire `Kubernetes/Installation/install-ingress.sh` | [rapport](reports/TASK-064-report.md) |
 | [TASK-069](completed/TASK-069.md) | Écrire `Kubernetes/Configuration/configure-ingress.sh` | [rapport](reports/TASK-069-report.md) |
+| [TASK-070](completed/TASK-070.md) | Écrire `Kubernetes/Configuration/configure-tls.sh` | [rapport](reports/TASK-070-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et
