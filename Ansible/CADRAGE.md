@@ -63,12 +63,14 @@ ensemble est dit **autonome** et le déclare dans son contrat.
   le service `ssh` toujours actif ; `ufw` actif, `deny (incoming)`, `allow (outgoing)`,
   le port SSH et les ports demandés autorisés ; `fail2ban-client status sshd` répond,
   prison chargée avec les valeurs de la distribution (décision 22).
-- **Gardes** (décisions 20 et 21), avant toute écriture : compte
-  `securite_base_compte_admin` existant, non-root, membre de `sudo` et porteur d'au
-  moins une clé dans `authorized_keys` ; `sshd_config` incluant `sshd_config.d/*.conf` ;
-  `sshd -T` confirmant le port déclaré ; `sshd -t` avant tout rechargement, dont l'échec
-  restaure la version antérieure et arrête le play sans recharger ; règle SSH relue dans
-  `ufw show added` avant l'activation du pare-feu.
+- **Gardes** (décisions 20 et 21), chacune avant l'écriture qu'elle protège : avant de
+  toucher à sshd, compte `securite_base_compte_admin` existant, non-root, membre de `sudo`
+  et porteur d'au moins une clé dans `authorized_keys`, et `sshd_config` incluant
+  `sshd_config.d/*.conf` ; avant tout rechargement, `sshd -t`, dont l'échec restaure la
+  version antérieure — ou retire le fragment si ce passage venait de le créer — et arrête
+  le play sans recharger ; avant de toucher au pare-feu, `sshd -T` confirmant le port
+  déclaré ; avant l'activation d'ufw, la règle SSH relue dans `ufw show added` et l'absence
+  de règle `deny` sur ce port.
 - **Variables** (`meta/argument_specs.yml`) : `securite_base_compte_admin` (requis, sans
   défaut) ; `securite_base_ssh_port` (22) ; `securite_base_ports_autorises` (`[]`, forme
   `443/tcp`) ; `securite_base_fail2ban_essais` (10) et `securite_base_fail2ban_delai`
@@ -84,7 +86,9 @@ ensemble est dit **autonome** et le déclare dans son contrat.
   redémarrer `ssh`.
 - **Prouvé par** : `roles/securite_base/molecule/default` — Debian 12 et Ubuntu 24.04,
   conteneurs systemd, étapes `converge`, `idempotence` et `verify`. Niveau **conteneur** ;
-  le niveau **machine** demande un `--check --diff` de `user` sur un VPS.
+  le niveau **machine** demande un `--check --diff` de `user` sur un VPS. Seul le chemin
+  nominal est joué : les gardes ci-dessus sont écrites et relues, jamais exécutées en
+  échec (registre A157).
 - **État** : pilote (voir ci-dessous).
 
 ## Statut du pilote

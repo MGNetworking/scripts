@@ -95,7 +95,9 @@
         mode: "0644"
         backup: true
       register: securite_base_depot
-      notify: Recharger ssh
+      notify:
+        - Lire l'état des services
+        - Recharger ssh
 
     # Le fragment seul ne prouve rien : c'est la configuration complète, telle
     # que sshd la lira au rechargement, qui doit être valide.
@@ -105,6 +107,10 @@
       changed_when: false
       check_mode: false
 
+  # Trois cas, et un seul retire le fichier : celui où ce passage venait de le
+  # créer. Si le fragment était déjà là et conforme, « sshd -t » a échoué pour
+  # une cause étrangère — une directive fautive ailleurs, par exemple — et le
+  # supprimer rendrait le mot de passe acceptable au prochain rechargement.
   rescue:
     - name: Remettre en place la configuration sshd antérieure
       ansible.builtin.copy:
@@ -116,11 +122,13 @@
         mode: "0644"
       when: securite_base_depot.backup_file is defined
 
-    - name: Retirer le fragment déposé, faute de version antérieure
+    - name: Retirer le fragment que ce passage venait de créer
       ansible.builtin.file:
         path: "{{ securite_base_sshd_config_d }}/10-mgnetworking.conf"
         state: absent
-      when: securite_base_depot.backup_file is not defined
+      when:
+        - securite_base_depot.backup_file is not defined
+        - securite_base_depot.changed
 
     # Cet arrêt laisse les handlers en attente sans les exécuter : sshd garde
     # la configuration qu'il a déjà en mémoire, et l'accès reste ouvert.

@@ -19,8 +19,9 @@
 #                clôture d'une tâche, pas à chaque push.
 #
 # Molecule éprouve le rôle securite_base depuis TASK-081, dans deux conteneurs
-# systemd privilégiés — Debian 12 et Ubuntu 24.04 — que le runner GitHub, qui
-# est une machine virtuelle, accepte de lancer.
+# systemd privilégiés — Debian 12 et Ubuntu 24.04. Le runner GitHub étant une
+# machine virtuelle, ces conteneurs devraient y démarrer ; c'est le premier run
+# de ce travail qui le dira, et non ce commentaire.
 #
 # Les versions d'ansible-lint et de yamllint sont épinglées : sans cela, une
 # publication amont pourrait faire rougir la CI sans qu'une ligne du dépôt

@@ -44,11 +44,25 @@
         group: "{{ compte }}"
         mode: "0600"
 
-    - name: Démarrer sshd
-      ansible.builtin.service:
-        name: ssh
-        state: started
-        enabled: true
+    # sshd n'est pas démarré ici à dessein : chaque distribution doit rester
+    # dans l'état où elle livre le paquet — « ssh.service » sur Debian 12,
+    # « ssh.socket » sur Ubuntu 24.04. Le forcer masquerait le second cas, où
+    # un rechargement échouerait.
+    #
+    # Reste à donner à sshd son répertoire de séparation de privilèges, sans
+    # lequel « sshd -t » refuse de lire quoi que ce soit : « Missing privilege
+    # separation directory: /run/sshd ». Sur un serveur, ce répertoire existe
+    # dès que sshd a tourné une fois — et il a forcément tourné, puisque c'est
+    # par lui qu'Ansible entre. Dans une instance où personne ne s'est jamais
+    # connecté, il faut le créer. Constaté sur Ubuntu 24.04, dont la socket
+    # n'avait encore lancé aucun démon.
+    - name: Donner à sshd le répertoire que son service crée au démarrage
+      ansible.builtin.file:
+        path: /run/sshd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
 
     # Sur un serveur Debian, rsyslog tient /var/log/auth.log et la prison sshd
     # l'y lit. L'image de base n'a ni rsyslog ni ce fichier, et fail2ban

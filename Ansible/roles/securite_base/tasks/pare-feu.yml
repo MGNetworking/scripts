@@ -48,6 +48,9 @@
 - name: Refuser une règle « deny » portant déjà sur le port SSH
   ansible.builtin.assert:
     that:
+      # Une lecture en échec ne vaut pas absence de règle : en simulation, ufw
+      # peut ne pas être installé, mais alors rien ne sera activé non plus.
+      - securite_base_regles_avant.rc == 0
       - securite_base_regles_avant.stdout_lines
         | select('match', '^ufw deny .*(' ~ securite_base_ssh_port ~ '/tcp|port '
                  ~ securite_base_ssh_port ~ '([^0-9]|$))')
@@ -57,6 +60,7 @@
       ufw garderait la sienne et l'accès serait coupé. La retirer d'abord.
       Rien n'a été modifié.
     quiet: true
+  when: not ansible_check_mode
 
 - name: Autoriser le port SSH avant toute politique
   community.general.ufw:
