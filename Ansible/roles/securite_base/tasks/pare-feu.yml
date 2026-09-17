@@ -1,0 +1,110 @@
+---
+# Ansible/roles/securite_base/tasks/pare-feu.yml — ufw, entrée refusée.
+#
+# C'est la partie du rôle qui peut couper l'accès à la machine. L'ordre est
+# donc imposé (décision 21) : le port SSH est ouvert avant toute politique,
+# puis la règle est relue dans « ufw show added » — lisible pare-feu actif
+# comme inactif — et l'activation n'a lieu que si elle s'y trouve. Aucune règle
+# n'est jamais supprimée.
+
+- name: Installer ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# Le port déclaré est celui que le rôle ouvrira : s'il n'est pas celui que sshd
+# écoute réellement, activer ufw fermerait la porte d'entrée.
+- name: Relire le port d'écoute effectif de sshd
+  ansible.builtin.command:
+    cmd: sshd -T
+  register: securite_base_sshd_effectif
+  changed_when: false
+  check_mode: false
+
+- name: Exiger que sshd écoute le port déclaré
+  ansible.builtin.assert:
+    that:
+      - "'port ' ~ securite_base_ssh_port in securite_base_sshd_effectif.stdout_lines"
+    fail_msg: >-
+      securite_base_ssh_port vaut {{ securite_base_ssh_port }}, que sshd
+      n'écoute pas : ouvrir ce port et fermer le reste couperait l'accès.
+      Rien n'a été modifié.
+    quiet: true
+
+- name: Relire les règles déjà enregistrées par ufw
+  ansible.builtin.command:
+    cmd: ufw show added
+  register: securite_base_regles_avant
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+# Une règle « deny » sur ce port l'emporterait sur la nôtre : refuser en la
+# nommant vaut mieux qu'activer un pare-feu qui couperait l'accès sans retour.
+# Les deux formes qu'ufw enregistre sont couvertes : « ufw deny 22/tcp » et
+# « ufw deny proto tcp from any to any port 22 ».
+- name: Refuser une règle « deny » portant déjà sur le port SSH
+  ansible.builtin.assert:
+    that:
+      # Une lecture en échec ne vaut pas absence de règle : en simulation, ufw
+      # peut ne pas être installé, mais alors rien ne sera activé non plus.
+      - securite_base_regles_avant.rc == 0
+      - securite_base_regles_avant.stdout_lines
+        | select('match', '^ufw deny .*(' ~ securite_base_ssh_port ~ '/tcp|port '
+                 ~ securite_base_ssh_port ~ '([^0-9]|$))')
+        | list | length == 0
+    fail_msg: >-
+      Une règle « deny » porte déjà sur le port {{ securite_base_ssh_port }} :
+      ufw garderait la sienne et l'accès serait coupé. La retirer d'abord.
+      Rien n'a été modifié.
+    quiet: true
+  when: not ansible_check_mode
+
+- name: Autoriser le port SSH avant toute politique
+  community.general.ufw:
+    rule: allow
+    port: "{{ securite_base_ssh_port }}"
+    proto: tcp
+
+- name: Autoriser les autres ports demandés
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.split('/')[0] }}"
+    proto: "{{ item.split('/')[1] }}"
+  loop: "{{ securite_base_ports_autorises }}"
+
+- name: Relire les règles enregistrées par ufw
+  ansible.builtin.command:
+    cmd: ufw show added
+  register: securite_base_regles
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+# En simulation, aucune règle n'a été posée et rien ne sera activé : la garde
+# n'aurait rien à garder, et son échec masquerait le reste du plan.
+- name: Exiger la règle SSH avant d'activer le pare-feu
+  ansible.builtin.assert:
+    that:
+      - "'ufw allow ' ~ securite_base_ssh_port ~ '/tcp' in securite_base_regles.stdout"
+    fail_msg: >-
+      La règle « ufw allow {{ securite_base_ssh_port }}/tcp » est absente de
+      « ufw show added » : activation refusée, l'accès serait coupé.
+    quiet: true
+  when: not ansible_check_mode
+
+- name: Refuser l'entrant par défaut
+  community.general.ufw:
+    direction: incoming
+    default: deny
+
+- name: Autoriser le sortant par défaut
+  community.general.ufw:
+    direction: outgoing
+    default: allow
+
+- name: Activer ufw
+  community.general.ufw:
+    state: enabled

@@ -1,0 +1,25 @@
+---
+# Ansible/roles/securite_base/handlers/main.yml
+#
+# « reload » et jamais « restart » pour ssh : un rechargement ne coupe pas les
+# connexions en cours — une configuration fautive ne se verrait qu'à la
+# connexion suivante, et laisse le temps de corriger.
+
+- name: Lire l'état des services
+  ansible.builtin.service_facts:
+
+# Ubuntu 24.04 livre sshd en activation par socket : « ssh.socket » écoute et
+# « ssh.service » ne démarre qu'à la connexion. Un « reload » y échouerait
+# — « Job type reload is not applicable » — après l'écriture du fragment et
+# hors du rescue, c'est-à-dire au pire endroit. Et il serait inutile : le sshd
+# lancé à la prochaine connexion lira de lui-même la configuration nouvelle.
+- name: Recharger ssh
+  ansible.builtin.service:
+    name: ssh
+    state: reloaded
+  when: ansible_facts.services['ssh.service'].state | default('') == 'running'
+
+- name: Redémarrer fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted

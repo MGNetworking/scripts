@@ -18,7 +18,10 @@
 #                fichiers vont et viennent avec les tâches. Il se lance à la
 #                clôture d'une tâche, pas à chaque push.
 #
-# Molecule n'a pas encore de travail : aucun rôle n'existe (TASK-081, A154).
+# Molecule éprouve le rôle securite_base depuis TASK-081, dans deux conteneurs
+# systemd privilégiés — Debian 12 et Ubuntu 24.04. Le runner GitHub étant une
+# machine virtuelle, ces conteneurs devraient y démarrer ; c'est le premier run
+# de ce travail qui le dira, et non ce commentaire.
 #
 # Les versions d'ansible-lint et de yamllint sont épinglées : sans cela, une
 # publication amont pourrait faire rougir la CI sans qu'une ligne du dépôt
@@ -77,5 +80,52 @@ jobs:
       - name: Contrôler le style YAML de tout le dépôt
         run: yamllint .
 
+      # ANSIBLE_ROLES_PATH est indispensable : les rôles ne sont pas à la
+      # racine du dépôt mais sous Ansible/, et ansible.cfg, qui porte
+      # roles_path, n'est lu que depuis Ansible/. Sans cette variable,
+      # ansible-lint ne trouve pas securite_base et rend « syntax-check ».
       - name: Contrôler les rôles et playbooks
-        run: ansible-lint Ansible/
+        run: ANSIBLE_ROLES_PATH="$PWD/Ansible/roles" ansible-lint Ansible/
+
+  ansible-molecule:
+    name: Ansible — Molecule sur Debian 12 et Ubuntu 24.04
+    runs-on: ubuntu-latest
+    # Deux instances systemd construites puis éprouvées l'une après l'autre,
+    # chacune installant ufw et fail2ban par apt : le double du travail du
+    # scénario le plus long des tests Bash.
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      # Deux environnements, comme sur le poste de contrôle, et la bibliothèque
+      # docker dans les deux : Molecule pilote le démon depuis le sien, mais
+      # les modules docker, eux, s'exécutent avec le python d'ansible.
+      - name: Installer l'outillage par pipx
+        run: |
+          pipx install --include-deps ansible==14.4.0
+          pipx inject ansible docker==7.2.0
+          pipx install molecule==26.8.0
+          pipx inject molecule 'molecule-plugins[docker]==26.7.15' docker==7.2.0
+
+      # Molecule vit dans son propre environnement, qui ne porte
+      # qu'ansible-core : sans cette installation, ni son pilote Docker ni le
+      # module ufw du rôle ne lui sont visibles. Le chemin est celui que
+      # Molecule consulte en premier.
+      - name: Installer les collections du rôle
+        run: |
+          ansible-galaxy collection install --force \
+            -r Ansible/roles/securite_base/molecule/default/collections.yml \
+            -p "$HOME/.ansible/collections"
+
+      # Le scénario construit ses images avec « pull: false » : les bases
+      # doivent donc être déjà présentes. C'est ce qui évite au pilote de
+      # s'adresser au registre à chaque construction.
+      - name: Tirer les images de base
+        run: |
+          docker pull debian:12
+          docker pull ubuntu:24.04
+
+      - name: Éprouver le rôle securite_base en conteneurs systemd
+        working-directory: Ansible/roles/securite_base
+        run: molecule test

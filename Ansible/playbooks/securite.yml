@@ -1,0 +1,19 @@
+---
+# Ansible/playbooks/securite.yml — sécurité de base des VPS.
+#
+#   ansible-playbook playbooks/securite.yml --check --diff --limit vps1
+#   ansible-playbook playbooks/securite.yml --limit vps1
+#
+# La simulation d'abord, l'application ensuite, machine par machine : c'est un
+# geste de user, jamais d'un agent (Ansible/README.md).
+#
+# securite_base_compte_admin n'a pas de valeur par défaut : il se déclare dans
+# host_vars/<hôte>.yml, hors Git, avec le compte réel de la machine.
+
+- name: Sécurité de base des serveurs
+  hosts: vps
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: securite_base

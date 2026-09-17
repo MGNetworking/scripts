@@ -1,0 +1,142 @@
+---
+# Ansible/roles/securite_base/tasks/ssh.yml — durcissement de sshd.
+#
+# Trois verrous, dans cet ordre, contre le verrouillage de la machine
+# (décision 20) : un compte non-root avec sudo et clé publique ; l'inclusion de
+# sshd_config.d/*.conf, sans laquelle le fragment serait ignoré en silence ;
+# « sshd -t » avant tout rechargement, dont l'échec restaure l'état antérieur.
+
+- name: Exiger un compte d'administration non-root
+  ansible.builtin.assert:
+    that:
+      - securite_base_compte_admin | length > 0
+      - securite_base_compte_admin != 'root'
+    fail_msg: >-
+      securite_base_compte_admin doit nommer un compte non-root : sans compte
+      joignable par clé, refuser le mot de passe fermerait l'accès.
+      Rien n'a été modifié.
+    quiet: true
+
+- name: Lire le compte d'administration
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ securite_base_compte_admin }}"
+    fail_key: false
+
+# « default(None) » couvre le compte introuvable : selon la version du module,
+# la clé manque ou vaut None, et l'assert qui suit doit trancher dans les deux
+# cas plutôt que de mourir sur une variable indéfinie.
+- name: Retenir le compte lu
+  ansible.builtin.set_fact:
+    securite_base_compte: "{{ ansible_facts.getent_passwd[securite_base_compte_admin] | default(None) }}"
+
+- name: Lire le groupe sudo
+  ansible.builtin.getent:
+    database: group
+    key: sudo
+    fail_key: false
+
+- name: Exiger un compte existant, hors UID 0 et membre de sudo
+  ansible.builtin.assert:
+    that:
+      - securite_base_compte is not none
+      - securite_base_compte[1] != '0'
+      - ansible_facts.getent_group['sudo'] is not none
+      - securite_base_compte[2] == ansible_facts.getent_group['sudo'][1]
+        or securite_base_compte_admin
+        in ansible_facts.getent_group['sudo'][2].split(',')
+    fail_msg: >-
+      « {{ securite_base_compte_admin }} » doit exister, avoir un UID autre que
+      0 et appartenir au groupe sudo : sans lui, aucune correction ne serait
+      possible après coup. Rien n'a été modifié.
+    quiet: true
+
+- name: Lire les clés publiques du compte d'administration
+  ansible.builtin.slurp:
+    src: "{{ securite_base_compte[4] }}/.ssh/authorized_keys"
+  register: securite_base_cles
+  failed_when: false
+
+- name: Exiger au moins une clé publique
+  ansible.builtin.assert:
+    that:
+      - securite_base_cles.content is defined
+      - (securite_base_cles.content | b64decode).splitlines()
+        | reject('match', '^\\s*(#|$)') | list | length > 0
+    fail_msg: >-
+      Aucune clé publique dans
+      {{ securite_base_compte[4] }}/.ssh/authorized_keys : refuser le mot de
+      passe fermerait la connexion. Rien n'a été modifié.
+    quiet: true
+
+- name: Lire la configuration principale de sshd
+  ansible.builtin.slurp:
+    src: "{{ securite_base_sshd_config }}"
+  register: securite_base_sshd_conf
+
+- name: Exiger que sshd_config inclue sshd_config.d/*.conf
+  ansible.builtin.assert:
+    that:
+      - securite_base_sshd_conf.content | b64decode
+        is search('(?im)^[ \\t]*Include[ \\t]+.*sshd_config\\.d/\\*\\.conf')
+    fail_msg: >-
+      {{ securite_base_sshd_config }} n'inclut pas sshd_config.d/*.conf : le
+      fragment déposé serait ignoré. Rien n'a été modifié.
+    quiet: true
+
+- name: Déposer le fragment sshd, puis le soumettre à sshd -t
+  block:
+    - name: Déposer le fragment de configuration sshd
+      ansible.builtin.template:
+        src: 10-mgnetworking.conf.j2
+        dest: "{{ securite_base_sshd_config_d }}/10-mgnetworking.conf"
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      register: securite_base_depot
+      notify:
+        - Lire l'état des services
+        - Recharger ssh
+
+    # Le fragment seul ne prouve rien : c'est la configuration complète, telle
+    # que sshd la lira au rechargement, qui doit être valide.
+    - name: Contrôler la configuration complète de sshd avant tout rechargement
+      ansible.builtin.command:
+        cmd: sshd -t -f {{ securite_base_sshd_config }}
+      changed_when: false
+      check_mode: false
+
+  # Trois cas, et un seul retire le fichier : celui où ce passage venait de le
+  # créer. Si le fragment était déjà là et conforme, « sshd -t » a échoué pour
+  # une cause étrangère — une directive fautive ailleurs, par exemple — et le
+  # supprimer rendrait le mot de passe acceptable au prochain rechargement.
+  rescue:
+    - name: Remettre en place la configuration sshd antérieure
+      ansible.builtin.copy:
+        src: "{{ securite_base_depot.backup_file }}"
+        dest: "{{ securite_base_sshd_config_d }}/10-mgnetworking.conf"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      when: securite_base_depot.backup_file is defined
+
+    - name: Retirer le fragment que ce passage venait de créer
+      ansible.builtin.file:
+        path: "{{ securite_base_sshd_config_d }}/10-mgnetworking.conf"
+        state: absent
+      when:
+        - securite_base_depot.backup_file is not defined
+        - securite_base_depot.changed
+
+    # Cet arrêt laisse les handlers en attente sans les exécuter : sshd garde
+    # la configuration qu'il a déjà en mémoire, et l'accès reste ouvert.
+    - name: Arrêter, sshd ayant refusé la configuration déposée
+      ansible.builtin.fail:
+        msg: >-
+          « sshd -t » refuse la configuration : l'état antérieur est restauré,
+          rien n'a été rechargé.
+
+- name: Recharger ssh maintenant, avant de toucher au pare-feu
+  ansible.builtin.meta: flush_handlers

@@ -1,0 +1,87 @@
+---
+# Ce que l'instance doit montrer une fois le rôle appliqué — constaté sur la
+# machine, jamais sur les fichiers que le rôle vient d'écrire : c'est sshd,
+# ufw et fail2ban qui répondent, pas le rôle.
+
+- name: Vérifier l'état obtenu
+  hosts: all
+  become: true
+  gather_facts: false
+
+  # Les mêmes valeurs que converge.yml, nommées plutôt qu'écrites en clair dans
+  # les assertions : un port changé là-bas doit faire échouer ici, pas passer.
+  vars:
+    securite_base_verif_port_ssh: 22
+    securite_base_verif_port_en_plus: 443
+
+  tasks:
+    - name: Lire la configuration effective de sshd
+      ansible.builtin.command:
+        cmd: sshd -T
+      register: securite_base_verif_sshd
+      changed_when: false
+
+    - name: Exiger le refus du mot de passe et la clé publique
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in securite_base_verif_sshd.stdout_lines"
+          - "'kbdinteractiveauthentication no' in securite_base_verif_sshd.stdout_lines"
+          - "'pubkeyauthentication yes' in securite_base_verif_sshd.stdout_lines"
+          - "'port ' ~ securite_base_verif_port_ssh in securite_base_verif_sshd.stdout_lines"
+        fail_msg: "sshd n'applique pas ce que le rôle garantit."
+        quiet: true
+
+    # Le rôle ne vaudrait rien s'il durcissait sshd en le laissant à terre. La
+    # question n'est pas de savoir quelle unité tourne — « ssh.service » sur
+    # Debian 12, « ssh.socket » sur Ubuntu 24.04 — mais si le port répond
+    # encore. C'est la seule chose qui compte pour qui veut entrer.
+    - name: Exiger que le port SSH écoute toujours
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ securite_base_verif_port_ssh }}"
+        state: started
+        timeout: 5
+
+    - name: Lire l'état du pare-feu
+      ansible.builtin.command:
+        cmd: ufw status verbose
+      register: securite_base_verif_ufw
+      changed_when: false
+
+    - name: Exiger un pare-feu actif, fermé en entrée, SSH et 443 ouverts
+      ansible.builtin.assert:
+        that:
+          - "'Status: active' in securite_base_verif_ufw.stdout"
+          - "'deny (incoming)' in securite_base_verif_ufw.stdout"
+          - "'allow (outgoing)' in securite_base_verif_ufw.stdout"
+          - securite_base_verif_port_ssh ~ '/tcp' in securite_base_verif_ufw.stdout
+          - securite_base_verif_port_en_plus ~ '/tcp' in securite_base_verif_ufw.stdout
+        fail_msg: "ufw n'est pas dans l'état que le rôle garantit."
+        quiet: true
+
+    - name: Lire l'état de la prison sshd
+      ansible.builtin.command:
+        cmd: fail2ban-client status sshd
+      register: securite_base_verif_prison
+      changed_when: false
+
+    - name: Exiger une prison sshd chargée par le démon
+      ansible.builtin.assert:
+        that:
+          - "'Status for the jail: sshd' in securite_base_verif_prison.stdout"
+        fail_msg: "fail2ban ne tient pas la prison sshd."
+        quiet: true
+
+    - name: Lire les droits du fragment sshd déposé
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config.d/10-mgnetworking.conf
+      register: securite_base_verif_fragment
+
+    - name: Exiger un fragment appartenant à root, lisible et non modifiable
+      ansible.builtin.assert:
+        that:
+          - securite_base_verif_fragment.stat.exists
+          - securite_base_verif_fragment.stat.mode == '0644'
+          - securite_base_verif_fragment.stat.pw_name == 'root'
+        fail_msg: "Le fragment sshd n'a pas les droits attendus."
+        quiet: true

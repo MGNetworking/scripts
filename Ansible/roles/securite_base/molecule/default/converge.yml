@@ -1,0 +1,15 @@
+---
+- name: Appliquer le rôle securite_base
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    securite_base_compte_admin: exploitant
+    # Un port supplémentaire, pour éprouver la boucle d'ouverture autrement que
+    # sur le seul port SSH.
+    securite_base_ports_autorises:
+      - 443/tcp
+
+  roles:
+    - role: securite_base

@@ -1,0 +1,28 @@
+---
+# Collections nécessaires au rôle et à son scénario, versions épinglées comme
+# celles des outils (Ansible/README.md) : une publication amont ne doit pas
+# pouvoir faire rougir la CI sans qu'une ligne du dépôt change.
+#
+# Molecule installe ce fichier lui-même à sa phase « dependency », mais trop
+# tard pour le pilote Docker, qu'il contrôle dès le démarrage du scénario : il
+# faut donc l'installer une fois à la main, là où Molecule cherche en premier.
+#
+#   ansible-galaxy collection install --force \
+#     -r Ansible/roles/securite_base/molecule/default/collections.yml \
+#     -p "$HOME/.ansible/collections"
+#
+# Le paquet « ansible » installé par pipx les embarque déjà ; cette installation
+# les rend visibles au venv de Molecule, qui ne porte qu'ansible-core.
+
+collections:
+  # ufw — le module que le rôle emploie pour les règles et les politiques.
+  - name: community.general
+    version: "13.4.0"
+
+  # Pilote Docker de Molecule.
+  - name: community.docker
+    version: "5.3.0"
+
+  # Exigée par le pilote Docker de molecule-plugins.
+  - name: ansible.posix
+    version: "2.2.2"

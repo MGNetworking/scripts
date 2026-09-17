@@ -1,0 +1,69 @@
+---
+# Scénario Molecule du rôle securite_base — niveau de preuve « conteneur ».
+#
+# Deux instances jetables, une par distribution du parc, toutes deux préfixées
+# « mgnet-test- » comme tout conteneur qu'un agent peut manipuler
+# (orchestration/regles.md §8).
+#
+# systemd y tourne en PID 1, comme dans tests/env/Dockerfile.systemd : sans
+# lui, « systemctl reload ssh », « systemctl restart fail2ban » et l'activation
+# d'ufw ne seraient jamais exécutés, et tout un pan du rôle resterait écrit
+# sans être éprouvé. D'où --privileged, le cgroup de l'hôte monté en écriture
+# et cgroupns_mode: host — ufw a en plus besoin de charger des règles
+# netfilter, ce qu'un conteneur non privilégié ne peut pas faire.
+#
+# « pull: false » exige que debian:12 et ubuntu:24.04 soient déjà là :
+#
+#   docker pull debian:12 && docker pull ubuntu:24.04
+#
+# Sans lui, le pilote retire l'image de base à chaque construction, donc
+# s'adresse au registre, donc réclame l'assistant d'identification du poste —
+# sur une machine Windows, un .exe que WSL ne sait pas exécuter, et la
+# construction meurt sur « Exec format error ». Les images de base restent
+# ainsi figées jusqu'au prochain « docker pull », ce qui rend aussi les
+# scénarios reproductibles d'un jour à l'autre.
+
+driver:
+  name: docker
+
+platforms:
+  - name: mgnet-test-securite-debian12
+    image: debian:12
+    dockerfile: Dockerfile.j2
+    command: /sbin/init
+    pull: false
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+  - name: mgnet-test-securite-ubuntu2404
+    image: ubuntu:24.04
+    dockerfile: Dockerfile.j2
+    command: /sbin/init
+    pull: false
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+  # Sans cela, le play ne trouve pas le rôle : Ansible cherche « roles/ » à
+  # côté du playbook — ici molecule/default/ — et Ansible/ansible.cfg, qui
+  # porte roles_path, n'est pas lu depuis un scénario.
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/../"
+    # Configuration Docker sans aucune authentification, puisque le scénario
+    # ne s'adresse à aucun registre privé. Sans elle, le pilote lit celle du
+    # poste — sur une machine Windows, elle délègue les identifiants à un .exe
+    # de Docker Desktop que WSL ne sait pas exécuter, et la construction meurt
+    # sur « Exec format error ». Le répertoire doit contenir un config.json :
+    # à défaut, la bibliothèque retombe sur celui du poste.
+    DOCKER_CONFIG: "${MOLECULE_SCENARIO_DIRECTORY}/docker"
+
+verifier:
+  name: ansible
