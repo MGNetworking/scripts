@@ -72,24 +72,28 @@ commite, et rend une ligne `VERDICT`.
 
 ## 5. Vérifier — ne jamais croire l'agent sur parole
 
-Dans la copie `../script-agents/$1`, chaque commande au premier plan avec un délai de
-600000 ms ; un délai dépassé vaut NON EXÉCUTÉ et se rend en `BESOIN_USER` :
+```bash
+bash orchestration/outils/verifier-travail.sh $1
+```
 
-1. `bash orchestration/outils/juger.sh tasks/active/$1.md` — tu relances toi-même ;
-2. **périmètre** : `git diff --name-only master...agent/$1` ne contient que des
-   fichiers du `scope` ;
-3. **tests** : lis `git diff <premier jet>..agent/$1 -- tests/`. Le nombre de lignes
+Au premier plan, délai de 600000 ms ; un délai dépassé vaut NON EXÉCUTÉ et se rend
+en `BESOIN_USER`. Le script fait dans la copie `../script-agents/$1` les gestes que
+tu faisais à la main — son en-tête et `--help` disent lesquels et à quelles
+conditions. Il rend une ligne `VERDICT` et 0 ou 1 ; ses lignes vont au rapport.
+
+Deux lectures restent à toi, qu'aucun script ne fait :
+
+1. **tests** : `git diff <premier jet>..agent/$1 -- tests/`. Le nombre de lignes
    `assert_`, `ok`, `ko`, `saute` ne baisse jamais (`grep -cE` sur les deux
    versions) ; toute modification est une correction de construction justifiée
    dans son commit. Après le dernier commit `fix: retours de relecture ($1)`,
    seules les modifications demandées par ces retours sont admises ;
-4. **longueur** : `wc -l` du script et du fichier de cas. Au-delà de 150 lignes
-   sans raison donnée sur la ligne `VERDICT`, c'est un défaut à signaler au
-   relecteur ;
-5. les commandes du champ `validation`, codes réels consignés. Sur l'hôte, `tests/run.sh lint`
-   rend 3 faute de `shellcheck` : c'est NON EXÉCUTÉ, la preuve est le lint en conteneur.
+2. une ligne `LONGUEUR` au-delà de 150 lignes sans raison donnée sur la ligne
+   `VERDICT` de l'agent : défaut à signaler au relecteur.
 
-Périmètre débordé ou tests modifiés : travail rejeté, tâche bloquée.
+Sur l'hôte, `tests/run.sh lint` rend 3 faute de `shellcheck` : c'est NON EXÉCUTÉ, la
+preuve est le lint en conteneur. Périmètre débordé ou tests modifiés : travail
+rejeté, tâche bloquée.
 
 ## 6. Relire, corriger une fois
 
@@ -151,17 +155,22 @@ porte un `Axx`, et chaque `Axx` cité existe dans le registre.
 
 1. `git merge --no-ff agent/$1`, puis `git worktree remove ../script-agents/$1`
    et `git branch -d agent/$1` ;
-2. fiche vers `tasks/completed/`, `status: completed` ;
-3. ligne du script dans le `README.md` de son dossier ; dans le `README.md` racine,
-   qui ne liste que les domaines, le seul nombre de scripts ;
-4. `tasks/backlog.md` : statut, section « Terminé », tâches débloquées en `ready` ;
-5. ligne au journal `orchestration/mesures/journal.md` : agent, modèle, passages,
-   jetons et jetons de relecture, lus tous deux dans `orchestration/mesures/agents.tsv`
-   (lignes `relecteur`), défauts ; une ligne d'agent `incomplet` (transcript de session
-   introuvable) s'écrit « non relevé », sauf si l'usage se lit dans le `.jsonl` de la session ;
-6. `bash orchestration/outils/verifier-liens.sh` : 0, sinon corrige les liens cassés
-   par le déplacement de la fiche ;
-7. `git commit`, `agents.tsv` compris, avec la ligne `Tâche : $1`.
+2. écris dans le scratchpad la ligne du tableau de `orchestration/mesures/journal.md`
+   — agent, modèle, passages, jetons et jetons de relecture, lus tous deux dans
+   `orchestration/mesures/agents.tsv` (lignes `relecteur`), défauts ; une ligne d'agent
+   `incomplet` (transcript de session introuvable) s'écrit « non relevé », sauf si
+   l'usage se lit dans le `.jsonl` de la session — et, dans un second fichier, les
+   lignes de mesure qui manquent encore à `agents.tsv`, puis :
+
+```bash
+bash orchestration/outils/clore-tache.sh $1 --journal <fichier> [--mesures <fichier>]
+```
+
+   Il contrôle avant d'écrire et n'écrit rien si un contrôle échoue ; son en-tête dit
+   ce qu'il vérifie et ce qu'il met à jour ;
+3. ce qu'il ne fait pas, et qui te revient : la ligne du script dans le `README.md` de
+   son dossier (le `README.md` racine ne porte que le nombre de scripts), le statut des
+   fiches débloquées, puis `git commit`, `agents.tsv` compris, avec la ligne `Tâche : $1`.
 
 **Tâche `blocked`** : fiche vers `tasks/blocked/` avec `blocked_reason`, rapport,
 commit sur `master`. Branche et copie gardées, rien fusionné.

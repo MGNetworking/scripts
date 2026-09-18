@@ -6,6 +6,8 @@
 #
 # Une fiche dont le périmètre ne vise que Ansible/ n'a pas de fichier de cas : elle
 # est jugée sur la présence d'un scénario Molecule complet (A158, décision 50).
+# Une fiche qui ne livre ni .sh ni rôle — un cadrage, une documentation — est « sans
+# objet » et passe ; seul un scope vide reste un défaut (A172).
 #
 # Usage : juger.sh <fiche>
 # Codes : 0 tout passe — 1 échec, lignes « FAIL » sur la sortie — 2 usage.
@@ -34,6 +36,13 @@ mapfile -t ansible < <(awk '
     }' "$racine/$fiche")
 mapfile -t roles < <(printf '%s\n' ${ansible[@]+"${ansible[@]}"} \
     | sed -n 's#^\(Ansible/roles/[A-Za-z0-9_-]\+\).*#\1#p' | sort -u)
+
+# Les entrées brutes du périmètre : elles seules distinguent une fiche mal formée,
+# au scope vide, d'une tâche documentaire qui ne livre ni script ni rôle (A172).
+mapfile -t entrees < <(awk '
+    /^scope:/ {s=1; next}
+    /^[a-z_]+:/ {s=0}
+    s && /^[[:space:]]*-[[:space:]]/ {sub(/^[[:space:]]*-[[:space:]]*/, ""); print}' "$racine/$fiche")
 
 # Présence du scénario : molecule/<nom>/ avec molecule.yml, converge.yml, verify.yml.
 juger_ansible() {
@@ -75,6 +84,19 @@ done
 # Périmètre sans aucun .sh mais visant Ansible/ : c'est Molecule qui fait foi.
 if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#ansible[@]}" -gt 0 ]; then
     if juger_ansible; then exit 0; else exit 1; fi
+fi
+# Périmètre sans aucun .sh ni rôle : documentaire, ou fiche mal formée (A172). Les
+# deux rendaient le même « aucun fichier de cas » ; seul le second est un défaut.
+if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#ansible[@]}" -eq 0 ]; then
+    if [ "${#entrees[@]}" -eq 0 ]; then
+        echo "FAIL  périmètre vide : aucune entrée sous « scope: » dans $fiche"
+        echo "JUGE  périmètre vide : ÉCHEC"
+        exit 1
+    fi
+    if ! printf '%s\n' "${entrees[@]}" | grep -qE '\.sh([^A-Za-z0-9]|$)'; then
+        echo "JUGE  périmètre documentaire (${#entrees[@]} entrées, aucun .sh, aucun rôle Ansible) : SANS OBJET"
+        exit 0
+    fi
 fi
 [ -n "$cas" ] || { echo "FAIL  aucun fichier de cas dans le périmètre de $fiche"; exit 1; }
 
