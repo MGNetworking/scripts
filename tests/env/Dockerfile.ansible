@@ -37,10 +37,16 @@ LABEL mgnet.test.docker="socket"
 # ca-certificates, curl, xz-utils   le client Docker à télécharger — rien de
 #                                   plus : l'outillage vient de pip, et les
 #                                   instances sont celles du démon de l'hôte
+# rsync                             réclamé par la phase « create » de Molecule
+#                                   (ansible.posix.synchronize, qui copie le
+#                                   contexte du scénario) : sans lui le
+#                                   scénario échoue avant toute convergence,
+#                                   mesuré le 2026-09-18
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
+        rsync \
         xz-utils \
     && rm -rf /var/lib/apt/lists/*
 

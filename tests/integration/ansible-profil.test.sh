@@ -51,6 +51,10 @@ for outil in 'ansible==14.4.0' 'ansible-lint==26.8.0' 'docker==7.2.0' \
              'molecule==26.8.0' 'molecule-plugins[docker]==26.7.15' 'yamllint==1.38.0'; do
     assert_contient "$image_texte" "$outil" "l'outil est épinglé : $outil"
 done
+# rsync n'est pas un outil du dépôt mais une dépendance du pilote Docker de
+# Molecule (phase « create ») : son absence n'échoue qu'à l'exécution réelle du
+# scénario, jamais à la lecture — d'où cette assertion.
+assert_contient "$image_texte" "rsync" "l'image porte rsync, exigé par la phase create de Molecule"
 
 titre "Le lanceur monte le socket que le profil réclame"
 

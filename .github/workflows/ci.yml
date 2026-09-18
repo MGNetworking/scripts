@@ -2,7 +2,8 @@
 # .github/workflows/ci.yml — intégration continue du dépôt.
 #
 # Obligatoire depuis la décision 50 : aucun push sur master dont la CI est
-# rouge. Deux travaux indépendants, en parallèle, sous la barre des 15 minutes.
+# rouge. Trois travaux indépendants, en parallèle, chacun sous sa propre borne
+# de temps.
 #
 # Le travail « bash » ne réinvente rien : il appelle le même point d'entrée que
 # sur le poste de travail, tests/env/run-in-container.sh, qui construit une
