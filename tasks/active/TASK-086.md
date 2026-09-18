@@ -1,7 +1,7 @@
 ---
 id: TASK-086
 title: "Outiller la vérification et la clôture d'une tâche, et donner à juger.sh sa branche documentaire (A172)"
-status: ready
+status: in_progress
 priority: high
 depends_on: []
 environment: host
