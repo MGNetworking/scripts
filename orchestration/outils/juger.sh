@@ -4,6 +4,9 @@
 # Lance, dans le conteneur de test, shellcheck sur les .sh du périmètre de la
 # fiche, son fichier de cas, puis les règles transverses de TASK-011. Aucun jeton.
 #
+# Une fiche dont le périmètre ne vise que Ansible/ n'a pas de fichier de cas : elle
+# est jugée sur la présence d'un scénario Molecule complet (A158, décision 50).
+#
 # Usage : juger.sh <fiche>
 # Codes : 0 tout passe — 1 échec, lignes « FAIL » sur la sortie — 2 usage.
 set -Eeuo pipefail
@@ -20,11 +23,59 @@ mapfile -t fichiers < <(awk '
         print substr($0, RSTART, RLENGTH)
     }' "$racine/$fiche")
 
+# Un rôle Ansible ne livre pas de fichier de cas : il se prouve par un scénario
+# Molecule (décision 50). Les chemins Ansible du périmètre, et les rôles qui s'en
+# déduisent, servent à juger sa présence — jamais à le lancer (A158).
+mapfile -t ansible < <(awk '
+    /^scope:/ {s=1; next}
+    /^[a-z_]+:/ {s=0}
+    s && match($0, /Ansible\/[^ ,]+/) {
+        print substr($0, RSTART, RLENGTH)
+    }' "$racine/$fiche")
+mapfile -t roles < <(printf '%s\n' ${ansible[@]+"${ansible[@]}"} \
+    | sed -n 's#^\(Ansible/roles/[A-Za-z0-9_-]\+\).*#\1#p' | sort -u)
+
+# Présence du scénario : molecule/<nom>/ avec molecule.yml, converge.yml, verify.yml.
+juger_ansible() {
+    local role scenario f manque trouve echec=0
+    if [ "${#roles[@]}" -eq 0 ]; then
+        echo "FAIL  périmètre Ansible sans rôle : aucun Ansible/roles/<nom>/ dans le scope de $fiche"
+        echo "JUGE  scénario Molecule : ÉCHEC"
+        return 1
+    fi
+    for role in "${roles[@]}"; do
+        trouve=""; manque=""
+        for scenario in "$racine/$role"/molecule/*/; do
+            [ -d "$scenario" ] || continue
+            manque=""
+            for f in molecule.yml converge.yml verify.yml; do
+                [ -f "$scenario$f" ] || manque="$manque $f"
+            done
+            if [ -n "$manque" ]; then continue; fi
+            trouve="${scenario#"$racine"/}"
+            break
+        done
+        if [ -n "$trouve" ]; then
+            echo "JUGE  scénario Molecule ${trouve%/} (molecule.yml, converge.yml, verify.yml) : PASSE"
+        else
+            echo "FAIL  $role : aucun scénario Molecule complet sous molecule/<nom>/"
+            echo "FAIL  attendus : molecule.yml, converge.yml, verify.yml${manque:+ — manquants :$manque}"
+            echec=1
+        fi
+    done
+    [ "$echec" = 0 ] || echo "JUGE  scénario Molecule : ÉCHEC"
+    return "$echec"
+}
+
 cas=""
 for f in "${fichiers[@]}"; do
     [ -f "$racine/$f" ] || { echo "FAIL  fichier absent : $f"; exit 1; }
     case "$f" in *.test.sh) cas="$f" ;; esac
 done
+# Périmètre sans aucun .sh mais visant Ansible/ : c'est Molecule qui fait foi.
+if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#ansible[@]}" -gt 0 ]; then
+    if juger_ansible; then exit 0; else exit 1; fi
+fi
 [ -n "$cas" ] || { echo "FAIL  aucun fichier de cas dans le périmètre de $fiche"; exit 1; }
 
 cd "$racine"
