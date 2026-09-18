@@ -6,7 +6,7 @@ priority: medium
 depends_on: []
 environment: host
 human_approval_required: false
-agent: sonnet
+agent: deepseek
 objective: |
   `orchestration/outils/juger.sh` rend 1 avec « aucun fichier de cas dans le périmètre »
   sur toute tâche qui ne livre pas de script Bash — TASK-080 et TASK-081 l'ont subi. Un
