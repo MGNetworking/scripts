@@ -158,3 +158,10 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-18 13:57:41	TASK-083	conducteur	sonnet	43	-	-	91621	354	0	
 2026-09-18 15:39:03	TASK-086	relecteur	opus	30	-	-	74686	328	0	
 2026-09-18 15:51:29	TASK-086	conducteur	sonnet	3	-	-	36295	2588	0	
+2026-09-18 15:52:45	TASK-087	deepseek	deepseek-flash	1	0	0	0	5	1	0.000
+2026-09-18 15:55:13	TASK-087	deepseek	deepseek-flash	17	47077	715264	17879	105	0	0.040
+2026-09-18 15:58:03	TASK-087	deepseek	deepseek-flash	45	57678	2326912	19231	147	0	0.054
+2026-09-18 15:59:51	TASK-087	deepseek	deepseek-flash	20	49339	868736	13690	94	0	0.036
+2026-09-18 16:02:26	TASK-087	deepseek	deepseek-flash	39	59567	2202112	19213	139	0	0.054
+2026-09-18 16:09:11	TASK-087	relecteur	opus	17	-	-	42420	122	0	
+2026-09-18 16:11:50	TASK-087	deepseek	deepseek-flash	27	36589	979968	11378	104	0	0.031
