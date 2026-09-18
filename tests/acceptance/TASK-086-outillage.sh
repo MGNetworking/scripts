@@ -78,12 +78,31 @@ c="$(code_de "$TMP/s3" bash "$jouet/orchestration/outils/juger.sh" tasks/active/
 assert_egal 1 "$c" "périmètre Bash : code 1 inchangé, la branche documentaire ne l'absorbe pas"
 assert_contient "$(cat "$TMP/s3")" "fichier absent" "périmètre Bash : le fichier manquant est nommé"
 
+cat > "$jouet/tasks/active/TASK-905.md" <<'FICHE'
+---
+id: TASK-905
+scope:
+  - orchestration/outils/juger.sh — un .sh hors des dossiers de scripts
+---
+FICHE
+c="$(code_de "$TMP/s31" bash "$jouet/orchestration/outils/juger.sh" tasks/active/TASK-905.md)"
+assert_egal 1 "$c" "un .sh au scope, où qu'il soit : jamais « sans objet »"
+assert_absent "$(cat "$TMP/s31")" "SANS OBJET" "un .sh au scope : pas de laissez-passer documentaire"
+
 c="$(code_de "$TMP/s4" bash "$OUTILS/juger.sh" tasks/completed/TASK-081.md)"
 assert_egal 0 "$c" "non-régression Ansible : TASK-081 rend toujours 0"
 assert_contient "$(cat "$TMP/s4")" "scénario Molecule" "non-régression Ansible : verdict Molecule"
 
 c="$(code_de "$TMP/s5" bash "$OUTILS/juger.sh" tasks/completed/TASK-083.md)"
 assert_egal 0 "$c" "TASK-083, la fiche qui a révélé A172 : code 0"
+
+# Tout ce bloc a besoin de git, absent de l'image de test : sans lui, rien ne peut
+# être produit — indisponibilité, pas cas sauté (tests/README.md).
+if ! command -v git > /dev/null 2>&1; then
+    saute_indisponible "verifier-travail.sh et clore-tache.sh : git absent de cet environnement"
+    bilan "TASK-086"
+    exit
+fi
 
 titre "verifier-travail.sh — périmètre"
 depot="$TMP/depot"
@@ -128,7 +147,7 @@ if git -C "$SCRIPTS_ROOT" rev-parse --verify -q "7be628a^{commit}" > /dev/null; 
         --ref 7be628a --base 7f75838 --perimetre)"
     assert_egal 0 "$c" "premier jet de TASK-085 : périmètre conforme"
 else
-    saute "premier jet de TASK-085 : commit 7be628a absent de ce dépôt"
+    saute_indisponible "premier jet de TASK-085 : commit 7be628a absent de ce dépôt"
 fi
 
 titre "clore-tache.sh — clôture de TASK-083 rejouée"

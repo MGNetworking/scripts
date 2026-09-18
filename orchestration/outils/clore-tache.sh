@@ -63,11 +63,20 @@ fi
 if [ -f "$rapport" ]; then
     mapfile -t cites < <(awk '/^#+ .*[Rr]éserve/ {d = 1; next} /^#+ /  {d = 0} d' "$rapport" \
         | grep -oE '\bA[0-9]{2,3}\b' | sort -u)
+    manquants=0
     for a in ${cites[@]+"${cites[@]}"}; do
-        grep -qE "^\| \[.\] \| $a \|" "$registre" || signaler "réserve $a absente du registre $registre"
+        grep -qE "^\| \[.\] \| $a \|" "$registre" \
+            || { signaler "réserve $a absente du registre $registre"; manquants=$((manquants + 1)); }
     done
-    echo "CONTROLE  réserves du rapport : ${#cites[@]} Axx cités, tous au registre"
+    echo "CONTROLE  réserves du rapport : ${#cites[@]} Axx cités, $manquants hors registre"
 fi
+
+# Les deux points d'insertion, cherchés avant d'écrire quoi que ce soit : sans eux,
+# une ligne se perdrait en silence pendant que la sortie annoncerait le succès.
+ligne_termine="$(awk '/^## .*Terminé/ {d = NR} d && NR > d && /^\| \[TASK-/ {n = NR} END {print n + 0}' "$backlog")"
+ligne_journal="$(awk '/^\| TASK-/ {n = NR} END {print n + 0}' "$journal")"
+[ "$ligne_termine" -gt 0 ] || signaler "aucune ligne « | [TASK-… » sous « ## … Terminé » de $backlog"
+[ "$ligne_journal" -gt 0 ] || signaler "aucune ligne « | TASK-… » dans $journal"
 
 [ "$echec" = 0 ] || { echo "CLOTURE  contrôles en défaut : rien n'a été écrit"; exit 1; }
 
@@ -87,17 +96,12 @@ titre="$(awk -F'|' -v t="[$tache](" 'index($2, t) {gsub(/^ +| +$/, "", $3); prin
 sed -i "${ligne_backlog}s#\](\(pending\|active\|blocked\)/$tache\.md)#](completed/$tache.md)#" "$backlog"
 sed -i "${ligne_backlog}s#| \`\(ready\|in_progress\|validating\|pending\|blocked\)\` |#| \`completed\` |#" "$backlog"
 
-# Section « Terminé » : à la suite de sa dernière ligne.
-debut="$(grep -n '^## .*Terminé' "$backlog" | head -1 | cut -d: -f1)"
-fin="$(awk -v d="$debut" 'NR > d && /^\| \[TASK-/ {n = NR} END {print n}' "$backlog")"
-inserer_apres "$backlog" "$fin" \
+inserer_apres "$backlog" "$ligne_termine" \
     "| [$tache](completed/$tache.md) | $titre | [rapport](reports/$tache-report.md) |"
-echo "CLOTURE  backlog : statut completed, ligne ajoutée à « Terminé »"
+echo "CLOTURE  backlog : statut completed, ligne ajoutée à « Terminé » (ligne $ligne_termine)"
 
-# Journal : à la suite de la dernière ligne de son tableau de tâches.
-fin="$(awk '/^\| TASK-/ {n = NR} END {print n}' "$journal")"
-inserer_apres "$journal" "$fin" "$(cat "$f_journal")"
-echo "CLOTURE  journal : 1 ligne ajoutée après la ligne $fin"
+inserer_apres "$journal" "$ligne_journal" "$(cat "$f_journal")"
+echo "CLOTURE  journal : 1 ligne ajoutée après la ligne $ligne_journal"
 
 if [ -n "$f_mesures" ]; then
     cat "$f_mesures" >> "$mesures"

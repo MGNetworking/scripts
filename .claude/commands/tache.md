@@ -78,10 +78,8 @@ bash orchestration/outils/verifier-travail.sh $1
 
 Au premier plan, délai de 600000 ms ; un délai dépassé vaut NON EXÉCUTÉ et se rend
 en `BESOIN_USER`. Le script fait dans la copie `../script-agents/$1` les gestes que
-tu faisais à la main : périmètre du diff contre le `scope` — un fichier de cas
-**ajouté** sous `tests/` est admis comme preuve, tout le reste est un débordement —,
-longueur des `.sh`, `juger.sh`, puis chaque commande du champ `validation` avec son
-code réel. Il rend une ligne `VERDICT` et 0 ou 1 ; ses lignes vont au rapport.
+tu faisais à la main — son en-tête et `--help` disent lesquels et à quelles
+conditions. Il rend une ligne `VERDICT` et 0 ou 1 ; ses lignes vont au rapport.
 
 Deux lectures restent à toi, qu'aucun script ne fait :
 
@@ -168,11 +166,8 @@ porte un `Axx`, et chaque `Axx` cité existe dans le registre.
 bash orchestration/outils/clore-tache.sh $1 --journal <fichier> [--mesures <fichier>]
 ```
 
-   Il contrôle avant d'écrire — rapport présent, chaque `Axx` des réserves inscrit au
-   registre — et n'écrit rien si un contrôle échoue ; il déplace ensuite la fiche en
-   `completed`, met le backlog à jour (statut, section « Terminé »), ajoute la ligne de
-   journal et les mesures, lance `verifier-liens.sh` et nomme les fiches dépendantes à
-   passer en `ready` ;
+   Il contrôle avant d'écrire et n'écrit rien si un contrôle échoue ; son en-tête dit
+   ce qu'il vérifie et ce qu'il met à jour ;
 3. ce qu'il ne fait pas, et qui te revient : la ligne du script dans le `README.md` de
    son dossier (le `README.md` racine ne porte que le nombre de scripts), le statut des
    fiches débloquées, puis `git commit`, `agents.tsv` compris, avec la ligne `Tâche : $1`.
