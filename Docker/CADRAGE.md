@@ -346,3 +346,4 @@ Aucun dans `Docker/`.
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
 | 2026-09-17 | État initial : besoin, ensemble « Moteur Docker », contrats des 9 scripts tels qu'écrits (TASK-076) | état initial | oui, 2026-09-17 |
+| 2026-09-18 | Ligne « Prouvé par » sur les contrats des 3 scripts de Diagnostics/ (TASK-083) | ajout compatible | fiche TASK-083, décision 50 |
