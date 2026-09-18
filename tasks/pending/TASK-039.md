@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A168**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A169**.
 
 ## Registre
 
@@ -217,6 +217,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A165 | P4 | `tests/env/valider-ansible.sh` (TASK-085) relève les instances `mgnet-test-securite-*` avant `molecule test` mais n'agit pas sur ce relevé : des instances déjà présentes ne font rien échouer, seul le relevé « après » est vérifié | TASK-085, relecture | avertir explicitement, ou refuser, si le relevé « avant » n'est pas vide |
 | [ ] | A166 | P4 | `tests/env/run-in-container.sh` (TASK-085) annonce en dur « debian:12 » dans ses messages de construction d'image (`--pull`, première construction), faux pour le profil `ansible` dont la base est `python:3.12-slim-bookworm` | TASK-085, relecture | rendre le message dépendant du profil résolu |
 | [ ] | A167 | P4 | Deux trous de documentation liés à TASK-085 : `tests/README.md` ne décrit le profil `ansible` ni son label `mgnet.test.docker` (seuls `debian` et `systemd` y figurent) ; le `scope` de `tasks/completed/TASK-085.md` omet `tests/integration/`, où vit pourtant le fichier de cas livré — c'est cette omission, autant que la limite de `juger.sh` déjà notée en A158, qui a produit son `FAIL` | TASK-085, relecture | documenter le profil dans `tests/README.md` ; élargir le `scope` de TASK-085 ou la reconnaissance de `juger.sh` (avec A158) |
+| [x] | A168 | P1 | `tests/env/valider-ansible.sh` (TASK-085) livré au mode Git `100644` (non exécutable), contre `100755` pour `run-in-container.sh` et `assurer-docker.sh` : le run CI du 2026-09-18 (35339381587) a échoué en 52 s, `exec: "tests/env/valider-ansible.sh": permission denied` (code 126), alors que la même commande passait sur le poste — le partage de fichiers de Docker Desktop sur Windows rend tout fichier monté exécutable, quel que soit son mode Git, ce qu'un checkout Linux natif (runner GitHub) ne fait pas. Le niveau **conteneur** obtenu sur le poste ne suffit donc pas à garantir un run Linux natif | TASK-085, CI | fait — conducteur, `git update-index --chmod=+x tests/env/valider-ansible.sh`, reprouvé par le run CI qui a suivi |
 
 ## Suivi, pas des défauts
 
