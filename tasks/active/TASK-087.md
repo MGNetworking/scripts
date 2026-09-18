@@ -1,7 +1,7 @@
 ---
 id: TASK-087
 title: "Documenter le fonctionnement de l'outil de préparation, à hauteur d'utilisateur"
-status: ready
+status: in_progress
 priority: high
 depends_on: []
 environment: host
