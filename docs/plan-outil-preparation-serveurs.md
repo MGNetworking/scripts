@@ -84,9 +84,10 @@ majeur. Conducteur Sonnet 36 000 à 199 000 jetons — c'est ce poste que TASK-0
 ### TASK-087 — Documentation fonctionnelle de l'outil
 
 - **Pourquoi** : user doit comprendre le fonctionnement sans jargon.
-- **Contenu** : `Ansible/README.md` complété — le trajet poste → serveur, ce qu'est un
-  rôle, ce qu'est une recette, où vivent les informations confidentielles, les commandes
-  du quotidien, ce qui se passe le jour où un VPS existe.
+- **Contenu** : `Ansible/GUIDE.md` (`limites.json` ferme `README.md` et `docs/` aux
+  agents, d'où ce fichier plutôt que `Ansible/README.md`, qui y renvoie) — le trajet
+  poste → serveur, ce qu'est un rôle, ce qu'est une recette, où vivent les informations
+  confidentielles, les commandes du quotidien, ce qui se passe le jour où un VPS existe.
 - **Critères** : aucun terme technique employé sans être expliqué à sa première
   apparition ; chaque commande citée existe ; le trajet des secrets est décrit.
 - **Agent** : DeepSeek.
