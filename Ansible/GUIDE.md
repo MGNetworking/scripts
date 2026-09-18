@@ -8,11 +8,11 @@ comment **installer** l'outillage sur le poste, dans [README.md](README.md).
 ## 1. Le trajet, en une image
 
 ```text
-  Le poste de travail (WSL Ubuntu)              Le serveur
-  ────────────────────────────────              ──────────
-  le dépôt Git, cloné ici                       rien du dépôt
-  Ansible, installé ici                         rien d'Ansible
-  les recettes, lues ici                        aucun agent, aucun service
+  Le poste de travail (WSL — Linux sous Windows)   Le serveur
+  ──────────────────────────────────────────────   ──────────
+  le dépôt Git, cloné ici                          rien du dépôt
+  Ansible, installé ici                            rien d'Ansible
+  les recettes, lues ici                           aucun agent, aucun service
                     │
                     │  SSH : on ouvre une connexion, on commande, on raccroche
                     └──────────────────────────▶  la commande s'exécute
@@ -59,10 +59,10 @@ rejouable sans risque.
 ## 4. Prouver, sans avoir de serveur
 
 Deux machines d'essai suffisent, et elles n'existent que le temps du test : ce sont des
-**conteneurs**, c'est-à-dire des machines simulées, montées puis détruites par Docker —
+**conteneurs**, c'est-à-dire des machines jetables, montées puis détruites par Docker —
 le logiciel qui fait tourner de telles machines sur le poste. **Molecule** est l'outil qui
-les fabrique, y joue le rôle, vérifie le résultat, rejoue le rôle une seconde fois pour
-éprouver l'**idempotence**, puis efface tout.
+les fabrique, y joue le rôle (`converge`), le rejoue pour vérifier qu'il ne change plus
+rien (`idempotence`), puis contrôle le résultat (`verify`) avant d'effacer les machines.
 
 Les niveaux de preuve se nomment toujours : **simulé** (la logique seule), **conteneur**
 (le rôle joué réellement, dans une machine jetable) et **machine** (le constat fait sur
@@ -95,7 +95,8 @@ Un **coffre** (Ansible Vault) répond au cas où un secret doit voyager avec le 
 le fichier reste chiffré, Git ne voit que des caractères illisibles, et Ansible le
 déchiffre au moment de l'emploi. On l'ouvre avec une phrase de passe, jamais versionnée.
 
-Pour vérifier avant un commit qu'un fichier réel est bien écarté :
+Pour vérifier avant un commit qu'un fichier réel est bien écarté — la commande se lance
+**depuis la racine du dépôt**, d'où partent les chemins ci-dessous :
 
 ```bash
 git check-ignore -v Ansible/inventory.yml Ansible/host_vars/vps1.yml
@@ -103,8 +104,8 @@ git check-ignore -v Ansible/inventory.yml Ansible/host_vars/vps1.yml
 
 ## 6. Les commandes du quotidien
 
-Toutes se lancent **depuis `Ansible/`** : Ansible ne lit son fichier de configuration
-`ansible.cfg` que dans le dossier courant.
+Les commandes `ansible*` ci-dessous se lancent **depuis `Ansible/`** : Ansible ne lit son
+fichier de configuration `ansible.cfg` que dans le dossier courant.
 
 ```bash
 cp inventory.example.yml inventory.yml                  # une fois, puis compléter
@@ -114,8 +115,8 @@ ansible-inventory --graph                               # ce qu'Ansible a compri
 ansible all -m ansible.builtin.ping                     # les machines répondent-elles
 ```
 
-La vérification qui ne touche à rien — elle tourne dans un conteneur jetable, et
-n'installe rien sur le poste :
+La vérification qui ne touche à rien se lance **depuis la racine du dépôt** : elle tourne
+dans un conteneur jetable, et n'installe rien sur le poste.
 
 ```bash
 tests/env/run-in-container.sh --profil ansible -- tests/env/valider-ansible.sh
