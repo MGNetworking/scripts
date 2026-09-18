@@ -76,6 +76,7 @@ sortie="$(cd "$copie" && "${env_agent[@]}" "${borne[@]}" claude -p "$consigne" \
     --setting-sources project \
     --settings "$ici/../limites.json" \
     --strict-mcp-config \
+    --disallowed-tools Artifact ArtifactComments ArtifactData \
     --permission-mode acceptEdits \
     --output-format json)" || code=$?
 rm -f "$copie/RETOURS-$tache.md"
