@@ -8,12 +8,12 @@ environment: host
 human_approval_required: false
 agent: deepseek
 objective: |
-  docs/guide-ansible-fonctionnel.md explique le fonctionnement de l'outil à quelqu'un qui n'a jamais
+  Ansible/GUIDE.md explique le fonctionnement de l'outil à quelqu'un qui n'a jamais
   employé Ansible : le trajet du poste vers le serveur, ce qu'est un rôle, ce qu'est une
   recette, où vivent les informations confidentielles, et ce qui se passe le jour où un
   serveur existe.
 scope:
-  - docs/guide-ansible-fonctionnel.md
+  - Ansible/GUIDE.md
 out_of_scope:
   - modifier Ansible/README.md (le conducteur y ajoute le renvoi à la clôture), un rôle, un playbook, la configuration des linters ou la CI
   - documenter des rôles qui n'existent pas encore (seul securite_base existe)
