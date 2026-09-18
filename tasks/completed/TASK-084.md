@@ -1,7 +1,7 @@
 ---
 id: TASK-084
 title: "Apprendre à juger.sh à juger une tâche Ansible (A158)"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: host
