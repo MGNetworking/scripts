@@ -103,7 +103,7 @@ de ce que cet ADR a tranché.
 | [TASK-081](completed/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | `completed` | haute | 080 | hôte | **oui** |
 | [TASK-083](pending/TASK-083.md) | Essai DeepSeek : lignes « Prouvé par : » des scripts qui restent en Bash | `ready` | moyenne | — | hôte | non |
 | [TASK-084](pending/TASK-084.md) | Apprendre à `juger.sh` à juger une tâche Ansible (A158) | `ready` | moyenne | — | hôte | non |
-| [TASK-085](pending/TASK-085.md) | Exécuter l'outillage Ansible dans un conteneur jetable | `ready` | haute | — | hôte | non |
+| [TASK-085](completed/TASK-085.md) | Exécuter l'outillage Ansible dans un conteneur jetable | `completed` | haute | — | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
@@ -449,6 +449,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-079](completed/TASK-079.md) | Consigner la décision 50 : Ansible pour installer et configurer, cadre de test | [rapport](reports/TASK-079-report.md) |
 | [TASK-080](completed/TASK-080.md) | Poser le poste de contrôle Ansible, le squelette `Ansible/` et la CI | [rapport](reports/TASK-080-report.md) |
 | [TASK-081](completed/TASK-081.md) | Pilote : écrire le rôle `securite_base` et le comparer aux scripts Bash | [rapport](reports/TASK-081-report.md) |
+| [TASK-085](completed/TASK-085.md) | Exécuter l'outillage Ansible dans un conteneur jetable | [rapport](reports/TASK-085-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

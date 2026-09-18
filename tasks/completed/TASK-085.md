@@ -1,7 +1,7 @@
 ---
 id: TASK-085
 title: "Exécuter l'outillage Ansible dans un conteneur jetable, comme le reste du dépôt"
-status: in_progress
+status: completed
 priority: high
 depends_on: []
 environment: host

@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A163**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A168**.
 
 ## Registre
 
@@ -212,6 +212,11 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A160 | P4 | Le scénario Molecule construit ses images avec `pull: false` et une configuration Docker sans authentification (`molecule/default/docker/config.json`) : sans cela, le pilote interroge le registre à chaque construction et bute, depuis WSL, sur `docker-credential-desktop.exe`, un binaire Windows inexécutable. Conséquence : `debian:12` et `ubuntu:24.04` restent figées jusqu'à un `docker pull` manuel, et une mise à jour de sécurité de l'image de base passe inaperçue | TASK-081 | selon la fréquence voulue, tirer les bases avant chaque campagne, ou rétablir `pull: true` le jour où le poste n'a plus d'assistant d'identification Windows |
 | [ ] | A161 | P3 | `disable-root-login.sh` (`PermitRootLogin no`, décision 20) n'a pas d'équivalent dans le rôle `securite_base` : la fiche TASK-081 l'excluait. Un serveur configuré par le seul rôle garde donc la connexion SSH directe de root telle que la distribution la laisse | TASK-081 | si `user` décide de poursuivre la migration, ajouter la clause au rôle — fragment `05-mgnetworking-root.conf` et relecture par `sshd -T` — ou dire pourquoi elle reste en Bash |
 | [ ] | A162 | P4 | Le rôle `securite_base` dépose son fragment sshd avec `backup: true` : chaque changement laisse dans `/etc/ssh/sshd_config.d/` une copie horodatée `10-mgnetworking.conf.<pid>.<date>`. Sans effet sur sshd, qui ne charge que les `*.conf`, mais le répertoire s'encombre au fil des passages | TASK-081, relecture | soit ranger les sauvegardes ailleurs (`/var/backups/`), soit s'en passer, la version antérieure étant déjà dans Git |
+| [ ] | A163 | P4 | `tests/integration/ansible-profil.test.sh` (TASK-085) est le seul fichier de `tests/integration/` sans `set -Eeuo pipefail` en tête | TASK-085, relecture | ajouter la ligne, sans changer d'assertion |
+| [ ] | A164 | P4 | `tests/env/valider-ansible.sh` (TASK-085) ne lit aucun argument : `--help` ou tout autre mot lancerait la suite Molecule complète au lieu d'un refus ou d'une aide | TASK-085, relecture | ajouter un parsing minimal, comme les autres scripts de `tests/env/` |
+| [ ] | A165 | P4 | `tests/env/valider-ansible.sh` (TASK-085) relève les instances `mgnet-test-securite-*` avant `molecule test` mais n'agit pas sur ce relevé : des instances déjà présentes ne font rien échouer, seul le relevé « après » est vérifié | TASK-085, relecture | avertir explicitement, ou refuser, si le relevé « avant » n'est pas vide |
+| [ ] | A166 | P4 | `tests/env/run-in-container.sh` (TASK-085) annonce en dur « debian:12 » dans ses messages de construction d'image (`--pull`, première construction), faux pour le profil `ansible` dont la base est `python:3.12-slim-bookworm` | TASK-085, relecture | rendre le message dépendant du profil résolu |
+| [ ] | A167 | P4 | Deux trous de documentation liés à TASK-085 : `tests/README.md` ne décrit le profil `ansible` ni son label `mgnet.test.docker` (seuls `debian` et `systemd` y figurent) ; le `scope` de `tasks/completed/TASK-085.md` omet `tests/integration/`, où vit pourtant le fichier de cas livré — c'est cette omission, autant que la limite de `juger.sh` déjà notée en A158, qui a produit son `FAIL` | TASK-085, relecture | documenter le profil dans `tests/README.md` ; élargir le `scope` de TASK-085 ou la reconnaissance de `juger.sh` (avec A158) |
 
 ## Suivi, pas des défauts
 
