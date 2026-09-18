@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-084**.
+Prochain identifiant libre : **TASK-086**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
