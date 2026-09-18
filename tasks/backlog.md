@@ -10,7 +10,7 @@ sélectionnables par `/tache`.
 renvoi vers sa section du plan de refactorisation. Jamais sélectionnable. Une
 entrée devient une tâche lorsqu'elle entre dans l'horizon de travail.
 
-Prochain identifiant libre : **TASK-088**.
+Prochain identifiant libre : **TASK-094**.
 
 Depuis le 2026-09-02, le chantier se déroule en autonomie :
 [décisions](../orchestration/decisions.md) fixe
@@ -106,6 +106,7 @@ de ce que cet ADR a tranché.
 | [TASK-085](completed/TASK-085.md) | Exécuter l'outillage Ansible dans un conteneur jetable | `completed` | haute | — | hôte | non |
 | [TASK-086](completed/TASK-086.md) | Outiller la vérification et la clôture, branche documentaire de `juger.sh` (A172) | `completed` | haute | — | hôte | non |
 | [TASK-087](completed/TASK-087.md) | Documenter le fonctionnement de l'outil de préparation | `completed` | haute | — | hôte | non |
+| [TASK-093](pending/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | `ready` | haute | — | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
