@@ -96,6 +96,34 @@ assert_contient "$(cat "$TMP/s4")" "scénario Molecule" "non-régression Ansible
 c="$(code_de "$TMP/s5" bash "$OUTILS/juger.sh" tasks/completed/TASK-083.md)"
 assert_egal 0 "$c" "TASK-083, la fiche qui a révélé A172 : code 0"
 
+# A177 : un chemin sous Ansible/ qui n'est ni un .sh ni un rôle est documentaire,
+# quel que soit le dossier — TASK-087 en est la preuve réelle, sortie d'active/.
+c="$(code_de "$TMP/s5b" bash "$OUTILS/juger.sh" tasks/completed/TASK-087.md)"
+assert_egal 0 "$c" "A177 : Ansible/GUIDE.md seul, code 0 (avant fix : FAIL Molecule)"
+assert_contient "$(cat "$TMP/s5b")" "SANS OBJET" "A177 : verdict documentaire, pas Molecule"
+
+cat > "$jouet/tasks/active/TASK-906.md" <<'FICHE'
+---
+id: TASK-906
+scope:
+  - Ansible/roles/inexistant/ — rôle sans scénario Molecule
+---
+FICHE
+c="$(code_de "$TMP/s5c" bash "$jouet/orchestration/outils/juger.sh" tasks/active/TASK-906.md)"
+assert_egal 1 "$c" "A177 : un rôle Ansible sans scénario Molecule reste en échec"
+
+titre "limites.json — écriture documentaire (A178)"
+# Preuve statique (lancement d'essai imbriqué indisponible ici, faute
+# d'authentification OAuth dans ce bac à sable — A179) : les motifs de « deny »
+# qui protègent le dépôt restent, ceux qui bloquaient toute documentation partent.
+lim="$SCRIPTS_ROOT/orchestration/limites.json"
+for motif in 'Edit(CLAUDE.md)' 'Edit(orchestration/**)' 'Edit(config/*.env)' \
+    'Edit(README.md)' 'Edit(docs/architecture-technique.md)' 'Edit(docs/guide-dispatcher.md)'; do
+    assert_contient "$(cat "$lim")" "$motif" "limites.json protège encore : $motif"
+done
+assert_absent "$(cat "$lim")" 'Edit(docs/**)' "limites.json n'interdit plus tout docs/**"
+assert_absent "$(cat "$lim")" 'Edit(**/README.md)' "limites.json n'interdit plus tout README.md"
+
 # Tout ce bloc a besoin de git, absent de l'image de test : sans lui, rien ne peut
 # être produit — indisponibilité, pas cas sauté (tests/README.md).
 if ! command -v git > /dev/null 2>&1; then
