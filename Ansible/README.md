@@ -3,7 +3,9 @@
 Ansible installe et configure les serveurs du parc ; les scripts Bash du dépôt gardent
 les diagnostics en lecture seule, l'exploitation ponctuelle et le NAS Synology
 ([décision 50](../orchestration/decisions.md)). Ce que le dossier **engage** est écrit
-dans [CADRAGE.md](CADRAGE.md) ; ce document **explique** comment s'en servir.
+dans [CADRAGE.md](CADRAGE.md) ; ce document **explique** comment installer et lancer
+l'outillage. Comment tout cela fonctionne, à hauteur de qui découvre Ansible, est dans
+[GUIDE.md](GUIDE.md).
 
 Le dossier porte un rôle, [`securite_base`](roles/securite_base) — SSH par clé seule,
 ufw fermé en entrée, prison sshd de fail2ban — appliqué par
