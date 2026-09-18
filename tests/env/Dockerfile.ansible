@@ -1,0 +1,76 @@
+# tests/env/Dockerfile.ansible — image du profil « ansible ».
+#
+# L'outillage Ansible du dépôt — ansible-lint, yamllint, Molecule — dans une
+# image jetable, comme shellcheck l'est pour le profil « debian » : valider un
+# rôle ne demande plus rien d'installé sur la machine (TASK-085). Le dépôt n'est
+# pas copié dans l'image, il est monté sur /depot à l'exécution.
+#
+# Molecule ne fait pas de Docker imbriqué : il pilote le démon de l'hôte, que le
+# conteneur joint par le socket (label mgnet.test.docker, lu par
+# tests/env/run-in-container.sh). Le client docker n'est là que pour ce que le
+# pilotage par socket ne couvre pas : tirer les images de base du scénario, et
+# constater avant et après les instances mgnet-test- qu'il crée.
+#
+# Versions épinglées, comme les linters de .github/workflows/ci.yml : une
+# publication amont ne doit pas pouvoir faire rougir la validation sans qu'une
+# ligne du dépôt change. Elles suivent celles du poste de contrôle
+# (Ansible/README.md).
+#
+# Construction et usage : tests/env/run-in-container.sh, tests/env/valider-ansible.sh.
+
+# Le socle Python officiel, et non debian:12 comme les autres profils : ansible
+# 14.4.0 exige Python 3.12 au moins, et Debian 12 n'en fournit que 3.11 —
+# mesuré le 2026-09-18, pip refuse la construction sur bookworm. La base reste
+# donc Debian 12, avec le Python 3.12 du contrôleur (Ansible/README.md). Ce
+# conteneur ne porte que l'outillage : les instances du scénario, elles, sont
+# les debian:12 et ubuntu:24.04 que Molecule demande au démon de l'hôte.
+FROM python:3.12-slim-bookworm
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Le profil dit lui-même ce qu'il attend de l'hôte, comme mgnet.test.init dit
+# comment il démarre : le lanceur n'en tient aucune liste.
+LABEL mgnet.test.docker="socket"
+
+# ca-certificates, curl, xz-utils   le client Docker à télécharger — rien de
+#                                   plus : l'outillage vient de pip, et les
+#                                   instances sont celles du démon de l'hôte
+# rsync                             réclamé par la phase « create » de Molecule
+#                                   (ansible.posix.synchronize, qui copie le
+#                                   contexte du scénario) : sans lui le
+#                                   scénario échoue avant toute convergence,
+#                                   mesuré le 2026-09-18
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        rsync \
+        xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Un seul environnement pour les quatre outils, là où le poste de contrôle en
+# empile quatre par pipx : Molecule y voit ansible, la bibliothèque docker et
+# les collections sans les « inject » qu'un environnement séparé réclame.
+RUN pip install --no-cache-dir \
+        ansible==14.4.0 \
+        ansible-lint==26.8.0 \
+        docker==7.2.0 \
+        molecule==26.8.0 \
+        "molecule-plugins[docker]==26.7.15" \
+        yamllint==1.38.0
+
+# Client Docker seul — le binaire statique officiel, et non le paquet
+# « docker.io », qui installerait un moteur complet pour une seule commande. La
+# version suit celle du démon du poste, mesurée le 2026-09-18 : 28.5.2.
+RUN architecture="$(dpkg --print-architecture)" \
+    && case "$architecture" in arm64) architecture="aarch64" ;; *) architecture="x86_64" ;; esac \
+    && curl -fsSL "https://download.docker.com/linux/static/stable/${architecture}/docker-28.5.2.tgz" \
+        -o /tmp/docker.tgz \
+    && tar -xzf /tmp/docker.tgz -C /usr/local/bin --strip-components=1 docker/docker \
+    && rm -f /tmp/docker.tgz
+
+WORKDIR /depot
+
+CMD ["bash"]

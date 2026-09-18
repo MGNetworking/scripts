@@ -58,6 +58,12 @@ REPERTOIRE_ENV="$SCRIPTS_ROOT/tests/env"
 # commandes exécutées : les chemins relatifs des exemples ci-dessus en dépendent.
 MONTAGE="/depot"
 
+# Socket du démon, pour les profils qui le demandent. Ce chemin est celui du
+# démon, résolu de son côté : sur Docker Desktop, il désigne le socket de la
+# machine virtuelle qui fait tourner le moteur, et le montage fonctionne depuis
+# Git Bash comme depuis WSL.
+SOCKET_DOCKER="/var/run/docker.sock"
+
 # Préfixe imposé par orchestration/regles.md §8 : les commandes Docker de l'agent ne portent
 # que sur les images et conteneurs préfixés « mgnet-test- ». Tout ce que ce
 # script crée doit donc l'être, sans exception.
@@ -178,6 +184,11 @@ autrement : le conteneur est lancé sur /sbin/init, le script attend que systemd
 ait fini de démarrer, puis la commande passe par « docker exec ». C'est le seul
 moyen d'obtenir un systemctl, un timedatectl et un hostnamectl qui répondent.
 
+Un profil dont le Dockerfile porte le label mgnet.test.docker="socket" reçoit le
+socket Docker de l'hôte : le conteneur pilote le démon, il n'en lance pas un
+second. C'est ce que demande le profil « ansible », dont Molecule crée les
+instances avec ce même démon. Les autres profils ne le reçoivent pas.
+
 Tout ce que ce mode demande au démon Docker est borné en temps mural : les
 interrogations du préflight, le lancement du conteneur détaché, chaque sondage
 de l'attente — en plus du plafond posé sur l'attente entière —, puis la lecture
@@ -224,6 +235,7 @@ Exemples :
   tests/env/run-in-container.sh --profil debian -- tests/run.sh unit
   tests/env/run-in-container.sh -- Linux/System/configure-swap.sh 512M --dry-run
   tests/env/run-in-container.sh --profil systemd -- systemctl list-units
+  tests/env/run-in-container.sh --profil ansible -- tests/env/valider-ansible.sh
 
 Codes de retour :
   0       la commande exécutée dans le conteneur a réussi
@@ -321,6 +333,19 @@ mode_init_du_profil() {
         "$DOCKERFILE" | tail -n 1 || true
 }
 
+# Ce que le profil attend de l'hôte, déclaré de la même façon par le label
+# mgnet.test.docker. « socket » est le seul mode : le conteneur pilote le démon
+# de l'hôte par son socket, il n'en lance jamais un second — pas de Docker
+# imbriqué. C'est ce dont Molecule a besoin pour créer ses instances, et ce
+# qu'aucun autre profil ne doit recevoir : le socket donne le contrôle du
+# démon, donc de tous les conteneurs de la machine.
+#
+# Un label absent vaut « aucun », c'est le cas des profils debian et systemd.
+mode_docker_du_profil() {
+    sed -n 's/^[[:space:]]*LABEL[[:space:]]\{1,\}mgnet\.test\.docker="\([^"]*\)".*/\1/p' \
+        "$DOCKERFILE" | tail -n 1 || true
+}
+
 # -------------------------------------------------------------------
 # Bornes de temps
 # -------------------------------------------------------------------
@@ -404,6 +429,16 @@ MODE_INIT="$(mode_init_du_profil)"
 case "$MODE_INIT" in
     ""|systemd) ;;
     *) die "Profil $PROFIL : mode d'init inconnu « $MODE_INIT » (attendu : systemd)." 2 ;;
+esac
+
+MODE_DOCKER="$(mode_docker_du_profil)"
+
+# Même raison que pour le mode d'init : un label présent mais inconnu est une
+# faute de frappe dans le profil, pas une invitation à retomber en silence sur
+# « aucun ». Ici le symptôme serait un Molecule qui ne trouve pas le démon.
+case "$MODE_DOCKER" in
+    ""|socket) ;;
+    *) die "Profil $PROFIL : attente Docker inconnue « $MODE_DOCKER » (attendu : socket)." 2 ;;
 esac
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -670,6 +705,13 @@ else
     OPTIONS_RUN+=(--rm -w "$MONTAGE")
 fi
 
+# Le socket, et lui seul : le profil « ansible » obtient le démon de l'hôte, pas
+# un démon à lui. Les autres profils ne le reçoivent pas — leurs cas n'en ont
+# pas besoin, et le socket vaut le contrôle de tous les conteneurs de la machine.
+if [ "$MODE_DOCKER" = "socket" ]; then
+    OPTIONS_RUN+=(-v "$SOCKET_DOCKER:$SOCKET_DOCKER")
+fi
+
 # -------------------------------------------------------------------
 # Résumé
 # -------------------------------------------------------------------
@@ -682,6 +724,9 @@ if [ "$MODE_INIT" = "systemd" ]; then
     info "Lancement  : systemd en PID 1, puis docker exec (label mgnet.test.init)"
 else
     info "Lancement  : direct — la commande est le PID 1 du conteneur"
+fi
+if [ "$MODE_DOCKER" = "socket" ]; then
+    info "Socket     : $SOCKET_DOCKER monté — le conteneur pilote le démon de l'hôte (label mgnet.test.docker)"
 fi
 
 if [ "$DRY_RUN" = "true" ]; then

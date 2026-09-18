@@ -2,7 +2,8 @@
 # .github/workflows/ci.yml — intégration continue du dépôt.
 #
 # Obligatoire depuis la décision 50 : aucun push sur master dont la CI est
-# rouge. Deux travaux indépendants, en parallèle, sous la barre des 15 minutes.
+# rouge. Trois travaux indépendants, en parallèle, chacun sous sa propre borne
+# de temps.
 #
 # Le travail « bash » ne réinvente rien : il appelle le même point d'entrée que
 # sur le poste de travail, tests/env/run-in-container.sh, qui construit une
@@ -23,9 +24,16 @@
 # machine virtuelle, ces conteneurs devraient y démarrer ; c'est le premier run
 # de ce travail qui le dira, et non ce commentaire.
 #
-# Les versions d'ansible-lint et de yamllint sont épinglées : sans cela, une
-# publication amont pourrait faire rougir la CI sans qu'une ligne du dépôt
-# change. Elles suivent celles du poste de contrôle (Ansible/README.md).
+# L'outillage Ansible suit le même chemin depuis TASK-085 : un conteneur
+# jetable, tests/env/Dockerfile.ansible, que la CI lance par le même point
+# d'entrée que le poste de travail. Le runner ne porte plus aucun outil
+# installé par pipx — c'est le conteneur qui reçoit le socket Docker du runner
+# et crée les instances Molecule avec ce démon.
+#
+# Les versions d'ansible, d'ansible-lint, de yamllint et de Molecule sont
+# épinglées dans ce Dockerfile : sans cela, une publication amont pourrait
+# faire rougir la CI sans qu'une ligne du dépôt change. Elles suivent celles du
+# poste de contrôle (Ansible/README.md).
 
 name: CI
 
@@ -64,31 +72,13 @@ jobs:
       - name: Exécuter les scripts dans un conteneur Debian jetable
         run: bash tests/env/run-in-container.sh -- bash tests/run.sh integration
 
+  # Un seul travail, une seule commande : c'est celle que Ansible/README.md
+  # donne au poste de travail. yamllint, ansible-lint, les collections du
+  # scénario puis molecule test s'enchaînent dans tests/env/valider-ansible.sh,
+  # exécuté dans le conteneur — la CI ne valide donc rien que l'humain ne
+  # valide à la main, et rien n'est installé sur le runner.
   ansible:
-    name: Ansible — yamllint et ansible-lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
-      - name: Installer l'outillage par pipx
-        run: |
-          pipx install ansible-lint==26.8.0
-          pipx install yamllint==1.38.0
-
-      - name: Contrôler le style YAML de tout le dépôt
-        run: yamllint .
-
-      # ANSIBLE_ROLES_PATH est indispensable : les rôles ne sont pas à la
-      # racine du dépôt mais sous Ansible/, et ansible.cfg, qui porte
-      # roles_path, n'est lu que depuis Ansible/. Sans cette variable,
-      # ansible-lint ne trouve pas securite_base et rend « syntax-check ».
-      - name: Contrôler les rôles et playbooks
-        run: ANSIBLE_ROLES_PATH="$PWD/Ansible/roles" ansible-lint Ansible/
-
-  ansible-molecule:
-    name: Ansible — Molecule sur Debian 12 et Ubuntu 24.04
+    name: Ansible — yamllint, ansible-lint et Molecule sur securite_base
     runs-on: ubuntu-latest
     # Deux instances systemd construites puis éprouvées l'une après l'autre,
     # chacune installant ufw et fail2ban par apt : le double du travail du
@@ -98,34 +88,8 @@ jobs:
       - name: Récupérer le dépôt
         uses: actions/checkout@v4
 
-      # Deux environnements, comme sur le poste de contrôle, et la bibliothèque
-      # docker dans les deux : Molecule pilote le démon depuis le sien, mais
-      # les modules docker, eux, s'exécutent avec le python d'ansible.
-      - name: Installer l'outillage par pipx
-        run: |
-          pipx install --include-deps ansible==14.4.0
-          pipx inject ansible docker==7.2.0
-          pipx install molecule==26.8.0
-          pipx inject molecule 'molecule-plugins[docker]==26.7.15' docker==7.2.0
-
-      # Molecule vit dans son propre environnement, qui ne porte
-      # qu'ansible-core : sans cette installation, ni son pilote Docker ni le
-      # module ufw du rôle ne lui sont visibles. Le chemin est celui que
-      # Molecule consulte en premier.
-      - name: Installer les collections du rôle
-        run: |
-          ansible-galaxy collection install --force \
-            -r Ansible/roles/securite_base/molecule/default/collections.yml \
-            -p "$HOME/.ansible/collections"
-
-      # Le scénario construit ses images avec « pull: false » : les bases
-      # doivent donc être déjà présentes. C'est ce qui évite au pilote de
-      # s'adresser au registre à chaque construction.
-      - name: Tirer les images de base
-        run: |
-          docker pull debian:12
-          docker pull ubuntu:24.04
-
-      - name: Éprouver le rôle securite_base en conteneurs systemd
-        working-directory: Ansible/roles/securite_base
-        run: molecule test
+      # Le conteneur reçoit le socket Docker du runner : Molecule pilote ce
+      # démon-là, il n'en lance pas un second. C'est le même montage que sur le
+      # poste de travail, où le socket est celui de Docker Desktop.
+      - name: Outillage Ansible en conteneur jetable
+        run: bash tests/env/run-in-container.sh --profil ansible -- tests/env/valider-ansible.sh

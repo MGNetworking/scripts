@@ -10,10 +10,31 @@ ufw fermé en entrée, prison sshd de fail2ban — appliqué par
 [`playbooks/securite.yml`](playbooks/securite.yml). Ce qu'il garantit exactement est
 écrit au contrat du [cadrage](CADRAGE.md).
 
+## Valider, sans rien installer sur le poste (TASK-085)
+
+La commande de référence — celle que la CI exécute — valide `securite_base` entier,
+dans un conteneur jetable, comme le reste du dépôt ([`tests/`](../tests/README.md)) :
+
+```bash
+tests/env/run-in-container.sh --profil ansible -- tests/env/valider-ansible.sh
+```
+
+Elle enchaîne `yamllint .`, `ansible-lint Ansible/` puis `molecule test` sur
+`securite_base`. Le conteneur ([`tests/env/Dockerfile.ansible`](../tests/env/Dockerfile.ansible))
+porte `ansible`, `ansible-lint`, `yamllint` et `molecule` à des versions épinglées, et
+reçoit le socket Docker de l'hôte pour que Molecule crée ses instances
+`mgnet-test-securite-*` — sans Docker imbriqué. Seul Docker Desktop est requis sur le
+poste de travail. Cette commande referme l'écart constaté à TASK-080, où l'outillage
+avait été installé dans WSL par `pipx`.
+
 ## Poste de contrôle
 
 Le poste de contrôle est une **WSL Ubuntu 24.04** sur la machine de travail. Les serveurs
 n'ont besoin de rien d'autre que SSH et Python : Ansible ne s'y installe pas.
+
+Ce qui suit installe l'outillage **sur le poste**, hors conteneur — nécessaire pour lancer
+`ansible-playbook` en application réelle contre l'inventaire (`--limit`), pas pour valider
+le rôle : la section précédente suffit à cela.
 
 L'installation se fait par [`pipx`](https://pipx.pypa.io), qui isole chaque outil dans
 son propre environnement Python sans toucher aux paquets du système.
@@ -84,7 +105,15 @@ ansible-playbook playbooks/<nom>.yml --limit vps1               # application r�
 pas : `--check --diff` d'abord, puis la même commande sans `--check`, serveur par serveur
 avec `--limit`.
 
-Qualité, avant tout commit — mêmes commandes que la CI, depuis la racine du dépôt :
+Qualité, avant tout commit — la commande de référence, depuis la racine du dépôt (voir
+plus haut) :
+
+```bash
+tests/env/run-in-container.sh --profil ansible -- tests/env/valider-ansible.sh
+```
+
+Pour rejouer seulement `yamllint` et `ansible-lint`, sans Molecule, depuis un poste où
+l'outillage est déjà installé (§ Poste de contrôle) :
 
 ```bash
 yamllint .
@@ -119,12 +148,17 @@ git check-ignore -v Ansible/inventory.yml Ansible/host_vars/vps1.yml
 Un rôle se valide par [Molecule](https://ansible.readthedocs.io/projects/molecule/) avec
 le pilote Docker : `converge`, `idempotence` (un second passage ne change rien) et
 `verify`. Le niveau de preuve est alors **conteneur** ; seul un `--check --diff` lancé par
-`user` sur un VPS donne le niveau **machine**.
+`user` sur un VPS donne le niveau **machine**. La commande de référence (§ Valider,
+sans rien installer sur le poste) exécute cette suite complète dans le conteneur
+d'outillage et détruit ses instances en sortie, prouvé par un `docker ps -a` avant et
+après (`mgnet-test-securite-*` : aucune, dans les deux relevés).
 
-Les deux images de base doivent être présentes localement : le scénario construit les
+Pour piloter Molecule pas à pas (`converge` puis `login` pour inspecter une instance,
+sans tout rejouer), depuis un poste où l'outillage est installé (§ Poste de contrôle) —
+les deux images de base doivent y être présentes localement : le scénario construit les
 siennes avec `pull: false`, ce qui lui évite d'interroger un registre — et, sur un poste
 Windows, de buter sur l'assistant d'identification de Docker Desktop, que WSL ne peut pas
-exécuter. Une fois, puis à chaque fois qu'on veut suivre les mises à jour des bases :
+exécuter :
 
 ```bash
 docker pull debian:12
