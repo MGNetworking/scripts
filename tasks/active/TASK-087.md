@@ -8,14 +8,14 @@ environment: host
 human_approval_required: false
 agent: deepseek
 objective: |
-  Ansible/README.md explique le fonctionnement de l'outil à quelqu'un qui n'a jamais
+  docs/guide-ansible-fonctionnel.md explique le fonctionnement de l'outil à quelqu'un qui n'a jamais
   employé Ansible : le trajet du poste vers le serveur, ce qu'est un rôle, ce qu'est une
   recette, où vivent les informations confidentielles, et ce qui se passe le jour où un
   serveur existe.
 scope:
-  - Ansible/README.md
+  - docs/guide-ansible-fonctionnel.md
 out_of_scope:
-  - modifier un rôle, un playbook, la configuration des linters ou la CI
+  - modifier Ansible/README.md (le conducteur y ajoute le renvoi à la clôture), un rôle, un playbook, la configuration des linters ou la CI
   - documenter des rôles qui n'existent pas encore (seul securite_base existe)
   - reprendre le contenu de Ansible/CADRAGE.md, qui engage les contrats
 acceptance_criteria:
