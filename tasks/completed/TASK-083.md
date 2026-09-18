@@ -1,7 +1,7 @@
 ---
 id: TASK-083
 title: "Essai DeepSeek sur une tâche documentaire : lignes « Prouvé par : » des scripts qui restent en Bash"
-status: in_progress
+status: completed
 priority: medium
 depends_on: []
 environment: host

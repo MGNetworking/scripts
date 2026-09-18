@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A172**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A173**.
 
 ## Registre
 
@@ -221,6 +221,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A169 | P3 | `juger.sh` n'emprunte sa branche Molecule que si le périmètre ne porte **aucun** `.sh` : une fiche mixte (un script Bash *et* `Ansible/`) reste jugée sur le seul fichier de cas, sans rien dire du scénario ; et un `.sh` rangé sous `Ansible/` (`files/`, `templates/`) n'est jamais passé à shellcheck, la regex d'extraction ne couvrant que `Docker|Linux|Kubernetes|Synology|tests/integration`. Une fiche dont le périmètre est ailleurs encore — `orchestration/`, `tests/env/` — rend toujours 1 « aucun fichier de cas », verdict sans objet (constaté sur TASK-084 elle-même) | TASK-084, relecture | juger chaque nature présente au périmètre plutôt qu'une seule : shellcheck sur tout `.sh` du scope d'où qu'il vienne, scénario Molecule dès qu'un rôle est cité, et verdict explicite « sans objet » quand le périmètre ne livre ni l'un ni l'autre |
 | [ ] | A170 | P4 | `orchestration/architecture.md` (lignes 38 et 262) décrit encore `juger.sh` comme un juge « shellcheck + fichier de cas », sans la branche Ansible ajoutée par TASK-084, alors que le document se présente comme la référence d'architecture. `orchestration/README.md` est, lui, à jour | TASK-084, relecture | mettre les deux passages à jour au prochain travail sur ce document |
 | [ ] | A171 | P4 | Deux limites du juge Ansible livré par TASK-084 : quand un rôle porte plusieurs scénarios tous incomplets, la ligne « manquants » ne rapporte que ceux du dernier scénario lu, sans le nommer ; et aucun fichier de cas versionné n'éprouve `juger.sh` lui-même — la non-régression des tâches Bash a été constatée une fois, à la main, et rien ne la rejouera | TASK-084, relecture | nommer le scénario dans le message ; écrire un fichier de cas pour `juger.sh` (fiches jouets Bash et Ansible, verdicts attendus) |
+| [ ] | A172 | P4 | `juger.sh` n'a pas de branche documentaire : une fiche dont le `scope` ne porte ni `.sh` ni `Ansible/` (ici deux `CADRAGE.md` seuls) tombe dans la même ligne « aucun fichier de cas dans le périmètre », code 1, que rendrait une fiche mal formée — rejoint A169 mais en diffère : ce n'est pas un périmètre mixte, c'est un périmètre sans script ni rôle du tout, constaté sur TASK-083 (essai DeepSeek, VERDICT ECHEC à tort) | TASK-083 | ajouter à `juger.sh` un troisième verdict « sans objet, périmètre documentaire » quand le scope ne cite ni `.sh` ni rôle Ansible, plutôt que FAIL |
 
 ## Suivi, pas des défauts
 
