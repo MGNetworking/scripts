@@ -106,7 +106,7 @@ de ce que cet ADR a tranché.
 | [TASK-085](completed/TASK-085.md) | Exécuter l'outillage Ansible dans un conteneur jetable | `completed` | haute | — | hôte | non |
 | [TASK-086](completed/TASK-086.md) | Outiller la vérification et la clôture, branche documentaire de `juger.sh` (A172) | `completed` | haute | — | hôte | non |
 | [TASK-087](completed/TASK-087.md) | Documenter le fonctionnement de l'outil de préparation | `completed` | haute | — | hôte | non |
-| [TASK-093](pending/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | `ready` | haute | — | hôte | non |
+| [TASK-093](completed/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | `completed` | haute | — | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
@@ -457,6 +457,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-083](completed/TASK-083.md) | Essai DeepSeek : lignes « Prouvé par : » des scripts qui restent en Bash | [rapport](reports/TASK-083-report.md) |
 | [TASK-086](completed/TASK-086.md) | Outiller la vérification et la clôture, branche documentaire de `juger.sh` (A172) | [rapport](reports/TASK-086-report.md) |
 | [TASK-087](completed/TASK-087.md) | Documenter le fonctionnement de l'outil de préparation | [rapport](reports/TASK-087-report.md) |
+| [TASK-093](completed/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | [rapport](reports/TASK-093-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

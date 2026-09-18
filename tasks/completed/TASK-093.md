@@ -1,7 +1,7 @@
 ---
 id: TASK-093
 title: "Rendre l'outillage capable de conduire une tâche documentaire (A177, A178)"
-status: in_progress
+status: completed
 priority: high
 depends_on: []
 environment: host
