@@ -47,13 +47,9 @@ mapfile -t entrees < <(awk '
     s && /^[[:space:]]*-[[:space:]]/ {sub(/^[[:space:]]*-[[:space:]]*/, ""); print}' "$racine/$fiche")
 
 # Présence du scénario : molecule/<nom>/ avec molecule.yml, converge.yml, verify.yml.
+# Seul appelant (ligne 89) : garde déjà "${#roles[@]} -gt 0", jamais appelée à vide.
 juger_ansible() {
     local role scenario f manque trouve echec=0
-    if [ "${#roles[@]}" -eq 0 ]; then
-        echo "FAIL  périmètre Ansible sans rôle : aucun Ansible/roles/<nom>/ dans le scope de $fiche"
-        echo "JUGE  scénario Molecule : ÉCHEC"
-        return 1
-    fi
     for role in "${roles[@]}"; do
         trouve=""; manque=""
         for scenario in "$racine/$role"/molecule/*/; do
