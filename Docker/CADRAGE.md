@@ -115,6 +115,8 @@ Aucun dans `Docker/`.
 - Lit : `DOCKER_SOCKET` (défaut `/var/run/docker.sock`), `DOCKER_HOST`, `docker
   --version`, `docker compose version`, `docker buildx version`, `systemctl is-active
   docker`, `systemctl is-enabled docker`, `docker info`.
+- Prouvé par : `tests/integration/check-docker.test.sh` — niveau simulé (faux « docker »
+  en tête de PATH, sans démon).
 - État : actif.
 
 ### list-containers.sh — ensemble « Moteur Docker »
@@ -133,6 +135,8 @@ Aucun dans `Docker/`.
   échec ou au-delà de 5 s ; 2 option inconnue.
 - Modifie sur la machine : rien.
 - Lit : `docker ps`.
+- Prouvé par : `tests/integration/list-containers.test.sh` — niveau simulé (faux
+  « docker » en tête de PATH, sans démon).
 - État : actif.
 
 ### docker-disk-usage.sh — ensemble « Moteur Docker »
@@ -152,6 +156,8 @@ Aucun dans `Docker/`.
   de 120 s ; 2 option inconnue.
 - Modifie sur la machine : rien.
 - Lit : `docker version`, `docker system df`, `docker info`, `df`, `docker system df -v`.
+- Prouvé par : `tests/integration/docker-disk-usage.test.sh` — niveau simulé (faux
+  « docker » en tête de PATH, sans démon).
 - État : actif.
 
 ### install-docker.sh — ensemble « Moteur Docker »
@@ -340,3 +346,4 @@ Aucun dans `Docker/`.
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
 | 2026-09-17 | État initial : besoin, ensemble « Moteur Docker », contrats des 9 scripts tels qu'écrits (TASK-076) | état initial | oui, 2026-09-17 |
+| 2026-09-18 | Ligne « Prouvé par » sur les contrats des 3 scripts de Diagnostics/ (TASK-083) | ajout compatible | fiche TASK-083, décision 50 |

@@ -262,6 +262,8 @@ Aucun dans `Kubernetes/`.
   absent ou apiserver injoignable ; 2 option inconnue.
 - Modifie sur la machine ou le cluster : rien.
 - Lit : nœuds, versions, namespaces, pods, deployments, services.
+- Prouvé par : `tests/integration/cluster-status.test.sh` — niveau simulé (faux
+  « kubectl » en tête de PATH, sans cluster).
 - État : actif.
 
 ### pods-status.sh — ensemble « Gestion de Kubernetes »
@@ -275,6 +277,8 @@ Aucun dans `Kubernetes/`.
   ou commençant par « - ».
 - Modifie sur la machine ou le cluster : rien.
 - Lit : pods, namespace demandé.
+- Prouvé par : `tests/integration/pods-status.test.sh` — niveau simulé (faux « kubectl »
+  en tête de PATH, sans cluster).
 - État : actif.
 
 ### events.sh — ensemble « Gestion de Kubernetes »
@@ -289,6 +293,8 @@ Aucun dans `Kubernetes/`.
   `--namespace` sans valeur ou commençant par « - ».
 - Modifie sur la machine ou le cluster : rien.
 - Lit : événements, namespace demandé.
+- Prouvé par : `tests/integration/events.test.sh` — niveau simulé (faux « kubectl » en
+  tête de PATH, sans cluster).
 - État : actif.
 
 ### diagnostics.sh — ensemble « Gestion de Kubernetes »
@@ -305,6 +311,8 @@ Aucun dans `Kubernetes/`.
   inconnue.
 - Modifie sur la machine ou le cluster : rien.
 - Lit : nœuds, pods, Deployments, StatefulSets, DaemonSets, événements Warning.
+- Prouvé par : `tests/integration/diagnostics.test.sh` — niveau simulé (faux « kubectl »
+  en tête de PATH, sans cluster).
 - État : actif.
 
 ### resource-usage.sh — ensemble « Gestion de Kubernetes »
@@ -320,6 +328,8 @@ Aucun dans `Kubernetes/`.
   par « - ».
 - Modifie sur la machine ou le cluster : rien.
 - Lit : nœuds, métriques, namespace demandé.
+- Prouvé par : `tests/integration/resource-usage.test.sh` — niveau simulé (faux
+  « kubectl » en tête de PATH, sans cluster).
 - État : actif.
 
 ### backup-resources.sh — ensemble « Gestion de Kubernetes »
@@ -338,6 +348,8 @@ Aucun dans `Kubernetes/`.
   insuffisants, délai dépassé, export incomplet ; 2 option inconnue, `--output` sans valeur.
 - Modifie sur la machine ou le cluster : fichiers locaux sous la destination seulement.
 - Lit : `SRV_K8S_BACKUP_DIR`, objets des types listés.
+- Prouvé par : `tests/integration/backup-resources.test.sh` — niveau simulé (faux
+  « kubectl » en tête de PATH, sans cluster).
 - État : actif.
 
 ### cleanup-resources.sh — ensemble « Gestion de Kubernetes »
@@ -359,6 +371,8 @@ Aucun dans `Kubernetes/`.
   formée, type hors liste, nom ou namespace invalide, aucune cible.
 - Modifie sur la machine ou le cluster : **supprime** les objets nommés.
 - Lit : chaque objet nommé.
+- Prouvé par : `tests/integration/cleanup-resources.test.sh` — niveau simulé (faux
+  « kubectl » en tête de PATH, sans cluster).
 - État : actif.
 
 ## Historique du cadrage
@@ -366,3 +380,4 @@ Aucun dans `Kubernetes/`.
 | Date | Changement | Nature (correction, ajout compatible, nouveau script, dépréciation) | Validé par user |
 |---|---|---|---|
 | 2026-09-17 | État initial : besoin, ensemble « Gestion de Kubernetes », contrats des 17 scripts tels qu'écrits (TASK-074) | état initial | oui, 2026-09-17 |
+| 2026-09-18 | Ligne « Prouvé par » sur les contrats des 7 scripts de Maintenance/ (TASK-083) | ajout compatible | fiche TASK-083, décision 50 |
