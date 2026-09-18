@@ -4,8 +4,10 @@
 # Lance, dans le conteneur de test, shellcheck sur les .sh du périmètre de la
 # fiche, son fichier de cas, puis les règles transverses de TASK-011. Aucun jeton.
 #
-# Une fiche dont le périmètre ne vise que Ansible/ n'a pas de fichier de cas : elle
-# est jugée sur la présence d'un scénario Molecule complet (A158, décision 50).
+# Une fiche dont le périmètre vise un rôle sous Ansible/roles/<nom>/ n'a pas de
+# fichier de cas : elle est jugée sur la présence d'un scénario Molecule complet
+# (A158, décision 50). Un autre chemin sous Ansible/ — guide, cadrage — sans .sh
+# ni rôle suit la branche documentaire, comme n'importe quel dossier (A177).
 # Une fiche qui ne livre ni .sh ni rôle — un cadrage, une documentation — est « sans
 # objet » et passe ; seul un scope vide reste un défaut (A172).
 #
@@ -45,13 +47,9 @@ mapfile -t entrees < <(awk '
     s && /^[[:space:]]*-[[:space:]]/ {sub(/^[[:space:]]*-[[:space:]]*/, ""); print}' "$racine/$fiche")
 
 # Présence du scénario : molecule/<nom>/ avec molecule.yml, converge.yml, verify.yml.
+# Seul appelant (ligne 89) : garde déjà "${#roles[@]} -gt 0", jamais appelée à vide.
 juger_ansible() {
     local role scenario f manque trouve echec=0
-    if [ "${#roles[@]}" -eq 0 ]; then
-        echo "FAIL  périmètre Ansible sans rôle : aucun Ansible/roles/<nom>/ dans le scope de $fiche"
-        echo "JUGE  scénario Molecule : ÉCHEC"
-        return 1
-    fi
     for role in "${roles[@]}"; do
         trouve=""; manque=""
         for scenario in "$racine/$role"/molecule/*/; do
@@ -81,13 +79,14 @@ for f in "${fichiers[@]}"; do
     [ -f "$racine/$f" ] || { echo "FAIL  fichier absent : $f"; exit 1; }
     case "$f" in *.test.sh) cas="$f" ;; esac
 done
-# Périmètre sans aucun .sh mais visant Ansible/ : c'est Molecule qui fait foi.
-if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#ansible[@]}" -gt 0 ]; then
+# Périmètre sans aucun .sh mais visant un rôle sous Ansible/roles/ : c'est Molecule
+# qui fait foi. Un chemin Ansible/ hors rôle (A177) tombe dans la branche suivante.
+if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#roles[@]}" -gt 0 ]; then
     if juger_ansible; then exit 0; else exit 1; fi
 fi
 # Périmètre sans aucun .sh ni rôle : documentaire, ou fiche mal formée (A172). Les
 # deux rendaient le même « aucun fichier de cas » ; seul le second est un défaut.
-if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#ansible[@]}" -eq 0 ]; then
+if [ -z "$cas" ] && [ "${#fichiers[@]}" -eq 0 ] && [ "${#roles[@]}" -eq 0 ]; then
     if [ "${#entrees[@]}" -eq 0 ]; then
         echo "FAIL  périmètre vide : aucune entrée sous « scope: » dans $fiche"
         echo "JUGE  périmètre vide : ÉCHEC"
