@@ -6,7 +6,7 @@ Ce dépôt se conduit par des agents. Le fichier que lit votre outil peut diffé
 **À lire dans cet ordre, avant toute action :**
 
 1. [CLAUDE.md](CLAUDE.md) — comment écrire un script, l'arborescence cible, les secrets.
-2. [docs/reprise-2026-09-18.md](docs/reprise-2026-09-18.md) — l'état du projet, ce qui
+2. [docs/reprise.md](docs/reprise.md) — l'état du projet, ce qui
    vient ensuite, et la procédure de portage vers un autre harnais.
 3. [orchestration/regles.md](orchestration/regles.md) — périmètre de modification,
    commandes autorisées, Git, validation, arrêt.
