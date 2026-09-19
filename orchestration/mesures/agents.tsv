@@ -174,3 +174,6 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-19 17:45:54	TASK-094	anthropic	claude-sonnet-5	32	66	1533194	20690	227	0	0.514
 2026-09-19 17:48:03	TASK-094	relecteur	claude-opus-5	13	16	226178	9113	112	0	0.602
 2026-09-19 18:39:17	TASK-099	relecteur	claude-opus-5	10	20	260525	11034	160	0	0.406
+2026-09-19 19:06:56	TASK-095	deepseek	deepseek-flash	88	93130	9063680	85519	634	0	0.185
+2026-09-19 19:16:07	TASK-095	relecteur	claude-opus-5	14	28	414634	12063	175	0	0.509
+2026-09-19 19:42:28	TASK-095	deepseek	deepseek-flash	104	79057	7502592	44308	1540	0	0.122

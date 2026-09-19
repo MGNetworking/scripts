@@ -1,7 +1,7 @@
 ---
 id: TASK-095
 title: "Extraire dans lib-agents.sh ce que lancer-agent.sh a de générique"
-status: in_progress
+status: completed
 priority: medium
 depends_on:
   - TASK-094
@@ -16,6 +16,9 @@ scope:
   - orchestration/outils/lib-agents.sh
   - orchestration/outils/lancer-agent.sh
   - tests/acceptance/TASK-095-lib-agents.sh
+  - tests/acceptance/TASK-097-cle.sh — ajouté par l'orchestrateur : copie lib-agents.sh dans le dépôt jouet
+  - tests/acceptance/TASK-098-modeles.sh — idem
+  - tests/acceptance/TASK-099-relecture.sh — idem
 out_of_scope:
   - créer un dépôt séparé pour cette bibliothèque
   - changer le comportement observable de lancer-agent.sh, ses arguments ou sa sortie

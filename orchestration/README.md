@@ -61,6 +61,7 @@ concurrentes du harnais maîtrisées (décision 40, registre A06).
 | `orchestration.html` / `.png` | affiche d'exposition : source HTML et export PNG |
 | `modeles/` | un fichier par modèle **externe** : adresse d'API, nom, variable de clé |
 | `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons dans le transcript de la session (« incomplet » s'il est introuvable) ; `--modele <alias>` choisit un modèle du profil (`anthropic` : haiku, sonnet, opus), `--dry-run` affiche profil, modèle, tarifs et présence de la clé sans rien lancer, `--relecture` fait relire au lieu d'écrire (agent lecture seule, verdict sur stdout, sa propre ligne de mesure) |
+| `outils/lib-agents.sh` | ce que `lancer-agent.sh` a de générique (TASK-095) : copie isolée par `git worktree`, plafond de durée, lecture d'un profil `.env`, relevé de jetons, écriture d'une ligne de journal tabulé — sans rien connaître du schéma à 11 colonnes d'`agents.tsv`, passé en argument par l'appelant |
 | `outils/resoudre-cle.sh` | rend la clé d'API d'un profil : environnement, puis variables utilisateur de Windows (le harnais ne retransmet pas `ANTHROPIC_API_KEY` à ses outils) |
 | `outils/juger.sh` | shellcheck et fichier de cas d'une fiche, en conteneur ; périmètre Ansible seul : présence du scénario Molecule (A158) |
 | `outils/lien-ecrit.awk` | lu par `juger.sh` : refuse un fichier de cas qui écrit un faux binaire à travers un lien (A122) |

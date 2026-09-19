@@ -407,7 +407,8 @@ TASK-095 peut extraire.
 
 | Script | Ce qu'il sait faire | Générique ou propre au projet |
 |---|---|---|
-| `lancer-agent.sh` | faire exécuter une tâche par un agent dans une copie isolée, `--modele`, `--dry-run`, mesure du coût | **mixte**. Générique : copie `git worktree`, plafond `DUREE_MAX`, lecture d'un profil `.env` (adresse, clé, tarifs). Propre : `tasks/active/`, branche `agent/<TASK>`, consigne `/executer-tache`, `limites.json`, `agents.tsv` à 11 colonnes |
+| `lancer-agent.sh` | faire exécuter une tâche par un agent dans une copie isolée, `--modele`, `--dry-run`, `--relecture`, mesure du coût | **mixte** (le générique vit désormais dans `lib-agents.sh`, TASK-095). Propre : `tasks/active/`, branche `agent/<TASK>`, consigne `/executer-tache`, `limites.json`, l'en-tête à 11 colonnes d'`agents.tsv` (passé en argument à `journal_agents`) |
+| `lib-agents.sh` | copie isolée par `git worktree`, plafond `DUREE_MAX`, lecture d'un profil `.env`, relevé de jetons dans le transcript de session, écriture d'une ligne de journal tabulé | **générique** : ne connaît ni ce dépôt ni le schéma d'`agents.tsv`, reçu en argument par l'appelant (TASK-095) |
 | `juger.sh` | shellcheck, fichier de cas en conteneur, règles transverses | **propre** : lit le `scope` d'une fiche, lance `tests/env/run-in-container.sh` et `TASK-011` |
 | `clore-tache.sh` | écrire la clôture : fiche vers `completed/`, backlog, journal, mesures | **propre** : `tasks/completed/`, `backlog.md`, `journal.md`, `agents.tsv` |
 | `verifier-travail.sh` | périmètre, longueur, juge, validations de la fiche | **propre** : branche `agent/<TASK>`, `master`, champ `validation` d'une fiche, `juger.sh` |
