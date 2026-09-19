@@ -7,36 +7,54 @@
 # séparée du dépôt (git worktree) sur la branche agent/<TASK>, et n'y fait que
 # ce que permet orchestration/limites.json.
 #
-# Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]
+# Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours] [--modele <alias>] [--dry-run]
 #   Le fichier de retours, facultatif, porte les défauts relevés par la
 #   relecture : l'agent les corrige au lieu de repartir de zéro.
+#   --modele  choisit un modèle du profil (anthropic : haiku, sonnet, opus) ; défaut MODELE_DEFAUT.
+#   --dry-run affiche profil, modèle, tarifs et présence de la clé, sans rien lancer ni dépenser.
 # Codes : celui de l'agent (0 terminé) — 2 usage ou prérequis manquant.
 set -Eeuo pipefail
 
 ici="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 racine="$(cd "$ici/../.." && pwd)"
-profil="${1:-}" tache="${2:-}" retours="${3:-}"
+usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours] [--modele <alias>] [--dry-run]" >&2; exit 2; }
+modele="" dry=0 pos=()
+while [ $# -gt 0 ]; do case "$1" in
+    --modele) [[ "${2:-}" =~ ^[A-Za-z0-9_-]+$ ]] || usage; modele="$2"; shift 2 ;;
+    --dry-run) dry=1; shift ;;
+    *) pos+=("$1"); shift ;;
+esac; done
+profil="${pos[0]:-}" tache="${pos[1]:-}" retours="${pos[2]:-}"
 
-usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours]" >&2; exit 2; }
 case "$profil" in sonnet|opus|haiku) ;; *) [ -f "$ici/../modeles/$profil.env" ] || usage ;; esac
-[[ "$tache" =~ ^TASK-[0-9]{3}$ ]] || usage
-[ -f "$racine/tasks/active/$tache.md" ] || { echo "tasks/active/$tache.md absent : l'orchestrateur active la fiche avant." >&2; exit 2; }
+[[ "$tache" =~ ^TASK-[0-9]{3}$ ]] || [ "$dry" -eq 1 ] || usage
+[ "$dry" -eq 1 ] || [ -f "$racine/tasks/active/$tache.md" ] || { echo "tasks/active/$tache.md absent : l'orchestrateur active la fiche avant." >&2; exit 2; }
 if [ -n "$retours" ] && [ ! -f "$retours" ]; then
     echo "Fichier de retours introuvable : $retours" >&2; exit 2
 fi
-command -v claude >/dev/null || { echo "claude introuvable dans le PATH." >&2; exit 2; }
+[ "$dry" -eq 1 ] || command -v claude >/dev/null || { echo "claude introuvable dans le PATH." >&2; exit 2; }
 
 # Un modèle Claude passe par l'abonnement, sans profil. Un autre modèle a son
 # profil : adresse, modèle, variable de clé et tarifs ; lu ligne à ligne, jamais exécuté.
-ADRESSE="" MODELE="$profil" VARIABLE_CLE="" PRIX_ENTREE="" PRIX_CACHE="" PRIX_SORTIE=""
+ADRESSE="" MODELE="$profil" VARIABLE_CLE="" PRIX_ENTREE="" PRIX_CACHE="" PRIX_SORTIE="" DEFAUT=""
+declare -A alias_modele=() alias_prix=()
 if [ -f "$ici/../modeles/$profil.env" ]; then
     while IFS='=' read -r cle valeur; do
         case "$cle" in
             ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;;
             PRIX_ENTREE) PRIX_ENTREE="$valeur" ;; PRIX_CACHE) PRIX_CACHE="$valeur" ;; PRIX_SORTIE) PRIX_SORTIE="$valeur" ;;
+            MODELE_DEFAUT) DEFAUT="$valeur" ;; MODELE_*) alias_modele["${cle#MODELE_}"]="$valeur" ;;
+            PRIX_*) alias_prix["${cle#PRIX_}"]="$valeur" ;;
         esac
     done < "$ici/../modeles/$profil.env"
 fi
+# Profil à plusieurs modèles : --modele choisit un alias, sinon MODELE_DEFAUT.
+if [ "${#alias_modele[@]}" -gt 0 ]; then
+    choix="${modele:-$DEFAUT}"
+    [ -n "${alias_modele[${choix:-_}]:-}" ] || {
+        echo "Profil $profil : modèle « $choix » inconnu. Disponibles : ${!alias_modele[*]}" >&2; exit 2; }
+    MODELE="${alias_modele[$choix]}"; read -r PRIX_ENTREE PRIX_CACHE PRIX_SORTIE <<< "${alias_prix[$choix]:-}"
+elif [ -n "$modele" ]; then echo "Profil $profil : pas de choix de modèle (--modele)." >&2; exit 2; fi
 [ -n "$MODELE" ] || { echo "Profil $profil : MODELE vide." >&2; exit 2; }
 
 # Environnement de l'agent. Sans adresse : l'abonnement Claude, rien à régler.
@@ -47,6 +65,10 @@ if [ -n "$ADRESSE" ]; then
     env_agent+=("ANTHROPIC_BASE_URL=$ADRESSE" "ANTHROPIC_API_KEY=$cle_api"
         "ANTHROPIC_MODEL=$MODELE" "ANTHROPIC_DEFAULT_HAIKU_MODEL=$MODELE"
         "ANTHROPIC_DEFAULT_SONNET_MODEL=$MODELE" "ANTHROPIC_DEFAULT_OPUS_MODEL=$MODELE")
+fi
+# --dry-run : dit ce qui serait lancé, sans copie, sans agent, sans dépense, et sans jamais montrer la clé.
+if [ "$dry" -eq 1 ]; then
+    echo "DRY-RUN  profil=$profil modèle=$MODELE tarifs=${PRIX_ENTREE:--}/${PRIX_CACHE:--}/${PRIX_SORTIE:--} clé=$([ -n "$ADRESSE" ] && echo trouvée || echo "sans objet")"; exit 0
 fi
 
 # Copie séparée, hors du dépôt pour que le lint ne la parcoure pas.
