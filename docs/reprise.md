@@ -18,9 +18,9 @@ Dernière mise à jour : **2026-09-19**.
 | Qui exécute quoi, avec quels droits et à quel coût | [orchestration/architecture.md](../orchestration/architecture.md) |
 | Ce que garantit chaque script et chaque rôle | `*/CADRAGE.md` (décision 49) |
 | Ce que chaque tâche a réellement produit | `tasks/reports/TASK-XXX-report.md` |
-| Les défauts connus, non corrigés | [tasks/pending/TASK-039.md](../tasks/pending/TASK-039.md) — registre, A01 à A184 |
+| Les défauts connus, non corrigés | [tasks/pending/TASK-039.md](../tasks/pending/TASK-039.md) — registre, A01 à A190 |
 | Les règles de conduite d'une tâche | [orchestration/regles.md](../orchestration/regles.md), [.claude/commands/tache.md](../.claude/commands/tache.md) |
-| Les décisions en vigueur | [orchestration/decisions.md](../orchestration/decisions.md) — 50 décisions |
+| Les décisions en vigueur | [orchestration/decisions.md](../orchestration/decisions.md) — 51 décisions |
 
 **Rien d'important ne vit dans une session** : tout ce qui a été décidé est dans ces
 fichiers, et `master` est poussé sur GitHub.
@@ -33,7 +33,7 @@ exécutable en conteneur jetable, sans rien installer sur le poste ; une CI GitH
 verte (lint, tests Bash, Ansible) ; l'outillage d'orchestration (`verifier-travail.sh`,
 `clore-tache.sh`, `juger.sh` capable de juger une tâche documentaire).
 
-**Les quatre dernières tâches**, qui ne figuraient pas dans la version précédente de ce
+**Les six dernières tâches**, qui ne figuraient pas dans la version précédente de ce
 fichier :
 
 | Tâche | Ce qu'elle a changé |
@@ -42,6 +42,8 @@ fichier :
 | TASK-097 | `lancer-agent.sh` lit la clé d'API dans les variables utilisateur de Windows quand le harnais ne la transmet pas (`resoudre-cle.sh`) |
 | TASK-098 | `orchestration/modeles/anthropic.env` porte **plusieurs modèles** — `haiku` (défaut), `sonnet`, `opus` — choisis par `--modele`, avec leurs tarifs ; `--dry-run` dit ce qui serait lancé sans rien dépenser |
 | TASK-094 | `orchestration/architecture.md` porte enfin les vues d'exécution, de couches, le registre des agents et l'inventaire des capacités (ce qui est générique, ce qui est propre au dépôt). **Première tâche du dépôt conduite par l'API Anthropic**, et non par l'abonnement |
+| TASK-099 | `lancer-agent.sh --relecture` : la relecture se lance par l'API, agent lecture seule, verdict rendu tel quel, sa propre ligne de mesure. `orchestration/relecture.json` dit « api » ou « abonnement » |
+| TASK-095 | `orchestration/outils/lib-agents.sh` porte le générique de `lancer-agent.sh` (150 lignes désormais, contre 189) ; première tâche écrite par `deepseek` alors qu'elle touche `orchestration/outils/` (décision 51) |
 
 **Changement de régime, 2026-09-19** — l'abonnement est presque épuisé. Il fait tourner le
 harnais lui-même ; **ce qui écrit et ce qui relit passe par l'API**, facturée à la clé :
@@ -50,16 +52,19 @@ règle d'arbitrage, avec les tarifs relevés ce jour-là, est la §19 de
 [regles.md](../orchestration/regles.md). Chaque lancement écrit son coût dans
 `orchestration/mesures/agents.tsv` : l'arbitrage se tranche sur ces chiffres.
 
-**Reste à faire, dans cet ordre**
+**Décision 51 (2026-09-19)** — `orchestration/outils/` et `.claude/` ne sont plus interdits en
+écriture à un agent lancé ; seuls `orchestration/regles.md`, `decisions.md`, `limites.json` et
+`modeles/` restent réservés à l'orchestrateur. Prise après que TASK-099 (écrite en direct par
+la session, seule alors autorisée à toucher ces dossiers) a montré son coût réel : tout,
+hormis la relecture, facturé à l'API Anthropic de la session, hors du registre `agents.tsv`.
 
-1. **TASK-099** — rendre la relecture lançable par l'API, avec un interrupteur
-   `orchestration/relecture.json` qui dit « api » ou « abonnement ».
-2. **TASK-095** — extraire dans `orchestration/outils/lib-agents.sh` ce que
-   `lancer-agent.sh` a de générique (inventaire : `architecture.md` §14).
-3. Les rôles Ansible `socle`, `docker`, `k3s`, `kubernetes`, puis la recette
-   `serveur-neuf.yml` et les fichiers de réglages. **Aucune fiche n'est encore écrite**
-   pour eux ; le plan en donne le contenu, les critères et l'ordre. Une fiche s'écrit au
-   format de [tasks/README.md](../tasks/README.md).
+**Reste à faire**
+
+TASK-099 et TASK-095 sont closes. Prochaine étape : les rôles Ansible `socle`, `docker`,
+`k3s`, `kubernetes`, puis la recette `serveur-neuf.yml` et les fichiers de réglages.
+**Aucune fiche n'est encore écrite** pour eux ; le plan en donne le contenu, les critères et
+l'ordre. Une fiche s'écrit au format de [tasks/README.md](../tasks/README.md), puis se
+lance comme n'importe quelle autre — `deepseek` par défaut, sauf besoin contraire.
 
 Le registre [TASK-039](../tasks/pending/TASK-039.md) reste `ready` en permanence : il passe
 devant le reste quand une anomalie devient urgente, jamais sélectionné automatiquement.
