@@ -1,7 +1,7 @@
 ---
 id: TASK-098
 title: "Donner à anthropic.env plusieurs modèles, choisis au lancement par --modele"
-status: ready
+status: in_progress
 priority: high
 depends_on: []
 environment: host

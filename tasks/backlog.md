@@ -108,7 +108,7 @@ de ce que cet ADR a tranché.
 | [TASK-087](completed/TASK-087.md) | Documenter le fonctionnement de l'outil de préparation | `completed` | haute | — | hôte | non |
 | [TASK-093](completed/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | `completed` | haute | — | hôte | non |
 | [TASK-097](completed/TASK-097.md) | Faire lire à `lancer-agent.sh` la clé d'API dans les variables utilisateur de Windows | `completed` | haute | — | hôte | non |
-| [TASK-098](pending/TASK-098.md) | Plusieurs modèles dans `anthropic.env`, choisis par `--modele` | `ready` | haute | — | hôte | non |
+| [TASK-098](active/TASK-098.md) | Plusieurs modèles dans `anthropic.env`, choisis par `--modele` | `in_progress` | haute | — | hôte | non |
 | [TASK-099](pending/TASK-099.md) | Relecture lançable par l'API, interrupteur API ou abonnement | `pending` | haute | 098 | hôte | non |
 | [TASK-094](pending/TASK-094.md) | Vues manquantes d'`architecture.md` : exécution, couches, registre, capacités | `ready` | haute | — | hôte | non |
 | [TASK-095](pending/TASK-095.md) | Extraire `lib-agents.sh` de `lancer-agent.sh` | `pending` | moyenne | 094 | hôte | non |
