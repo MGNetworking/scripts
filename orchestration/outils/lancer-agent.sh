@@ -21,6 +21,12 @@ set -Eeuo pipefail
 
 ici="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 racine="$(cd "$ici/../.." && pwd)"
+# Ce qui est générique — copie isolée, plafond de durée, profil, relevé — vit
+# dans lib-agents.sh, à côté ; SCRIPTDIR le fait trouver à shellcheck quel que
+# soit le dossier d'où il est lancé.
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=lib-agents.sh
+source "$ici/lib-agents.sh"
 usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier] [--modele <alias>] [--relecture] [--dry-run]" >&2; exit 2; }
 modele="" dry=0 relecture=0 pos=()
 while [ $# -gt 0 ]; do case "$1" in
@@ -58,19 +64,17 @@ if [ "$relecture" -eq 1 ]; then
 fi
 
 # Un modèle Claude passe par l'abonnement, sans profil. Un autre modèle a son
-# profil : adresse, modèle, variable de clé et tarifs ; lu ligne à ligne, jamais exécuté.
+# profil : adresse, modèle, variable de clé et tarifs, lus sans être exécutés.
 ADRESSE="" MODELE="$profil" VARIABLE_CLE="" PRIX_ENTREE="" PRIX_CACHE="" PRIX_SORTIE="" DEFAUT=""
 declare -A alias_modele=() alias_prix=()
-if [ -f "$ici/../modeles/$profil.env" ]; then
-    while IFS='=' read -r cle valeur; do
-        case "$cle" in
-            ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;;
-            PRIX_ENTREE) PRIX_ENTREE="$valeur" ;; PRIX_CACHE) PRIX_CACHE="$valeur" ;; PRIX_SORTIE) PRIX_SORTIE="$valeur" ;;
-            MODELE_DEFAUT) DEFAUT="$valeur" ;; MODELE_*) alias_modele["${cle#MODELE_}"]="$valeur" ;;
-            PRIX_*) alias_prix["${cle#PRIX_}"]="$valeur" ;;
-        esac
-    done < "$ici/../modeles/$profil.env"
-fi
+while IFS=$'\t' read -r cle valeur; do
+    case "$cle" in
+        ADRESSE) ADRESSE="$valeur" ;; MODELE) MODELE="$valeur" ;; VARIABLE_CLE) VARIABLE_CLE="$valeur" ;;
+        PRIX_ENTREE) PRIX_ENTREE="$valeur" ;; PRIX_CACHE) PRIX_CACHE="$valeur" ;; PRIX_SORTIE) PRIX_SORTIE="$valeur" ;;
+        MODELE_DEFAUT) DEFAUT="$valeur" ;; MODELE_*) alias_modele["${cle#MODELE_}"]="$valeur" ;;
+        PRIX_*) alias_prix["${cle#PRIX_}"]="$valeur" ;;
+    esac
+done < <(profil_lire "$ici/../modeles/$profil.env")
 # Profil à plusieurs modèles : --modele choisit un alias, sinon MODELE_DEFAUT.
 if [ "${#alias_modele[@]}" -gt 0 ]; then
     choix="${modele:-$DEFAUT}"
@@ -96,14 +100,7 @@ fi
 
 # Copie séparée, hors du dépôt pour que le lint ne la parcoure pas.
 copie="$(dirname "$racine")/$(basename "$racine")-agents/$tache"
-if [ ! -d "$copie" ]; then
-    mkdir -p "$(dirname "$copie")"
-    if git -C "$racine" rev-parse -q --verify "agent/$tache" >/dev/null; then
-        git -C "$racine" worktree add -q "$copie" "agent/$tache"
-    else
-        git -C "$racine" worktree add -q -b "agent/$tache" "$copie" master
-    fi
-fi
+copie_isolee "$racine" "agent/$tache" "$copie" master
 
 if [ "$relecture" -eq 1 ]; then
     # Le relecteur n'a que la lecture : il lit les fichiers de l'arbre, il ne rejoue rien.
@@ -125,7 +122,7 @@ debut=$(date +%s)
 code=0
 # Plafond de durée (A08) : un agent qui tourne en rond est arrêté au bout d'une heure.
 DUREE_MAX="${DUREE_MAX:-3600}"
-borne=(); command -v timeout >/dev/null 2>&1 && borne=(timeout "$DUREE_MAX")
+mapfile -t borne < <(plafond_duree "$DUREE_MAX")
 options=(--model "$MODELE" --setting-sources project --strict-mcp-config --output-format json)
 if [ "$relecture" -eq 1 ]; then
     # Lecture seule : ni Bash, ni Edit, ni Write. Le relecteur est défini une seule fois,
@@ -138,52 +135,15 @@ fi
 sortie="$(cd "$copie" && "${env_agent[@]}" "${borne[@]}" claude -p "$consigne" "${options[@]}")" || code=$?
 rm -f "$copie/RETOURS-$tache.md" "$copie/VERIFICATION-$tache.md"
 
-# Relevé : une ligne par lancement. Le coût se calcule au tarif du profil,
-# pas au total_cost_usd de Claude Code, qui applique les prix Anthropic.
+# Relevé : une ligne par lancement, au tarif du profil. Le verdict de la relecture
+# est la sortie utile du lancement : il part sur stdout, tel quel.
 journal="$racine/orchestration/mesures/agents.tsv"
-[ -f "$journal" ] || printf 'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\tcout_usd\n' > "$journal"
-# Coût au tarif du profil (A09) ; vide pour un modèle Claude, facturé à l'abonnement.
-# Jetons lus dans le transcript de la session, pas dans la sortie JSON de claude -p
-# (A122) : celle-ci ne rend que la dernière boucle. Une notification de tâche de fond
-# (Monitor, commande passée en arrière-plan) arrivée après la réponse en relance une,
-# seule comptée : TASK-071, 1 tour et 243 jetons pour 81 appels au modèle en 2269 s.
-# Transcript introuvable (sortie vide d'un agent tué par DUREE_MAX, session inconnue) :
-# relevé « incomplet ». Tours : appels distincts au modèle.
-node -e '
-    const fs = require("fs"), path = require("path"), os = require("os");
-    const [sortie, date, tache, profil, modele, duree, code, pe, pc, ps, rel] = process.argv.slice(1);
-    let j = {}; try { j = JSON.parse(sortie); } catch {}
-    const ids = [...sortie.matchAll(/"session_id"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
-    const projets = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude"), "projects");
-    const appels = new Map();
-    for (const d of ids.length && fs.existsSync(projets) ? fs.readdirSync(projets) : []) {
-        const f = path.join(projets, d, ids[ids.length - 1] + ".jsonl");
-        if (!fs.existsSync(f)) continue;
-        for (const l of fs.readFileSync(f, "utf8").split("\n")) {
-            try { const m = JSON.parse(l).message; if (m.role === "assistant" && m.id && m.usage) appels.set(m.id, m.usage); } catch {}
-        }
-    }
-    let entree = 0, cache = 0, produits = 0;
-    for (const u of appels.values()) {
-        entree += u.input_tokens || 0; produits += u.output_tokens || 0;
-        cache += (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-    }
-    if (appels.size === 0) {
-        console.log([date, tache, profil, modele, "incomplet", "?", "?", "?", duree, code, "?"].join("\t"));
-        console.error("RELEVÉ INCOMPLET : transcript de session introuvable (" + (ids.pop() || "aucune session") + ")");
-    } else {
-        const cout = pe ? ((entree * pe + cache * pc + produits * ps) / 1e6).toFixed(3) : "";
-        console.log([date, tache, profil, modele, appels.size, entree, cache, produits, duree, code, cout].join("\t"));
-    }
-    if (rel !== "1") console.error(j.result || "(aucune réponse lisible de cet agent)");
-' "$sortie" "$(date '+%F %T')" "$tache" "$colonne" "$MODELE" "$(( $(date +%s) - debut ))" "$code" \
-    "$PRIX_ENTREE" "$PRIX_CACHE" "$PRIX_SORTIE" "$relecture" >> "$journal"
-
-# Relecture : le verdict est la sortie utile du lancement ; il part sur stdout, tel quel.
-if [ "$relecture" -eq 1 ]; then
-    node -e 'let j = {}; try { j = JSON.parse(process.argv[1]); } catch {}
-        console.log(j.result || "(aucune réponse lisible du relecteur)");' "$sortie"
-fi
-
+flux=stderr repli="(aucune réponse lisible de cet agent)"
+if [ "$relecture" -eq 1 ]; then flux=stdout; repli="(aucune réponse lisible du relecteur)"; fi
+duree="$(( $(date +%s) - debut ))"
+ligne="$(releve_jetons "$sortie" "$tache" "$colonne" "$MODELE" "$duree" "$code" \
+    "$PRIX_ENTREE" "$PRIX_CACHE" "$PRIX_SORTIE")"
+journal_agents "$journal" "$ligne"
+resultat_agent "$sortie" "$flux" "$repli"
 tail -1 "$journal"
 exit "$code"
