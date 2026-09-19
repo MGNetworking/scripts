@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A184**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A185**.
 
 ## Registre
 
@@ -233,6 +233,7 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A181 | P3 | `orchestration/decisions.md`, décision 39, énumère encore l'ancien périmètre de `limites.json` — « pas d'écriture dans `tasks/`, `docs/`, `orchestration/`, `lib/`, `.claude/`, les README et `CLAUDE.md` » — devenu faux après TASK-093 (A178) : `docs/` et les README de domaine sont désormais ouverts, seuls deux fichiers de `docs/` et le README racine restent protégés | relecture TASK-093 | mettre à jour l'énumération de la décision 39 au prochain travail sur `decisions.md`, en listant les exceptions plutôt que le dossier entier |
 | [ ] | A182 | P3 | Le cas « jouet » de `tests/acceptance/TASK-097-cle.sh` (`lancer-agent.sh` transmet la clé du registre à l'agent, faux `claude`) exige `git` et `node`, absents du conteneur `debian` : indisponibilité déclarée, le test rend 3 en conteneur ; ce cas n'est prouvé qu'à l'hôte | TASK-097 | ajouter `git` et `node` à l'image `debian`, ou accepter ce niveau de preuve |
 | [ ] | A183 | P4 | `resoudre-cle.sh` ne lit que les variables de portée utilisateur de Windows, par `powershell.exe` ; sur Linux la variable d'environnement seule sert. Git Bash retirant lui-même le retour chariot, la ligne `tr -d '\r'` n'est prouvée qu'en conteneur Linux | TASK-097 | étendre à la portée Machine si une clé y est un jour posée |
+| [ ] | A184 | P3 | Le coût affiché des profils Anthropic est sous-estimé : `lancer-agent.sh` additionne lecture et écriture de cache au tarif de lecture (0,1 x l'entrée), alors que l'écriture de cache est facturée 1,25 x (5 min). DeepSeek n'a pas de surcoût d'écriture, donc son coût reste juste | TASK-098 | compter séparément lecture et écriture de cache dans le relevé, avec un `PRIX_ECRITURE` par alias |
 
 ## Suivi, pas des défauts
 

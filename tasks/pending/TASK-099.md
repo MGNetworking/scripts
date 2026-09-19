@@ -1,7 +1,7 @@
 ---
 id: TASK-099
 title: "Rendre la relecture lançable par l'API, avec un interrupteur API ou abonnement"
-status: pending
+status: ready
 priority: high
 depends_on:
   - TASK-098
