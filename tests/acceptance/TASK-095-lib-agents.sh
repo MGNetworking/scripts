@@ -8,7 +8,9 @@
 #   2. lib-agents.sh ne nomme ni un chemin, ni une tâche, ni une règle du dépôt ;
 #   3. la copie isolée se crée, puis se réutilise sans être refaite ;
 #   4. un profil inconnu est refusé en 2 ;
-#   5. un lancement réel garde la ligne VERDICT et la ligne de mesure.
+#   5. un lancement réel garde la ligne VERDICT et la ligne de mesure ;
+#   6. le lancer-agent.sh du dépôt, lancé pour de vrai en --dry-run, s'exécute
+#      et rend sa ligne — la bibliothèque est donc bien chargée par lui.
 
 set -Eeuo pipefail
 
@@ -33,7 +35,7 @@ done
 
 titre "2. Générique — aucune mention du dépôt"
 contenu="$(cat "$LIB")"
-for motif in TASK- SCRIPTS_ROOT orchestration/ tasks/ lib/common.sh agents.tsv limites.json MGNetworking; do
+for motif in TASK- SCRIPTS_ROOT orchestration/ tasks/ lib/common.sh agents.tsv limites.json cout_usd entree_cache MGNetworking; do
     assert_absent "$contenu" "$motif" "lib-agents.sh ne nomme pas « $motif »"
 done
 
@@ -134,5 +136,10 @@ FAUX
 else
     saute_indisponible "lancement jouet" "git ou node est introuvable"
 fi
+
+titre "5. Lancement réel du script du dépôt, sans clé"
+code=0; sortie="$(bash "$LANCEUR" sonnet TASK-095 --dry-run 2>&1)" || code=$?
+assert_code 0 "$code" "lancer-agent.sh du dépôt s'exécute"
+assert_contient "$sortie" "DRY-RUN  profil=sonnet modèle=sonnet" "il a chargé lib-agents.sh et rend sa ligne"
 
 bilan "TASK-095"

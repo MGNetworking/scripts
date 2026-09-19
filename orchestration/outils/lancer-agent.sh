@@ -138,12 +138,13 @@ rm -f "$copie/RETOURS-$tache.md" "$copie/VERIFICATION-$tache.md"
 # Relevé : une ligne par lancement, au tarif du profil. Le verdict de la relecture
 # est la sortie utile du lancement : il part sur stdout, tel quel.
 journal="$racine/orchestration/mesures/agents.tsv"
+entete=$'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\tcout_usd'
 flux=stderr repli="(aucune réponse lisible de cet agent)"
 if [ "$relecture" -eq 1 ]; then flux=stdout; repli="(aucune réponse lisible du relecteur)"; fi
 duree="$(( $(date +%s) - debut ))"
 ligne="$(releve_jetons "$sortie" "$tache" "$colonne" "$MODELE" "$duree" "$code" \
     "$PRIX_ENTREE" "$PRIX_CACHE" "$PRIX_SORTIE")"
-journal_agents "$journal" "$ligne"
+journal_agents "$journal" "$entete" "$ligne"
 resultat_agent "$sortie" "$flux" "$repli"
 tail -1 "$journal"
 exit "$code"

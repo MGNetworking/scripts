@@ -19,8 +19,8 @@
 #       écrit la ligne de mesure — tours, jetons, coût — lue dans le transcript
 #       de la session, et non dans la sortie rendue par l'agent, qui ne porte
 #       que sa dernière boucle
-#   journal_agents <fichier> <ligne>
-#       ajoute la ligne au journal, en-tête des onze colonnes compris
+#   journal_agents <fichier> <en-tete> <ligne>
+#       ajoute une ligne à un journal tabulé, en posant l'en-tête s'il est neuf
 #   resultat_agent <sortie> <flux> <texte de repli>
 #       écrit la réponse lisible de l'agent sur stdout, sur stderr, ou nulle part
 #
@@ -109,12 +109,12 @@ releve_jetons() {
     ' "$1" "$(date '+%F %T')" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
 }
 
-# journal_agents <fichier> <ligne> — ajoute <ligne> au journal, et pose l'en-tête
-# des onze colonnes si le fichier n'existe pas encore.
+# journal_agents <fichier> <en-tete> <ligne> — ajoute <ligne> au journal, et pose
+# <en-tete> si le fichier n'existe pas encore. Ni le nombre ni l'ordre des colonnes
+# ne sont connus ici : ils appartiennent à l'appelant, qui les passe en clair.
 journal_agents() {
-    local entete=$'date\ttache\tprofil\tmodele\ttours\tentree\tentree_cache\tsortie\tduree_s\tcode\tcout_usd'
-    [ -f "$1" ] || printf '%s\n' "$entete" > "$1"
-    printf '%s\n' "$2" >> "$1"
+    [ -f "$1" ] || printf '%s\n' "$2" > "$1"
+    printf '%s\n' "$3" >> "$1"
 }
 
 # resultat_agent <sortie> <flux> <texte de repli> — écrit la réponse lisible de
