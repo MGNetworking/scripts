@@ -47,6 +47,7 @@ assert_code 0 "$code" "environnement seul"; assert_egal "valeur-env" "$out" "env
 
 cle "valeur-registre"
 assert_code 0 "$code" "registre seul"; assert_egal "valeur-registre" "$out" "registre seul : la valeur"
+# Preuve du retour chariot : conteneur Linux seulement — Git Bash le retire lui-même, l'hôte ne peut pas la voir.
 assert_egal "0" "$octets_cr" "registre seul : aucun retour chariot dans les octets écrits"
 
 cle "valeur-registre" TEST_CLE_MGNET=valeur-env
@@ -72,7 +73,6 @@ env -u TEST_CLE_ABSENTE_MGNET FAUX_REGISTRE="" PATH="$TMP/bin:$PATH" bash "$J/or
 assert_code 2 "$code" "lancer-agent.sh : clé introuvable"
 assert_contient "$(cat "$TMP/err")" "TEST_CLE_ABSENTE_MGNET" "le message nomme la variable"
 assert_contient "$(cat "$TMP/err")" "variables utilisateur de Windows" "le message nomme les deux endroits"
-assert_absent "$(cat "$TMP/err")" "valeur-registre" "aucune valeur dans le message"
 
 if command -v git > /dev/null && command -v node > /dev/null; then
     git -C "$J" init -q -b master && git -C "$J" add -A \
@@ -80,6 +80,7 @@ if command -v git > /dev/null && command -v node > /dev/null; then
     FAUX_REGISTRE="valeur-registre" PATH="$TMP/bin:$PATH" bash "$J/orchestration/outils/lancer-agent.sh" faux TASK-999 > "$TMP/sortie" 2>&1 && code=0 || code=$?
     assert_code 0 "$code" "lancer-agent.sh : clé du registre, agent lancé"
     assert_egal "valeur-registre" "$(cat "$TMP/cle-recue" 2> /dev/null)" "l'agent reçoit la clé du registre"
+    # Garde limitée : le faux claude n'affiche jamais la clé ; elle attrape un « set -x » ou un « echo » ajouté au script.
     assert_absent "$(cat "$TMP/sortie")" "valeur-registre" "la clé n'est pas affichée"
     assert_absent "$(cat "$J/orchestration/mesures/agents.tsv" 2> /dev/null)" "valeur-registre" "la clé n'est pas dans le relevé"
 else
