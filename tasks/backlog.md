@@ -113,6 +113,10 @@ de ce que cet ADR a tranché.
 | [TASK-094](completed/TASK-094.md) | Vues manquantes d'`architecture.md` : exécution, couches, registre, capacités | `completed` | haute | — | hôte | non |
 | [TASK-095](completed/TASK-095.md) | Extraire `lib-agents.sh` de `lancer-agent.sh` | `completed` | moyenne | 094 | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
+| [TASK-088](pending/TASK-088.md) | Rôle Ansible `socle` (fuseau, hôte, journaux, swap, mises à jour, comptes, cron) | `ready` | moyenne | — | hôte | non |
+| [TASK-089](pending/TASK-089.md) | Rôle Ansible `docker` (dépôt officiel, moteur, daemon.json, réseau, mise à jour) | `pending` | moyenne | 088 | hôte | non |
+| [TASK-090](pending/TASK-090.md) | Rôle Ansible `k3s` (installation officielle, version épinglée, configuration, mise à jour, désinstallation) | `pending` | moyenne | 088 | hôte | non |
+| [TASK-091](pending/TASK-091.md) | Rôle Ansible `kubernetes` (kubectl, Helm, cert-manager, metrics-server, Traefik, manifestes versionnés) | `pending` | moyenne | 090 | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre
 fixé par [décisions](../orchestration/decisions.md)
