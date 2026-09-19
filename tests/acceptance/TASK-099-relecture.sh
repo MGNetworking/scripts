@@ -69,7 +69,7 @@ fi
 # --- Dépôt jouet : les deux modes, et ce que reçoit vraiment claude -----------
 J="$TMP/jouet"
 mkdir -p "$J/orchestration/outils" "$J/orchestration/mesures" "$J/orchestration/modeles" "$J/tasks/active"
-cp "$OUTILS/lancer-agent.sh" "$OUTILS/resoudre-cle.sh" "$J/orchestration/outils/"
+cp "$OUTILS/lancer-agent.sh" "$OUTILS/resoudre-cle.sh" "$OUTILS/lib-agents.sh" "$J/orchestration/outils/"
 printf 'ADRESSE=https://exemple.invalid\nVARIABLE_CLE=TEST_CLE_MGNET\nMODELE_DEFAUT=petit\nMODELE_petit=m-petit\nPRIX_petit=1.00 0.10 5.00\nMODELE_grand=m-grand\nPRIX_grand=5.00 0.50 25.00\n' > "$J/orchestration/modeles/multi.env"
 echo "fiche" > "$J/tasks/active/TASK-999.md"
 JOUET="$J/orchestration/outils/lancer-agent.sh"

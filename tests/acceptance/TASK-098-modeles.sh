@@ -68,7 +68,7 @@ assert_absent "$sortie" "fausse-cle-anthropic" "la clé n'apparaît pas dans la 
 # Dépôt jouet : le lancement transmet le modèle choisi.
 J="$TMP/jouet"
 mkdir -p "$J/orchestration/outils" "$J/orchestration/modeles" "$J/orchestration/mesures" "$J/tasks/active"
-cp "$OUTILS/lancer-agent.sh" "$OUTILS/resoudre-cle.sh" "$J/orchestration/outils/"
+cp "$OUTILS/lancer-agent.sh" "$OUTILS/resoudre-cle.sh" "$OUTILS/lib-agents.sh" "$J/orchestration/outils/"
 printf 'ADRESSE=https://exemple.invalid\nVARIABLE_CLE=TEST_CLE_MGNET\nMODELE_DEFAUT=petit\nMODELE_petit=m-petit\nPRIX_petit=1.00 0.10 5.00\nMODELE_grand=m-grand\nPRIX_grand=5.00 0.50 25.00\n' > "$J/orchestration/modeles/multi.env"
 printf 'ADRESSE=https://exemple.invalid\nMODELE=m-ancien\nVARIABLE_CLE=TEST_CLE_MGNET\nPRIX_ENTREE=0.30\nPRIX_CACHE=0.006\nPRIX_SORTIE=1.20\n' > "$J/orchestration/modeles/ancien.env"
 echo "fiche" > "$J/tasks/active/TASK-999.md"
