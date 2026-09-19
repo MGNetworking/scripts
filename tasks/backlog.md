@@ -110,7 +110,7 @@ de ce que cet ADR a tranché.
 | [TASK-097](completed/TASK-097.md) | Faire lire à `lancer-agent.sh` la clé d'API dans les variables utilisateur de Windows | `completed` | haute | — | hôte | non |
 | [TASK-098](completed/TASK-098.md) | Plusieurs modèles dans `anthropic.env`, choisis par `--modele` | `completed` | haute | — | hôte | non |
 | [TASK-099](pending/TASK-099.md) | Relecture lançable par l'API, interrupteur API ou abonnement | `ready` | haute | 098 | hôte | non |
-| [TASK-094](pending/TASK-094.md) | Vues manquantes d'`architecture.md` : exécution, couches, registre, capacités | `ready` | haute | — | hôte | non |
+| [TASK-094](active/TASK-094.md) | Vues manquantes d'`architecture.md` : exécution, couches, registre, capacités | `in_progress` | haute | — | hôte | non |
 | [TASK-095](pending/TASK-095.md) | Extraire `lib-agents.sh` de `lancer-agent.sh` | `pending` | moyenne | 094 | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 

@@ -1,12 +1,12 @@
 ---
 id: TASK-094
 title: "Ajouter à architecture.md la vue d'exécution, les couches, le registre des agents et l'inventaire des capacités"
-status: ready
+status: in_progress
 priority: high
 depends_on: []
 environment: host
 human_approval_required: false
-agent: deepseek
+agent: anthropic
 objective: |
   orchestration/architecture.md répond à quatre questions qu'il laisse ouvertes : quel
   programme tourne et depuis où, ce qui relève du modèle, du harnais, des scripts et des
