@@ -111,7 +111,7 @@ de ce que cet ADR a tranché.
 | [TASK-098](completed/TASK-098.md) | Plusieurs modèles dans `anthropic.env`, choisis par `--modele` | `completed` | haute | — | hôte | non |
 | [TASK-099](completed/TASK-099.md) | Relecture lançable par l'API, interrupteur API ou abonnement | `completed` | haute | 098 | hôte | non |
 | [TASK-094](completed/TASK-094.md) | Vues manquantes d'`architecture.md` : exécution, couches, registre, capacités | `completed` | haute | — | hôte | non |
-| [TASK-095](pending/TASK-095.md) | Extraire `lib-agents.sh` de `lancer-agent.sh` | `pending` | moyenne | 094 | hôte | non |
+| [TASK-095](active/TASK-095.md) | Extraire `lib-agents.sh` de `lancer-agent.sh` | `in_progress` | moyenne | 094 | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
 
 TASK-020 à TASK-026 atomisent le domaine `Linux/System` — plan §1 — dans l'ordre

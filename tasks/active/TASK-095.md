@@ -1,7 +1,7 @@
 ---
 id: TASK-095
 title: "Extraire dans lib-agents.sh ce que lancer-agent.sh a de générique"
-status: pending
+status: in_progress
 priority: medium
 depends_on:
   - TASK-094
