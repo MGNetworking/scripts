@@ -308,3 +308,65 @@ Chaque écart vit dans le registre ; cette liste ne fait que les signaler.
 | 150 lignes par script et par fichier de cas | dépassements fréquents, justifiés sur la ligne VERDICT | A92, A105, A121… |
 | chaque commit porte `Tâche : TASK-XXX` | les commits de l'agent ne la portent pas : `executer-tache.md` ne la lui demande pas | A66 |
 | contrôles de l'étape 5 | sondes, mutations et stabilité pratiquées sans être prescrites | A128 |
+
+## 11. Vue d'exécution
+
+Trois contextes où s'exécute du code IA dans cette orchestration.
+
+```mermaid
+flowchart TD
+    subgraph Session["Session orchestratrice — Opus, interactive"]
+        SE["Claude Code<br/>Claude Opus 5<br/>dossier : racine du dépôt<br/>API : platform.anthropic.com<br/>Tâche : réflexion, propositions<br/>cadrage, fusion"]
+    end
+    subgraph SousAgent["Sous-agents — neuf par tâche"]
+        SA["Claude Code sans interface<br/>modèle du harnais ou Opus<br/>dossier : racine du dépôt<br/>API : platform.anthropic.com<br/>Tâche : rédaction, relecture<br/>gestes mécaniques"]
+    end
+    subgraph Agent["Agent exécutant — isolé par worktree"]
+        AE["claude -p (sans interface)<br/>modèle du profil : deepseek<br/>ou anthropic (haiku/sonnet/opus)<br/>dossier : ../script-agents/TASK-XXX<br/>API : api.deepseek.com/anthropic<br/>ou platform.anthropic.com<br/>Tâche : écriture, test, correction"]
+    end
+    SE -->|prépare, reprend| SousAgent
+    SE -->|lancer-agent.sh| AE
+    AE -->|juge, validation| Batch["juger.sh<br/>verifier-travail.sh"]
+    SousAgent -->|juge| Batch
+```
+
+## 12. Les quatre couches
+
+L'orchestration repose sur une séparation d'intérêts : le modèle (logique), le harnais (déploiement), les scripts (outils), et les consignes (règles).
+
+| Couche | Composants | Interchangeable | Contrat minimal |
+|---|---|---|---|
+| **Modèle** | LLM choisi (Opus, Sonnet, Haiku, DeepSeek, autre) | oui : `orchestration/modeles/<nom>.env` suffit | parler JSON, responder aux prompts |
+| **Harnais** | Claude Code, CLI, permissions, worktrees, variables | oui : changer le `--output-format json`, relancer, changer les permissions | lire/écrire fichiers, exécuter shell, API d'un modèle |
+| **Scripts** | `orchestration/outils/*.sh`, `tests/`, CI | non : ils contiennent la logique d'orchestration | appels déterministes, pas d'état caché |
+| **Consignes** | `regles.md`, `decisions.md`, `.claude/agents/*.md`, `limites.json` | oui : relire ou réécrire avec le même sens | `tasks/active/*.md`, `orchestration/mesures/` existants, commits versionnés |
+
+Le harnais n'impose qu'un seul contrat : **lire et écrire des fichiers**, **exécuter une commande shell**, **parler à un modèle LLM**. Le reste est dans les scripts et les consignes.
+
+## 13. Registre des agents
+
+Chaque rôle et modèle disponible, où le trouver, ses permissions, et son coût moyen.
+
+| Rôle | Défini dans | Modèle | Permissions | Coût moyen | Ne peut pas |
+|---|---|---|---|---|---|
+| **Conducteur** | `.claude/agents/conducteur-tache.md` | Claude Opus 5 | `/tache` étapes 1 à 8 ; git merge ; lancer relecture | ~100 jetons × 10.00 $/M = ~$1 | `lancer-agent.sh` ; `push`, `rebase`, `reset` |
+| **Relecteur** | `.claude/agents/relecteur.md` | Claude Opus 5 | lecture seule ; relire 40 lignes max | ~7 000 jetons × 10.00 $/M = ~$0.07 | écrire ; exécuter commande |
+| **Rédacteur** | `.claude/agents/redacteur-tache.md` | hérité de la session | `tasks/pending/`, `tasks/backlog.md` | session dépend de son modèle | `lib/`, scripts ; inventer une décision |
+| **Agent exécutant (deepseek)** | `orchestration/modeles/deepseek.env` | deepseek-flash (défaut) | périmètre `scope` de la fiche | ~50 jetons × 1.20 $/M = ~$0.06 | `CLAUDE.md`, `README`, `tasks/`, `docs/` ; `push`, `merge`, `rebase` |
+| **Agent exécutant (anthropic)** | `orchestration/modeles/anthropic.env` | haiku (défaut), sonnet, opus | périmètre `scope` de la fiche | **haiku** ~50 jetons × 5.00 $/M = ~$0.0005 **sonnet** ~50 jetons × 10.00 $/M = ~$0.0005 **opus** ~50 jetons × 25.00 $/M = ~$0.001 | idem deepseek |
+
+Tarifs relevés de [platform.anthropic.com](https://platform.anthropic.com/docs/about-claude/pricing) le 2026-09-19 ; DeepSeek du 2026-09-14 ; coûts observés dans `orchestration/mesures/agents.tsv`.
+
+## 14. Inventaire des capacités
+
+Chaque script de `orchestration/outils/` et sa fonction.
+
+| Script | Que fait-il | Générique ou propre |
+|---|---|---|
+| **lancer-agent.sh** | crée une copie isolée (worktree), lance un agent dedans avec un modèle du profil spécifié, relève jeton/durée/coût, attend le verdict | **générique** : l'API et le modèle changent ; l'orchestration ne change pas |
+| **juger.sh** | teste le script d'une fiche en conteneur (shellcheck, cas, règles transverses) ; juge documentaire si pas de .sh | **générique** : le conteneur et le verbe du shell changent ; la logique de jugement reste |
+| **clore-tache.sh** | écrit les artefacts de fermeture (fiche dans `completed/`, line du backlog, journal, mesures) ; ne commite pas, ne relance pas le juge | **générique** : déplace des fichiers et ajoute des lignes ; travail mécanique |
+| **verifier-travail.sh** | quatre contrôles sans faire confiance à l'agent : périmètre, longueur, juge, validations de la fiche | **générique** : l'appel à juger change ; les quatre contrôles restent |
+| **verifier-liens.sh** | trouve les liens Markdown morts après déplacement d'une fiche | **générique** : cherche les motifs `](` ; ne connaît aucune tâche particulière |
+| **resoudre-cle.sh** | écrit sur stdout une variable d'environnement (cherche en env d'abord, puis Windows) | **générique** : utilitaire de résolution ; le harnais peut le remplacer |
+| **lien-ecrit.awk** | utilitaire pour verifier-liens.sh : extrait les cibles Markdown | **générique** : regex sur `](…)` |
