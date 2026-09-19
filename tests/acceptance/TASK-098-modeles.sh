@@ -57,6 +57,11 @@ assert_code 2 "$code" "deepseek refuse --modele"
 assert_contient "$sortie" "pas de choix de modèle" "deepseek : message"
 lancer "$REEL" -- anthropic --dry-run
 assert_code 2 "$code" "anthropic sans clé, dry-run"
+assert_contient "$sortie" "ANTHROPIC_API_KEY est introuvable" "anthropic sans clé : le message nomme la variable"
+lancer "$REEL" "$AN" -- anthropic --dry-run --modele
+assert_code 2 "$code" "--modele sans valeur"
+lancer "$REEL" "$AN" -- anthropic --dry-run --modele "*"
+assert_code 2 "$code" "--modele avec un joker"
 lancer "$REEL" "$AN" -- anthropic --dry-run
 assert_absent "$sortie" "fausse-cle-anthropic" "la clé n'apparaît pas dans la sortie"
 
@@ -71,16 +76,21 @@ CLE="TEST_CLE_MGNET=fausse-cle"
 
 lancer "$J/orchestration/outils/lancer-agent.sh" "$CLE" -- multi --dry-run --modele grand
 assert_code 0 "$code" "jouet : dry-run"
-if [ -d "$TMP/jouet-agents" ] || [ -e "$TMP/env-recu" ]; then ko "dry-run" "une copie ou un lancement est apparu"; else ok "dry-run : ni copie, ni agent lancé"; fi
+if [ -d "$TMP/jouet-agents" ] || [ -e "$TMP/env-recu" ] || [ -e "$J/orchestration/mesures/agents.tsv" ]; then
+    ko "dry-run" "une copie, un lancement ou un relevé est apparu"; else ok "dry-run : ni copie, ni agent, ni relevé"; fi
 
 if command -v git > /dev/null && command -v node > /dev/null; then
     git -C "$J" init -q -b master && git -C "$J" add -A 2> /dev/null && git -C "$J" -c user.email=t@t -c user.name=t commit -qm init
+    lancer "$J/orchestration/outils/lancer-agent.sh" "$CLE" -- multi --dry-run
+    assert_egal "" "$(git -C "$J" branch --list 'agent/*')" "dry-run : aucune branche agent créée"
     # recu <alias…> : lance et rend les quatre variables de modèle reçues par l'agent, sur une ligne.
     recu() { lancer "$J/orchestration/outils/lancer-agent.sh" "$CLE" -- "$@"; tr '\n' ' ' < "$TMP/env-recu"; }
     assert_egal "m-petit m-petit m-petit m-petit " "$(recu multi TASK-999)" "lancement sans --modele : le défaut, aux quatre variables"
     assert_egal "m-petit" "$(tail -1 "$J/orchestration/mesures/agents.tsv" | cut -f4)" "le relevé porte l'identifiant du défaut"
     assert_egal "m-grand m-grand m-grand m-grand " "$(recu multi TASK-999 --modele grand)" "lancement --modele grand"
     assert_egal "m-grand" "$(tail -1 "$J/orchestration/mesures/agents.tsv" | cut -f4)" "le relevé porte l'identifiant choisi"
+    echo "retours" > "$TMP/retours.md"
+    assert_egal "m-grand m-grand m-grand m-grand " "$(recu multi TASK-999 "$TMP/retours.md" --modele grand)" "fichier de retours et --modele mêlés"
     assert_egal "m-ancien m-ancien m-ancien m-ancien " "$(recu ancien TASK-999)" "profil à un seul modèle : comportement d'avant"
 else
     saute_indisponible "lancement jouet : git ou node indisponible"

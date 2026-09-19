@@ -20,7 +20,7 @@ racine="$(cd "$ici/../.." && pwd)"
 usage() { echo "Usage : lancer-agent.sh <profil> <TASK-XXX> [fichier de retours] [--modele <alias>] [--dry-run]" >&2; exit 2; }
 modele="" dry=0 pos=()
 while [ $# -gt 0 ]; do case "$1" in
-    --modele) [ $# -ge 2 ] || usage; modele="$2"; shift 2 ;;
+    --modele) [[ "${2:-}" =~ ^[A-Za-z0-9_-]+$ ]] || usage; modele="$2"; shift 2 ;;
     --dry-run) dry=1; shift ;;
     *) pos+=("$1"); shift ;;
 esac; done
