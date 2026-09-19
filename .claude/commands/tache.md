@@ -97,16 +97,24 @@ rejeté, tâche bloquée.
 
 ## 6. Relire, corriger une fois
 
-Sous-agent `relecteur`, modèle `opus`, une lecture : critères de la fiche un par
-un, défauts BLOQUANT / MAJEUR / MINEUR, tests creux, verdict.
+Une lecture, quel que soit le mode : critères de la fiche un par un, défauts
+BLOQUANT / MAJEUR / MINEUR, tests creux, verdict. Qui relit se lit dans
+`orchestration/relecture.json` (TASK-099).
 
-**Dès son retour**, avant toute autre action, ajoute une ligne à
-`orchestration/mesures/agents.tsv` dans le dépôt principal — jamais dans
-`../script-agents/$1` —, onze colonnes séparées par des tabulations
-(`printf '%s\t…\n' >>`) : `date '+%F %T'`, `$1`, `relecteur`, `opus`, appels d'outils,
-`-`, `-`, jetons **totaux** du sous-agent (seul chiffre fourni : pour ce profil, la
-colonne `sortie` ne se somme pas avec les autres), durée en secondes, `0`, vide.
-Une session interrompue ne perd ainsi pas la mesure (A47).
+**Mode `abonnement`** — sous-agent `relecteur`, modèle `opus`. Dès son retour,
+avant toute autre action, ajoute une ligne à `orchestration/mesures/agents.tsv`
+dans le dépôt principal — jamais dans `../script-agents/$1` —, onze colonnes
+séparées par des tabulations (`printf '%s\t…\n' >>`) : `date '+%F %T'`, `$1`,
+`relecteur`, `opus`, appels d'outils, `-`, `-`, jetons **totaux** du sous-agent
+(seul chiffre fourni : pour ce profil, la colonne `sortie` ne se somme pas avec
+les autres), durée en secondes, `0`, vide. Une session interrompue ne perd
+ainsi pas la mesure (A47).
+
+**Mode `api`** — `bash orchestration/outils/lancer-agent.sh anthropic $1
+--relecture`, dans le dépôt principal. Le script lit lui-même le modèle du
+réglage, lance le relecteur en lecture seule dans `../script-agents/$1`, rend
+son verdict sur stdout et écrit sa propre ligne dans `agents.tsv` : rien à
+ajouter à la main.
 
 - **Fusionnable** : étape 7.
 - **Défauts** : écris-les dans un fichier du scratchpad et rends `RELANCER <ce
