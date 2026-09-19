@@ -41,6 +41,10 @@ par `orchestration/limites.json` : pas d'écriture dans `tasks/`, `docs/`,
 `orchestration/`, `lib/`, `.claude/`, les README et `CLAUDE.md` ; ni `push`, ni
 `merge`, ni lecture des `config/*.env`, ni web, ni sous-agents, ni MCP.
 
+Amendée par la décision 51 (2026-09-19) : `orchestration/outils/` et `.claude/` sont retirés
+de cette liste, à l'exception de `orchestration/regles.md`, `decisions.md`, `limites.json`
+et `modeles/`, qui restent interdits.
+
 ### Décision 40 — Boucle et plafonds
 
 ```text
@@ -461,3 +465,33 @@ les serveurs au `git pull`.
 scripts Bash (lignes, durée des tests, lisibilité, défauts). **`user` décide seul** de
 poursuivre la migration ou non ; ensuite seulement, un plan de migration par domaine,
 selon la boucle de la décision 49.
+
+### Décision 51 — L'agent peut écrire dans `orchestration/outils/` et `.claude/` (2026-09-19)
+
+Amende la décision 39. Décidé par `user` le 2026-09-19, à la suite de TASK-099 : écrite en
+direct par la session (`agent: orchestrateur`, seule autorisée par la décision 39 à toucher
+ces deux dossiers), elle a consommé son coût entier — lecture, patch, fichier de cas,
+corrections — sur l'API Anthropic, hors du registre `agents.tsv`, alors que le régime du
+2026-09-19 (abonnement quasi épuisé, §19 de `regles.md`) vise justement à faire porter
+l'écriture par l'agent le moins cher. Le même schéma allait se reproduire à l'identique sur
+TASK-095, tagué pareil et visant le même fichier.
+
+**Ce qui change** : `orchestration/limites.json` n'interdit plus l'écriture dans
+`orchestration/outils/` ni `.claude/` à un agent lancé. Une fiche qui les touche peut
+redevenir `agent: deepseek` (ou tout profil de `orchestration/modeles/`) au lieu
+d'`orchestrateur` — le choix se fait comme n'importe quelle autre fiche, à l'atomisation.
+
+**Ce qui ne change pas** : `orchestration/regles.md`, `orchestration/decisions.md`,
+`orchestration/limites.json` et `orchestration/modeles/` restent interdits — un agent ne
+modifie jamais les règles qui le bornent ni sa propre facturation. La relecture reste
+obligatoire, sans exception, sur toute tâche qui touche ces deux dossiers ; elle porte une
+attention nommée au caractère auto-référentiel de l'outillage — un agent qui affaiblirait
+`juger.sh`, `verifier-travail.sh` ou son propre relecteur (`.claude/agents/relecteur.md`,
+déjà signalé en ce sens par A189 du registre) neutraliserait le contrôle plutôt que de le
+respecter, ce qui reste un motif de rejet **BLOQUANT** au même titre qu'un test neutralisé
+(§12 de `regles.md`).
+
+**Portée** : ne vaut que pour l'agent lancé par `lancer-agent.sh` dans sa copie isolée. Le
+paragraphe 5 de `docs/reprise.md` (portage vers un autre harnais) et la décision 39 elle-même
+restent la référence pour tout le reste des interdits (pas de `push`, pas de fusion, pas de
+lecture de `config/*.env`, pas de web, pas de sous-agent).

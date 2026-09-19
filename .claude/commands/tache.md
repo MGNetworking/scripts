@@ -49,7 +49,10 @@ Refuse et explique pourquoi si :
 **Le champ `agent`** désigne un modèle externe de `orchestration/modeles/` (`deepseek`), un modèle
 Claude (`sonnet`, `opus`, `haiku`) ou `orchestrateur`. Fiche sans ce champ : choisis, écris-le dans la
 fiche, annonce-le. `human_approval_required: true` ne bloque pas (decisions.md
-décision 2).
+décision 2). Depuis la décision 51, un scope qui touche `orchestration/outils/` ou `.claude/`
+ne force plus `orchestrateur` : choisis le modèle le moins cher qui sait faire, comme pour
+toute autre fiche (§19 de `regles.md`) — `orchestrateur` reste seul pour
+`orchestration/regles.md`, `decisions.md`, `limites.json` et `modeles/`.
 
 ## 3. Activer
 

@@ -51,9 +51,12 @@ les champs imposés par un format et les préfixes `[INFO]` `[WARN]` `[ERROR]`
 
 **Zone protégée** — seulement si la tâche le demande : `lib/common.sh` (toute
 modification impose de revalider tout le dépôt), `.gitattributes`,
-`docs/architecture-technique.md`, `docs/guide-dispatcher.md`. `.claude/` et
-`orchestration/` : l'orchestrateur les fait évoluer quand l'usage révèle une règle
-mal formulée, et le consigne.
+`docs/architecture-technique.md`, `docs/guide-dispatcher.md`. Depuis la
+[décision 51](decisions.md) (2026-09-19), `.claude/` et `orchestration/outils/` suivent la
+même règle : une fiche peut les confier à un agent lancé, avec une relecture qui porte une
+attention renforcée à leur caractère auto-référentiel. `orchestration/regles.md`,
+`decisions.md`, `limites.json` et `modeles/` restent réservés à l'orchestrateur, qui les
+fait évoluer quand l'usage révèle une règle mal formulée, et le consigne.
 
 **Zone interdite** : `CLAUDE.md`, `config/*.env` (hors `.example`), `.git/`,
 `logs/`, `.idea/`, tout chemin hors du dépôt. Un **agent** a en plus les limites de
