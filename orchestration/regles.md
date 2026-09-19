@@ -205,3 +205,24 @@ Statuts : `pending`, `ready`, `in_progress`, `validating`, `completed`, `blocked
 `cancelled`. Une tâche n'est prise que `ready`, dépendances `completed`. Un agent ne
 se déclare jamais terminé : l'orchestrateur constate, sur les codes de retour.
 `blocked` n'est jamais repris automatiquement.
+
+## 19. Choix du modèle, du moins cher au plus cher (2026-09-19)
+
+Le modèle se choisit par **nature de tâche**, pas par confort. Tarifs relevés le
+2026-09-19, par million de jetons, entrée / sortie : `deepseek` 0,30 / 1,20 —
+`api-haiku` 1 / 5 — `api-sonnet` 2 / 10 — Opus 5 à l'API 5 / 25.
+
+| Nature de la tâche | Profil | Pourquoi |
+|---|---|---|
+| Écrire du code, un rôle, un scénario de test, de la documentation | `deepseek` | mesuré 0,03 à 0,19 $ par tâche, zéro défaut majeur sur 4 tâches |
+| Conduire une tâche : activer, lancer, vérifier, clore | `api-haiku`, ou un conducteur Haiku | travail procédural, outillé par `verifier-travail.sh` et `clore-tache.sh` |
+| Relire, juger, trancher un cas ambigu | Sonnet ou Opus | la relecture est le filet de sécurité ; elle a rattrapé les défauts majeurs de TASK-074, 078, 081 et 087 |
+| Écrire un plan, arbitrer avec `user` | Opus, dans la session | une fois par chantier, pas par tâche |
+
+Les profils `api-*` facturent la clé `ANTHROPIC_API_KEY` au lieu de l'abonnement.
+Sans cette variable, le lancement s'arrête avec un message clair.
+
+**Règle d'arbitrage** : prendre le profil le moins cher qui sait faire, et remonter
+d'un cran seulement quand une relecture a montré que le précédent ne suffisait pas.
+Chaque lancement écrit son coût dans `orchestration/mesures/agents.tsv` : l'arbitrage
+se tranche sur ces chiffres, jamais sur une impression.
