@@ -173,3 +173,4 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-19 17:38:28	TASK-094	anthropic	claude-haiku-4-5	18	148	908332	11192	139	0	0.147
 2026-09-19 17:45:54	TASK-094	anthropic	claude-sonnet-5	32	66	1533194	20690	227	0	0.514
 2026-09-19 17:48:03	TASK-094	relecteur	claude-opus-5	13	16	226178	9113	112	0	0.602
+2026-09-19 18:39:17	TASK-099	relecteur	claude-opus-5	10	20	260525	11034	160	0	0.406

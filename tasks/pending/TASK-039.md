@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A188**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A191**.
 
 ## Registre
 
@@ -236,7 +236,10 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A184 | P3 | Le coût affiché des profils Anthropic est sous-estimé : `lancer-agent.sh` additionne lecture et écriture de cache au tarif de lecture (0,1 x l'entrée), alors que l'écriture de cache est facturée 1,25 x (5 min). DeepSeek n'a pas de surcoût d'écriture, donc son coût reste juste | TASK-098 | compter séparément lecture et écriture de cache dans le relevé, avec un `PRIX_ECRITURE` par alias |
 | [ ] | A185 | P4 | `orchestration/architecture.md` §11 à 14 : tableaux dont certaines lignes atteignent 373 caractères, contre ~90 dans les sections 1 à 10 ; lisibilité dégradée, sans erreur de fond | TASK-094 | couper les cellules longues, ou déplacer le détail sous les tableaux |
 | [ ] | A186 | P3 | Un agent lancé ne peut pas exécuter `verifier-liens.sh` ni `juger.sh` (absents de l'allow-list de `orchestration/limites.json`) : ses lignes `VERDICT ECHEC` sur ce point sont des faux négatifs, constatés sur TASK-087 et TASK-094 | TASK-094 | autoriser ces deux commandes dans `limites.json`, ou faire lire ce défaut au conducteur comme non bloquant |
-| [ ] | A187 | P3 | Relecture Opus par l'API lancée à la main (`claude -p --agent relecteur`, 0,602 $ sur TASK-094) : son coût n'est pas relevé par un script mais saisi à la main dans `agents.tsv` | TASK-094 | TASK-099 : `lancer-agent.sh --relecture` écrit sa ligne de mesure seul |
+| [x] | A187 | P3 | Relecture Opus par l'API lancée à la main (`claude -p --agent relecteur`, 0,602 $ sur TASK-094) : son coût n'est pas relevé par un script mais saisi à la main dans `agents.tsv` | TASK-094 | fait — TASK-099 : `lancer-agent.sh anthropic TASK-XXX --relecture` écrit sa propre ligne dans `agents.tsv`, sans aide du conducteur ; démontré sur sa propre relecture (0,406 $, ligne `relecteur`) |
+| [ ] | A188 | P4 | `tests/acceptance/TASK-099-relecture.sh`, l. 5-7 : décrit le mécanisme de faux (`claude`, transcript de session) sans nommer le niveau de preuve « simulé », comme l'exige la décision 50 | relecture TASK-099 | nommer explicitement « simulé » dans l'en-tête du fichier de cas |
+| [ ] | A189 | P3 | `lancer-agent.sh --relecture` (TASK-099) lit `.claude/agents/relecteur.md` par `--setting-sources project`, donc celui de la branche `agent/<TASK>` **relue elle-même**, pas celui du dépôt principal : une branche pourrait redéfinir son propre relecteur avant d'être jugée | relecture TASK-099 | faire lire la définition du relecteur depuis la racine du dépôt principal plutôt que depuis la copie relue |
+| [ ] | A190 | P4 | `lancer-agent.sh --relecture` (TASK-099) : si `modele` est absent de `orchestration/relecture.json`, repli silencieux sur `MODELE_DEFAUT` du profil (`haiku`) sans avertissement, alors qu'une relecture veut en général un modèle fort | relecture TASK-099 | avertir sur stderr, ou refuser, quand `relecture.json` ne porte pas de `modele` |
 
 ## Suivi, pas des défauts
 
