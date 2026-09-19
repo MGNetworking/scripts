@@ -42,8 +42,9 @@ fi
 # Environnement de l'agent. Sans adresse : l'abonnement Claude, rien à régler.
 env_agent=(env -u ANTHROPIC_BASE_URL -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN)
 if [ -n "$ADRESSE" ]; then
-    [ -n "${!VARIABLE_CLE:-}" ] || { echo "Profil $profil : la variable $VARIABLE_CLE est vide." >&2; exit 2; }
-    env_agent+=("ANTHROPIC_BASE_URL=$ADRESSE" "ANTHROPIC_API_KEY=${!VARIABLE_CLE}"
+    cle_api="$(bash "$ici/resoudre-cle.sh" "$VARIABLE_CLE")" || {
+        echo "Profil $profil : la variable $VARIABLE_CLE est introuvable (environnement, puis variables utilisateur de Windows)." >&2; exit 2; }
+    env_agent+=("ANTHROPIC_BASE_URL=$ADRESSE" "ANTHROPIC_API_KEY=$cle_api"
         "ANTHROPIC_MODEL=$MODELE" "ANTHROPIC_DEFAULT_HAIKU_MODEL=$MODELE"
         "ANTHROPIC_DEFAULT_SONNET_MODEL=$MODELE" "ANTHROPIC_DEFAULT_OPUS_MODEL=$MODELE")
 fi

@@ -23,7 +23,7 @@ acceptance_criteria:
   - resoudre-cle.sh NOM écrit sur stdout la valeur de la variable d'environnement NOM ; sinon celle de la variable utilisateur Windows lue par powershell.exe, retour chariot retiré ; sinon code 1 sans rien écrire
   - la variable d'environnement est prioritaire sur le registre ; un nom hors ^[A-Z][A-Z0-9_]*$ est refusé en code 2 sans appeler powershell.exe
   - lancer-agent.sh appelle resoudre-cle.sh au lieu de lire ${!VARIABLE_CLE} ; si la clé est introuvable il s'arrête en code 2 avec un message qui nomme la variable et les deux endroits cherchés, sans jamais afficher de valeur
-  - le test prouve chaque cas avec de fausses valeurs, dont l'arrêt de lancer-agent.sh sur un dépôt jouet ; il rend 0
+  - le test prouve chaque cas avec de fausses valeurs, dont l'arrêt de lancer-agent.sh sur un dépôt jouet ; il rend 0 sur l'hôte, et 3 en conteneur où le cas jouet (git et node absents) est une indisponibilité déclarée ; le retour chariot ne se prouve qu'en conteneur Linux
   - shellcheck -x rend 0 sur les trois fichiers ; resoudre-cle.sh fait 25 lignes au plus
 validation:
   - "bash tests/acceptance/TASK-097-cle.sh"
