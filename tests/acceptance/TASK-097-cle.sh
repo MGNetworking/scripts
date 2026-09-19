@@ -66,7 +66,7 @@ done
 # lancer-agent.sh sur un dépôt jouet : la clé absente arrête en 2, la clé du registre part à l'agent.
 J="$TMP/jouet"
 mkdir -p "$J/orchestration/outils" "$J/orchestration/modeles" "$J/orchestration/mesures" "$J/tasks/active"
-cp "$OUTILS/lancer-agent.sh" "$OUTILS/resoudre-cle.sh" "$J/orchestration/outils/"
+cp "$OUTILS/lancer-agent.sh" "$OUTILS/resoudre-cle.sh" "$OUTILS/lib-agents.sh" "$J/orchestration/outils/"
 printf 'ADRESSE=https://exemple.invalid\nMODELE=faux\nVARIABLE_CLE=TEST_CLE_ABSENTE_MGNET\n' > "$J/orchestration/modeles/faux.env"
 echo "fiche" > "$J/tasks/active/TASK-999.md"
 env -u TEST_CLE_ABSENTE_MGNET FAUX_REGISTRE="" PATH="$TMP/bin:$PATH" bash "$J/orchestration/outils/lancer-agent.sh" faux TASK-999 > /dev/null 2> "$TMP/err" && code=0 || code=$?
