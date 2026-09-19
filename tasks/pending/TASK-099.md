@@ -37,7 +37,8 @@ validation:
 implementation_notes:
   - ordre de user du 2026-09-19 - abonnement pour la gestion du projet, jetons d'API pour exécuter, relecture Opus par l'API ou l'abonnement selon ce qui reste
   - le CLI offre --agent et --tools, vérifiés le 2026-09-19 ; le relecteur reste défini une seule fois, dans .claude/agents/relecteur.md
-  - à établir avant de coder - si claude -p --agent relecteur applique bien la liste d'outils du fichier de l'agent ; sinon --tools la fixe explicitement
+  - établi le 2026-09-19 sur TASK-094 - claude -p --agent relecteur --model claude-opus-5 --tools Read,Grep,Glob --setting-sources project --strict-mcp-config --output-format json, lancé depuis la copie ../script-agents/TASK-XXX avec ANTHROPIC_BASE_URL=https://api.anthropic.com et la clé de resoudre-cle.sh, fonctionne en lecture seule ; le verdict est dans .result, les jetons et total_cost_usd dans le JSON ; 13 tours, 0,602 $ pour un fichier documentaire de 400 lignes
+  - le coût rendu par le JSON est celui de l'API (tarif Anthropic exact) ; pour la ligne agents.tsv, recomposer entree, entree_cache (lecture + écriture) et sortie depuis .usage
 ---
 
 # TASK-099 — Relecture par l'API

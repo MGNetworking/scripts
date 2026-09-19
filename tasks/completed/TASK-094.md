@@ -1,7 +1,7 @@
 ---
 id: TASK-094
 title: "Ajouter à architecture.md la vue d'exécution, les couches, le registre des agents et l'inventaire des capacités"
-status: in_progress
+status: completed
 priority: high
 depends_on: []
 environment: host

@@ -170,3 +170,6 @@ date	tache	profil	modele	tours	entree	entree_cache	sortie	duree_s	code	cout_usd
 2026-09-18 17:39:02	TASK-093	conducteur	sonnet	99	-	-	147762	1626	0	
 2026-09-19 15:44:09	TASK-097	relecteur	sonnet	7	-	-	24350	61	0	
 2026-09-19 17:00:19	TASK-098	relecteur	sonnet	8	-	-	30976	81	0	
+2026-09-19 17:38:28	TASK-094	anthropic	claude-haiku-4-5	18	148	908332	11192	139	0	0.147
+2026-09-19 17:45:54	TASK-094	anthropic	claude-sonnet-5	32	66	1533194	20690	227	0	0.514
+2026-09-19 17:48:03	TASK-094	relecteur	claude-opus-5	13	16	226178	9113	112	0	0.602

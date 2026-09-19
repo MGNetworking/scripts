@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A185**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A188**.
 
 ## Registre
 
@@ -234,6 +234,9 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A182 | P3 | Le cas « jouet » de `tests/acceptance/TASK-097-cle.sh` (`lancer-agent.sh` transmet la clé du registre à l'agent, faux `claude`) exige `git` et `node`, absents du conteneur `debian` : indisponibilité déclarée, le test rend 3 en conteneur ; ce cas n'est prouvé qu'à l'hôte | TASK-097 | ajouter `git` et `node` à l'image `debian`, ou accepter ce niveau de preuve |
 | [ ] | A183 | P4 | `resoudre-cle.sh` ne lit que les variables de portée utilisateur de Windows, par `powershell.exe` ; sur Linux la variable d'environnement seule sert. Git Bash retirant lui-même le retour chariot, la ligne `tr -d '\r'` n'est prouvée qu'en conteneur Linux | TASK-097 | étendre à la portée Machine si une clé y est un jour posée |
 | [ ] | A184 | P3 | Le coût affiché des profils Anthropic est sous-estimé : `lancer-agent.sh` additionne lecture et écriture de cache au tarif de lecture (0,1 x l'entrée), alors que l'écriture de cache est facturée 1,25 x (5 min). DeepSeek n'a pas de surcoût d'écriture, donc son coût reste juste | TASK-098 | compter séparément lecture et écriture de cache dans le relevé, avec un `PRIX_ECRITURE` par alias |
+| [ ] | A185 | P4 | `orchestration/architecture.md` §11 à 14 : tableaux dont certaines lignes atteignent 373 caractères, contre ~90 dans les sections 1 à 10 ; lisibilité dégradée, sans erreur de fond | TASK-094 | couper les cellules longues, ou déplacer le détail sous les tableaux |
+| [ ] | A186 | P3 | Un agent lancé ne peut pas exécuter `verifier-liens.sh` ni `juger.sh` (absents de l'allow-list de `orchestration/limites.json`) : ses lignes `VERDICT ECHEC` sur ce point sont des faux négatifs, constatés sur TASK-087 et TASK-094 | TASK-094 | autoriser ces deux commandes dans `limites.json`, ou faire lire ce défaut au conducteur comme non bloquant |
+| [ ] | A187 | P3 | Relecture Opus par l'API lancée à la main (`claude -p --agent relecteur`, 0,602 $ sur TASK-094) : son coût n'est pas relevé par un script mais saisi à la main dans `agents.tsv` | TASK-094 | TASK-099 : `lancer-agent.sh --relecture` écrit sa ligne de mesure seul |
 
 ## Suivi, pas des défauts
 
