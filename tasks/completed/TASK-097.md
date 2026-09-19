@@ -1,7 +1,7 @@
 ---
 id: TASK-097
 title: "Faire lire à lancer-agent.sh la clé d'API dans les variables utilisateur de Windows quand l'environnement ne la porte pas"
-status: in_progress
+status: completed
 priority: high
 depends_on: []
 environment: host

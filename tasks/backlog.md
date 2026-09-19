@@ -107,7 +107,7 @@ de ce que cet ADR a tranché.
 | [TASK-086](completed/TASK-086.md) | Outiller la vérification et la clôture, branche documentaire de `juger.sh` (A172) | `completed` | haute | — | hôte | non |
 | [TASK-087](completed/TASK-087.md) | Documenter le fonctionnement de l'outil de préparation | `completed` | haute | — | hôte | non |
 | [TASK-093](completed/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | `completed` | haute | — | hôte | non |
-| [TASK-097](active/TASK-097.md) | Faire lire à `lancer-agent.sh` la clé d'API dans les variables utilisateur de Windows | `in_progress` | haute | — | hôte | non |
+| [TASK-097](completed/TASK-097.md) | Faire lire à `lancer-agent.sh` la clé d'API dans les variables utilisateur de Windows | `completed` | haute | — | hôte | non |
 | [TASK-094](pending/TASK-094.md) | Vues manquantes d'`architecture.md` : exécution, couches, registre, capacités | `ready` | haute | — | hôte | non |
 | [TASK-095](pending/TASK-095.md) | Extraire `lib-agents.sh` de `lancer-agent.sh` | `pending` | moyenne | 094 | hôte | non |
 | [TASK-082](completed/TASK-082.md) | Remettre au vert `tests/acceptance/TASK-012` sur l'hôte (A149) | `completed` | haute | — | hôte | non |
@@ -461,6 +461,7 @@ tableau restent dans l'historique Git et dans [décisions](../orchestration/deci
 | [TASK-086](completed/TASK-086.md) | Outiller la vérification et la clôture, branche documentaire de `juger.sh` (A172) | [rapport](reports/TASK-086-report.md) |
 | [TASK-087](completed/TASK-087.md) | Documenter le fonctionnement de l'outil de préparation | [rapport](reports/TASK-087-report.md) |
 | [TASK-093](completed/TASK-093.md) | Rendre l'outillage capable de conduire une tâche documentaire (A177, A178) | [rapport](reports/TASK-093-report.md) |
+| [TASK-097](completed/TASK-097.md) | Faire lire à `lancer-agent.sh` la clé d'API dans les variables utilisateur de Windows | [rapport](reports/TASK-097-report.md) |
 
 Les travaux antérieurs à la mise en place de ce backlog — socle `lib/common.sh`,
 six scripts `Linux/System`, documentation — sont tracés dans l'historique Git et

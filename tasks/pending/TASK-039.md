@@ -41,7 +41,7 @@ reste ouverte : toute nouvelle anomalie s'inscrit ci-dessous, avec le prochain A
 
 Tout défaut non corrigé, toute réserve de rapport, toute remarque de relecture
 laissée de côté, tout point ouvert d'orchestration **s'inscrit ici**, et nulle
-part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A182**.
+part ailleurs. `/tache` le vérifie à la clôture. Prochain identifiant libre : **A184**.
 
 ## Registre
 
@@ -231,6 +231,8 @@ et du harnais · P3 dette du socle et des scripts · P4 documentation et forme.
 | [ ] | A179 | P4 | Prouver en conditions réelles le comportement de `limites.json` (A178) demande d'imbriquer un lancement `claude -p --settings limites.json` : dans le bac à sable de l'orchestrateur, `claude auth status` y rend `"loggedIn": false` — aucune session n'est disponible à un processus `claude` lancé depuis l'intérieur d'une session `claude`. TASK-093 a donc substitué une preuve statique (motifs de `deny` attendus, `tests/acceptance/TASK-086-outillage.sh`) au « lancement d'essai » demandé par sa fiche | TASK-093 | si une preuve comportementale de `limites.json` redevient nécessaire, la conduire en conteneur avec des identifiants dédiés, jamais par un `claude` imbriqué dans la session orchestratrice |
 | [ ] | A180 | P4 | Le laissez-passer documentaire de `juger.sh` corrigé par A177 se décide sur `${#roles[@]}` : un scope Ansible qui ne cite aucun rôle mais un fichier de code réel hors rôle — `Ansible/playbooks/site.yml`, `Ansible/inventory.example.yml` — obtient désormais « SANS OBJET » et 0, comme une fiche purement documentaire, alors qu'il livre du YAML sans preuve ni juge | relecture TASK-093 | juger ce YAML (lint `ansible-lint`/`yamllint` déjà requis par décision 50 pour un rôle) plutôt que de le laisser passer par la branche documentaire |
 | [ ] | A181 | P3 | `orchestration/decisions.md`, décision 39, énumère encore l'ancien périmètre de `limites.json` — « pas d'écriture dans `tasks/`, `docs/`, `orchestration/`, `lib/`, `.claude/`, les README et `CLAUDE.md` » — devenu faux après TASK-093 (A178) : `docs/` et les README de domaine sont désormais ouverts, seuls deux fichiers de `docs/` et le README racine restent protégés | relecture TASK-093 | mettre à jour l'énumération de la décision 39 au prochain travail sur `decisions.md`, en listant les exceptions plutôt que le dossier entier |
+| [ ] | A182 | P3 | Le cas « jouet » de `tests/acceptance/TASK-097-cle.sh` (`lancer-agent.sh` transmet la clé du registre à l'agent, faux `claude`) exige `git` et `node`, absents du conteneur `debian` : indisponibilité déclarée, le test rend 3 en conteneur ; ce cas n'est prouvé qu'à l'hôte | TASK-097 | ajouter `git` et `node` à l'image `debian`, ou accepter ce niveau de preuve |
+| [ ] | A183 | P4 | `resoudre-cle.sh` ne lit que les variables de portée utilisateur de Windows, par `powershell.exe` ; sur Linux la variable d'environnement seule sert. Git Bash retirant lui-même le retour chariot, la ligne `tr -d '\r'` n'est prouvée qu'en conteneur Linux | TASK-097 | étendre à la portée Machine si une clé y est un jour posée |
 
 ## Suivi, pas des défauts
 
