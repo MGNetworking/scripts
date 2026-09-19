@@ -308,3 +308,109 @@ Chaque écart vit dans le registre ; cette liste ne fait que les signaler.
 | 150 lignes par script et par fichier de cas | dépassements fréquents, justifiés sur la ligne VERDICT | A92, A105, A121… |
 | chaque commit porte `Tâche : TASK-XXX` | les commits de l'agent ne la portent pas : `executer-tache.md` ne la lui demande pas | A66 |
 | contrôles de l'étape 5 | sondes, mutations et stabilité pratiquées sans être prescrites | A128 |
+
+## 11. Vue d'exécution
+
+Trois endroits où tourne du code IA : la session, ses sous-agents, l'agent externe.
+
+```mermaid
+flowchart TB
+    subgraph Session["Processus de la session — Claude Code interactif, Opus"]
+        S["Session orchestratrice<br/>dossier : racine du dépôt<br/>API : api.anthropic.com"]
+        C["Sous-agent conducteur<br/>même processus, contexte neuf<br/>dossier : racine du dépôt"]
+        L["Sous-agent relecteur<br/>lecture seule"]
+        R["Sous-agent rédacteur"]
+    end
+    subgraph Externe["Processus distinct — claude -p"]
+        A["Agent exécutant<br/>dossier : ../script-agents/TASK-XXX<br/>API : celle du profil"]
+    end
+    LA["lancer-agent.sh"]
+    V["verifier-travail.sh<br/>juger.sh"]
+    D[("api.deepseek.com/anthropic")]
+    N[("api.anthropic.com")]
+
+    S -- "Agent, SendMessage" --> C
+    S -- "Agent" --> L
+    S -- "Agent" --> R
+    S -- "commande, arrière-plan" --> LA
+    LA -- "worktree, claude -p" --> A
+    C -- "vérifie" --> V
+    A -- "juger.sh" --> V
+    A -- "profil deepseek" --> D
+    A -- "profil anthropic, abonnement" --> N
+```
+
+| Cas | Programme | Dossier de travail | API contactée |
+|---|---|---|---|
+| session | Claude Code interactif | racine du dépôt | api.anthropic.com |
+| sous-agent | le même processus que la session : nouvelle fenêtre de contexte, même programme | racine du dépôt | celle de la session |
+| agent externe | processus `claude -p` lancé par `lancer-agent.sh` | copie `../script-agents/<TASK>` | selon le profil |
+
+Côté agent externe, `ADRESSE` du profil devient `ANTHROPIC_BASE_URL` :
+`api.deepseek.com/anthropic` pour `deepseek`, `api.anthropic.com` pour `anthropic`
+([modeles/](modeles/)). Sans profil (`sonnet`, `opus`, `haiku`), aucune adresse ni clé
+n'est posée : l'agent utilise l'abonnement Claude.
+
+« Claude Code sans interface » désigne le seul agent externe. Un sous-agent n'a pas de
+processus à lui : il partage la session, ses droits et son dossier. Le relecteur, en
+lecture seule, ne juge pas par exécution : c'est le conducteur qui lance
+`verifier-travail.sh`, donc `juger.sh`, et lui transmet les codes.
+
+## 12. Les quatre couches
+
+| Couche | Ce qu'elle contient | Interchangeable |
+|---|---|---|
+| **Modèle** | Opus, Sonnet, Haiku, `deepseek-flash` | oui : un profil `modeles/<nom>.env`, ou `--modele` |
+| **Harnais** | Claude Code : `claude -p`, sous-agents, droits de [limites.json](limites.json) | en principe ; seul Claude Code est éprouvé et `lancer-agent.sh` appelle `claude -p` en dur |
+| **Scripts** | `outils/*.sh`, `tests/` | non : la logique d'orchestration y vit ; voir §14 pour ce qui s'en détache |
+| **Consignes** | [regles.md](regles.md), [decisions.md](decisions.md), `.claude/agents/`, `.claude/commands/` | oui, à condition de garder le sens |
+
+Ce qu'un modèle doit savoir faire : répondre au protocole que Claude Code parle à son
+API, l'adresse étant passée par `ANTHROPIC_BASE_URL`. C'est ce qui permet à DeepSeek
+de remplacer Claude.
+
+Contrat minimal d'un harnais, la seule chose que les scripts et les consignes lui
+demandent :
+
+1. lire et écrire des fichiers ;
+2. exécuter une commande shell ;
+3. parler à un modèle.
+
+Le reste (worktree, juge, mesures, fiches) est dans les scripts et les consignes.
+
+## 13. Registre des agents
+
+Coûts en dollars lus dans les colonnes `profil` et `cout_usd` de
+`orchestration/mesures/agents.tsv` ; « non mesuré » quand le fichier n'en dit rien.
+
+| Agent | Défini dans | Modèle | Permissions | Coût moyen | Ne peut pas |
+|---|---|---|---|---|---|
+| **Conducteur** | [conducteur-tache.md](../.claude/agents/conducteur-tache.md) | `opus` ; `sonnet` sur certaines lignes de `agents.tsv` | Read, Write, Edit, Grep, Glob, Bash, PowerShell, Agent | non mesuré en dollars (abonnement, `cout_usd` vide) | lancer `lancer-agent.sh` ; pousser, rebaser, `reset --hard` |
+| **Relecteur** | [relecteur.md](../.claude/agents/relecteur.md) | `opus` ; `sonnet` pour TASK-097 et TASK-098 | Read, Grep, Glob | non mesuré en dollars | écrire, lancer une commande |
+| **Rédacteur** | [redacteur-tache.md](../.claude/agents/redacteur-tache.md) | hérité de la session | Read, Write, Edit, Grep, Glob | non mesuré | écrire un script ou un test ; exécuter une commande |
+| **Exécutant `deepseek`** | [deepseek.env](modeles/deepseek.env) | `deepseek-flash` | [limites.json](limites.json) | moyenne 0,120 $ sur 82 lignes ; minimum 0,000 $, maximum 0,305 $ | ce que refuse `limites.json` (§1) |
+| **Exécutant `anthropic`** | [anthropic.env](modeles/anthropic.env) | `haiku` (défaut), `sonnet`, `opus` | [limites.json](limites.json) | non mesuré : aucune ligne `anthropic` | idem |
+| **Exécutant `sonnet`, `opus`, `haiku`** | `lancer-agent.sh`, sans profil | l'alias demandé | [limites.json](limites.json) | non mesuré en dollars (abonnement) | idem |
+
+Tarif de `anthropic` (`anthropic.env`, relevé le 2026-09-19 sur
+`platform.claude.com/docs/en/about-claude/pricing`), en dollars par million de jetons,
+entrée / lecture du cache / sortie : `haiku` (`claude-haiku-4-5`) 1,00 / 0,10 / 5,00 ;
+`sonnet` (`claude-sonnet-5`) 2,00 / 0,20 / 10,00 ; `opus` (`claude-opus-5`)
+5,00 / 0,50 / 25,00. L'écriture de cache est comptée au tarif de lecture : le coût
+affiché est sous-estimé (A184). Tarif `deepseek` : 0,30 / 0,006 / 1,20, relevé au
+2026-09-14, en heures de pointe.
+
+## 14. Inventaire des capacités
+
+« Générique » : rien dans le script ne dépend de ce dépôt. Cette colonne désigne ce que
+TASK-095 peut extraire.
+
+| Script | Ce qu'il sait faire | Générique ou propre au projet |
+|---|---|---|
+| `lancer-agent.sh` | faire exécuter une tâche par un agent dans une copie isolée, `--modele`, `--dry-run`, mesure du coût | **mixte**. Générique : copie `git worktree`, plafond `DUREE_MAX`, lecture d'un profil `.env` (adresse, clé, tarifs). Propre : `tasks/active/`, branche `agent/<TASK>`, consigne `/executer-tache`, `limites.json`, `agents.tsv` à 11 colonnes |
+| `juger.sh` | shellcheck, fichier de cas en conteneur, règles transverses | **propre** : lit le `scope` d'une fiche, lance `tests/env/run-in-container.sh` et `TASK-011` |
+| `clore-tache.sh` | écrire la clôture : fiche vers `completed/`, backlog, journal, mesures | **propre** : `tasks/completed/`, `backlog.md`, `journal.md`, `agents.tsv` |
+| `verifier-travail.sh` | périmètre, longueur, juge, validations de la fiche | **propre** : branche `agent/<TASK>`, `master`, champ `validation` d'une fiche, `juger.sh` |
+| `verifier-liens.sh` | lister les liens Markdown morts | **propre** : suit les fiches qui passent de `pending/` à `active/`, ignore `tasks/completed/` |
+| `resoudre-cle.sh` | écrire sur stdout la valeur d'une variable : environnement, puis variables utilisateur de Windows | **générique** : n'a besoin que d'un nom de variable |
+| `lien-ecrit.awk` | signaler une écriture à travers un lien symbolique dans un fichier de cas | **propre** : cible les fichiers de cas du dépôt (A122), appelé par `juger.sh` |
