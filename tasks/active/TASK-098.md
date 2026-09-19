@@ -24,9 +24,9 @@ acceptance_criteria:
   - anthropic.env porte MODELE_DEFAUT=haiku et, pour haiku, sonnet et opus, une ligne MODELE_<alias>=<identifiant> et une ligne PRIX_<alias>=<entrée> <cache> <sortie> ; identifiants et tarifs relevés à la source le jour de la tâche, la règle « cache = 10 % de l'entrée » notée comme hypothèse à contrôler
   - lancer-agent.sh anthropic TASK-XXX --modele opus exporte ANTHROPIC_MODEL et les trois ANTHROPIC_DEFAULT_*_MODEL au modèle de l'alias, et le relevé agents.tsv porte cet identifiant ; sans --modele, l'alias MODELE_DEFAUT
   - un alias inconnu, ou --modele sur un profil qui n'en porte pas (deepseek), s'arrête en code 2 en listant les alias disponibles
-  - --dry-run n'écrit rien, ne crée ni copie ni branche, ne lance rien, et affiche profil, identifiant du modèle, les trois tarifs et « clé : trouvée » ou « clé : absente », jamais une valeur ; code 0, ou 2 si la clé manque
+  - --dry-run n'écrit rien, ne crée ni copie ni branche, ne lance rien, et affiche profil, identifiant du modèle, les trois tarifs et « clé=trouvée », jamais une valeur, et rend 0 ; si la clé manque, il s'arrête en code 2 avec le message habituel de lancer-agent.sh, sans rien lancer
   - le lancement de deepseek, avec ou sans option, se comporte exactement comme avant ; démontré par le test
-  - le test prouve chaque cas sur un dépôt jouet avec un faux claude ; shellcheck -x rend 0 ; lancer-agent.sh gagne 20 lignes au plus
+  - le test prouve chaque cas sur un dépôt jouet avec un faux claude ; shellcheck -x rend 0 ; lancer-agent.sh reste à 150 lignes au plus
 validation:
   - "bash tests/acceptance/TASK-098-modeles.sh"
   - "bash tests/acceptance/TASK-097-cle.sh"
