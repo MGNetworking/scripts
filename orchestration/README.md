@@ -56,10 +56,11 @@ concurrentes du harnais maîtrisées (décision 40, registre A06).
 | [decisions.md](decisions.md) | les décisions en vigueur, numérotées |
 | [mode.json](mode.json) | `automatique` : enchaînement sans message de `user` ; `manuel` : attente d’une consigne |
 | [limites.json](limites.json) | les droits techniques d'un agent (écriture, commandes) |
+| [relecture.json](relecture.json) | qui relit (§6 de `tache.md`) : `api` (`lancer-agent.sh --relecture`) ou `abonnement` (sous-agent `relecteur`), et le modèle par défaut de la relecture (TASK-099) |
 | [architecture.md](architecture.md) | architecture complète et schémas Mermaid : la référence |
 | `orchestration.html` / `.png` | affiche d'exposition : source HTML et export PNG |
 | `modeles/` | un fichier par modèle **externe** : adresse d'API, nom, variable de clé |
-| `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons dans le transcript de la session (« incomplet » s'il est introuvable) ; `--modele <alias>` choisit un modèle du profil (`anthropic` : haiku, sonnet, opus), `--dry-run` affiche profil, modèle, tarifs et présence de la clé sans rien lancer |
+| `outils/lancer-agent.sh` | crée la copie, lance l'agent, relève ses jetons dans le transcript de la session (« incomplet » s'il est introuvable) ; `--modele <alias>` choisit un modèle du profil (`anthropic` : haiku, sonnet, opus), `--dry-run` affiche profil, modèle, tarifs et présence de la clé sans rien lancer, `--relecture` fait relire au lieu d'écrire (agent lecture seule, verdict sur stdout, sa propre ligne de mesure) |
 | `outils/resoudre-cle.sh` | rend la clé d'API d'un profil : environnement, puis variables utilisateur de Windows (le harnais ne retransmet pas `ANTHROPIC_API_KEY` à ses outils) |
 | `outils/juger.sh` | shellcheck et fichier de cas d'une fiche, en conteneur ; périmètre Ansible seul : présence du scénario Molecule (A158) |
 | `outils/lien-ecrit.awk` | lu par `juger.sh` : refuse un fichier de cas qui écrit un faux binaire à travers un lien (A122) |

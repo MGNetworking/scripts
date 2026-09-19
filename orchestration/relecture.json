@@ -1,0 +1,5 @@
+{
+  "mode": "api",
+  "modele": "opus",
+  "note": "Qui relit le travail d'une tâche, étape 6 de .claude/commands/tache.md. api : la relecture se lance par « bash orchestration/outils/lancer-agent.sh anthropic TASK-XXX --relecture », hors du harnais, facturée à la clé ANTHROPIC_API_KEY ; le script écrit lui-même sa ligne dans orchestration/mesures/agents.tsv. abonnement : le sous-agent relecteur de .claude/agents/relecteur.md, facturé à l'abonnement, et la ligne de mesure s'écrit à la main. modele : un alias du profil orchestration/modeles/anthropic.env — haiku, sonnet ou opus ; --modele le change pour un lancement. user bascule le mode en une ligne, selon ce qu'il reste d'abonnement pour faire tourner le harnais."
+}
